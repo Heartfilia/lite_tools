@@ -5,7 +5,7 @@ from setuptools import setup
 
 
 setup(
-    name='lite_tools',
+    name='lite-tools',
     version='0.3.8',
     description='some little tools',
     author='Lodge',
