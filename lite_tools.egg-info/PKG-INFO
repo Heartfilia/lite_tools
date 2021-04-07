@@ -1,0 +1,17 @@
+Metadata-Version: 1.1
+Name: lite-tools
+Version: 0.3.7
+Summary: some little tools
+Home-page: https://github.com/Heartfilia/lite_tools
+Author: Lodge
+Author-email: lodgeheartfilia@163.com
+License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Natural Language :: Chinese (Simplified)
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9

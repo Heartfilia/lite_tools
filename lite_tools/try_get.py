@@ -4,7 +4,7 @@
 from loguru import logger
 
 
-def try_get(renderer: dict, getters, expected_type=None):
+def try_get(renderer: dict, getters, expected_type=None, log=False):
     """
     获取字典键值
     params renderer: 传入的需要解析的字典
@@ -13,14 +13,14 @@ def try_get(renderer: dict, getters, expected_type=None):
     return : 如果取到则为值，否则为None
     """
     if isinstance(getters, str):
-        origin_x = "x"
+        origin_getter = "_"
         if '.' in getters:
             getters = getters.split('.')
-            for x in getters:
-                origin_x += f"['{x}']"
+            for getter in getters:
+                origin_getter += f"['{getter}']"
         else:
-            origin_x += f"['{getters}']"
-        getters = lambda x: eval(origin_x)
+            origin_getter += f"['{getters}']"
+        getters = lambda _: eval(origin_getter)
     if not isinstance(getters, (list, tuple)):
         getters = [getters]
     for getter in getters:
@@ -31,12 +31,13 @@ def try_get(renderer: dict, getters, expected_type=None):
             elif isinstance(result, expected_type):
                 return result
         except (AttributeError, KeyError, TypeError, IndexError) as e:
-            logger.error(f"try_get: {e} --line: {e.__traceback__.tb_lineno}")
+            if log is True:
+                logger.error(f"try_get: {e} --line: {e.__traceback__.tb_lineno}")
     else:
         return None
 
 
-def try_get_by_name(renderer: dict, getter: str, depth: int = 20) -> list:
+def try_get_by_name(renderer: dict, getter: str, depth: int = 20, log: bool = False) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
@@ -48,7 +49,8 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 20) -> list:
         result = _try_get_by_name(renderer=renderer, getter=getter, depth=depth)
         return result
     except Exception as e:
-        logger.error(f"try_get_by_name: {e} --line: {e.__traceback__.tb_lineno}")
+        if log is True:
+            logger.error(f"try_get_by_name: {e} --line: {e.__traceback__.tb_lineno}")
         return []
 
 
