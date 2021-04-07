@@ -16,6 +16,12 @@ python setup.py install
 # or
 
 pip install dist/lite_tools*
+
+# or
+# 如果没有替换到国内镜像 那么使用
+pip install lite-tools 
+# 如果替换了国内镜像 那么使用
+pip install -i https://pypi.org/simple lite-tools
 ```
 
 
