@@ -9,7 +9,8 @@ print(get_time(cursor=7, fmt=True))                            # 2021-04-13 17:4
 print(get_time(double=True))                                   # 1617701814.704276
 print(get_time(fmt=True))                                      # 2021-04-06 17:36:54
 print(get_time(fmt=True, fmt_str="%Y::%m::%d::"))              # 2021::04::06::
-print(get_time(1617701814))                                    # 2021-04-06 17:36:54
+print(get_time(1617701814))                                    # 2021-04-06 17:36:54   
+print(get_time("1617701814"))                                  # 2021-04-06 17:36:54   support string too
 print(get_time(1617701814, fmt_str="%Y::%m::%d::%H~%M~%S"))    # 2021::04::06::17~36~54
 
 # about ua  ==> get_ua   //  get_navigator
@@ -78,6 +79,6 @@ test_json = {
 print(try_get(test_json, 'a.d.e'))                 # 3   ==> support the Chain operation
 print(try_get(test_json, lambda x: x['a']['b']))   # 1   ==> support the lambda operation
 print(try_get(test_json, 'x'))                     # None  ==> not found
-print(try_get_by_name(test_json, 'e'))             # [-3, 3]       default depth = 20  this function return the list objection
-print(try_get_by_name(test_json, 'e', depth=30))   # [-3, 3, 10]
+print(try_get_by_name(test_json, 'e', depth=20))   # [-3, 3]       default depth = 50  this function return the list objection
+print(try_get_by_name(test_json, 'e'))             # [-3, 3, 10]   default depth = 50
 

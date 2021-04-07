@@ -37,7 +37,7 @@ def try_get(renderer: dict, getters, expected_type=None, log=False):
         return None
 
 
-def try_get_by_name(renderer: dict, getter: str, depth: int = 20, log: bool = False) -> list:
+def try_get_by_name(renderer: dict, getter: str, depth: int = 50, log: bool = False) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
@@ -54,13 +54,13 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 20, log: bool = Fa
         return []
 
 
-def _try_get_by_name(renderer, getter, result=[], depth=20, is_first=True) -> list:
+def _try_get_by_name(renderer, getter, result=[], depth: int = 50, is_first=True) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
     :param getter : 需要获取的键的名称
     :param result : 外面不需要传这个参数 这个作内部参数校验
-    :param depth : 遍历深度,默认20层
+    :param depth : 遍历深度,默认50层
     :param is_first : 是否是第一次传入,外面不需要传这个数据
     """
     if is_first is True:
