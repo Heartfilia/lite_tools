@@ -4,10 +4,16 @@
 from setuptools import setup
 
 
+with open("README.md", "r", encoding='utf-8') as fd:
+    long_description = fd.read()
+
+
 setup(
     name='lite-tools',
-    version='0.3.8',
-    description='some little tools',
+    version='0.4.1',
+    description='一些python小工具||some little tools',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author='Lodge',
     author_email='lodgeheartfilia@163.com',
     url='https://github.com/Heartfilia/lite_tools',

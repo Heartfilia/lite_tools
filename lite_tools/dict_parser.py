@@ -37,24 +37,32 @@ def try_get(renderer: dict, getters, expected_type=None, log=False):
         return None
 
 
-def try_get_by_name(renderer: dict, getter: str, depth: int = 50, log: bool = False) -> list:
+def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=None, log: bool = False) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
     :param getter : 需要获取的键的名称
-    :param depth : 遍历深度,默认20层
+    :param depth : 遍历深度,默认50层
+    :param expected_type : 期望获得的值类型 不是则为None  可多传如：  expected_type=(list, str)
+    :param log: 是否打印报错的提示日志 默认不打印
     """
     try:
-        result_list = []
-        result = _try_get_by_name(renderer=renderer, getter=getter, depth=depth)
-        return result
+        result = __try_get_by_name(renderer=renderer, getter=getter, depth=depth)
+        if expected_type is None:
+            return result
+        else:
+            result_list = []
+            for res in result:
+                if isinstance(res, expected_type):
+                    result_list.append(res)
+            return result_list
     except Exception as e:
         if log is True:
             logger.error(f"try_get_by_name: {e} --line: {e.__traceback__.tb_lineno}")
         return []
 
 
-def _try_get_by_name(renderer, getter, result=[], depth: int = 50, is_first=True) -> list:
+def __try_get_by_name(renderer, getter, result=[], depth: int = 50, is_first=True) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
@@ -80,6 +88,6 @@ def _try_get_by_name(renderer, getter, result=[], depth: int = 50, is_first=True
         return result
     depth -= 1
     for value in need_parse_dict_list:
-        return _try_get_by_name(value, getter, result, depth, is_first=False)
+        return __try_get_by_name(value, getter, result, depth, is_first=False)
     else:
         return result
