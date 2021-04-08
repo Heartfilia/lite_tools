@@ -87,7 +87,7 @@ test_json = {
 
 # print(try_get(test_json, 'a.d.e'))                 # 3   ==> support the Chain operation
 # print(try_get(test_json, lambda x: x['a']['b']))   # 1   ==> support the lambda operation
-# print(try_get(test_json, 'x'))                     # None  ==> not found
+# print(try_get(test_json, 'x'))                     # None  ==> not found      support `expected_type` too
 print(try_get_by_name(test_json, 'e', depth=20))   # [-3, 3]       default depth = 50  this function return the list objection
 print(try_get_by_name(test_json, 'e'))             # [-3, 3, ['test', 'test'], 10, {'e': 'test'}, 'test']   default depth = 50
 print(try_get_by_name(test_json, 'e', expected_type=int))   # [-3, 3, 10]   default depth = 50
