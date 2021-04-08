@@ -12,16 +12,12 @@ requirements :
 ```bash
 python setup.py install
 
-# or
+# or   # then chose one version 选择是需要whl还是tar.gz的安装包
 cd dist
-# then chose one version
 pip install xxxxx
 
-# or
-# 如果没有替换到国内镜像 那么使用 国内镜像一般慢一天更新版本 
+# or  # 可以直接通过pip安装 国内镜像可能会版本更新不及时 用国内镜像也可以
 pip install lite-tools 
-# 如果替换了国内镜像 那么使用
-pip install -i https://pypi.org/simple lite-tools
 ```
 
 
