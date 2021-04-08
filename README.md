@@ -13,8 +13,9 @@ requirements :
 python setup.py install
 
 # or
-
-pip install dist/lite_tools*
+cd dist
+# then chose one version
+pip install xxxxx
 
 # or
 # 如果没有替换到国内镜像 那么使用 国内镜像一般慢一天更新版本 
