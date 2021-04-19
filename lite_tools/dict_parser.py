@@ -55,7 +55,7 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=
             logger.error(f"try_get_by_name: {e} -- {type(e)} --line: {e.__traceback__.tb_lineno}")
         return []
     except Exception as res:
-        return eval(str(res.args)[1:-2])
+        return res.args[0] if res.args else []
 
 
 def __try_get_by_name(renderer: dict, getter: str, result: list = [], depth: int = 50, is_first=True, expected_type=None) -> list:
