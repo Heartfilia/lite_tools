@@ -39,7 +39,7 @@ def try_get(renderer: dict, getters, expected_type=None, log=False):
         return None
 
 
-def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=None, log: bool = False) -> list:
+def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=None, log: bool = False, in_list: bool = False) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
@@ -47,9 +47,10 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=
     :param depth : 遍历深度,默认50层
     :param expected_type : 期望获得的值类型 不是则为None  可多传如：  expected_type=(list, str)
     :param log: 是否打印报错的提示日志 默认不打印
+    :param in_list: 如果结果在一个列表里面的`字典`里面是否获取 默认不获取 只判断列表里面的`字典`的值
     """
     try:
-        result = __try_get_by_name(renderer=renderer, getter=getter, depth=depth, expected_type=expected_type)
+        result = __try_get_by_name(renderer=renderer, getter=getter, depth=depth, expected_type=expected_type, in_list=in_list)
     except (AttributeError, KeyError, TypeError, IndexError) as e:
         if log is True:
             logger.error(f"try_get_by_name: {e} -- {type(e)} --line: {e.__traceback__.tb_lineno}")
@@ -58,7 +59,7 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=
         return res.args[0] if res.args else []
 
 
-def __try_get_by_name(renderer: dict, getter: str, result: list = [], depth: int = 50, is_first=True, expected_type=None) -> list:
+def __try_get_by_name(renderer: dict, getter: str, expected_type, in_list, result: list = [], depth: int = 50, is_first=True) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
@@ -66,6 +67,7 @@ def __try_get_by_name(renderer: dict, getter: str, result: list = [], depth: int
     :param result : 外面不需要传这个参数 这个作内部参数校验
     :param depth : 遍历深度,默认50层
     :param is_first : 是否是第一次传入,外面不需要传这个数据
+    :param in_list: 如果结果在一个列表里面的`字典`里面是否获取 默认不获取 只判断列表里面的`字典`的值
     """
     if is_first is True:
         result = []
@@ -81,8 +83,30 @@ def __try_get_by_name(renderer: dict, getter: str, result: list = [], depth: int
 
         if isinstance(value, dict):
             for new_key, new_value in value.items():
-                if new_key in need_parse_next_renderer:
-                    new_key = f"{new_key}#_#{random.randint(10000, 9999999)}"
+                new_key = f"{new_key}#_#{random.randint(100, 9999999)}"
                 need_parse_next_renderer[new_key] = new_value
+        if isinstance(value, list) and in_list is True:
+            for item in value:
+                if isinstance(item, dict):
+                    res, need_dict = __handle_to_dict(item, getter, expected_type)
+                    result += res
+                    need_parse_next_renderer.update(need_dict)
+
     depth -= 1
-    return __try_get_by_name(need_parse_next_renderer, getter, result, depth=depth, is_first=False, expected_type=expected_type)
+    return __try_get_by_name(need_parse_next_renderer, getter, expected_type, in_list, result, depth=depth, is_first=False)
+
+
+def __handle_to_dict(data: dict, getter, expected_type):
+    back_dict = dict()
+    back_result = list()
+    for key, value in data.items():
+        if re.sub(r"#_#\d+", "", key) == getter:
+            if expected_type is not None and not isinstance(value, expected_type):
+                continue
+            back_result.append(value)
+
+        if isinstance(value, dict):
+            for new_key, new_value in value.items():
+                new_key = f"{new_key}#_#{random.randint(100, 99999999)}"
+                back_dict[new_key] = new_value
+    return back_result, back_dict 
