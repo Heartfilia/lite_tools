@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Time   : 2021-04-06 15:26
 # @Author : Lodge
+import re
+import random
 from loguru import logger
 
 
@@ -47,22 +49,16 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=
     :param log: 是否打印报错的提示日志 默认不打印
     """
     try:
-        result = __try_get_by_name(renderer=renderer, getter=getter, depth=depth)
-        if expected_type is None:
-            return result
-        else:
-            result_list = []
-            for res in result:
-                if isinstance(res, expected_type):
-                    result_list.append(res)
-            return result_list
-    except Exception as e:
+        result = __try_get_by_name(renderer=renderer, getter=getter, depth=depth, expected_type=expected_type)
+    except (AttributeError, KeyError, TypeError, IndexError) as e:
         if log is True:
-            logger.error(f"try_get_by_name: {e} --line: {e.__traceback__.tb_lineno}")
+            logger.error(f"try_get_by_name: {e} -- {type(e)} --line: {e.__traceback__.tb_lineno}")
         return []
+    except Exception as res:
+        return eval(str(res.args)[1:-2])
 
 
-def __try_get_by_name(renderer, getter, result=[], depth: int = 50, is_first=True) -> list:
+def __try_get_by_name(renderer: dict, getter: str, result: list = [], depth: int = 50, is_first=True, expected_type=None) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
@@ -73,21 +69,20 @@ def __try_get_by_name(renderer, getter, result=[], depth: int = 50, is_first=Tru
     """
     if is_first is True:
         result = []
-    if depth <= 0:
-        return result
-    if not renderer or not isinstance(renderer, dict):
-        return result
-    need_parse_dict_list = []
-    for key, value in renderer.items():
-        if key == getter:
-            result.append(value)
-        if isinstance(value, dict):
-            need_parse_dict_list.append(value)
+    if depth < 0 or not renderer:
+        raise Exception(result)
+    need_parse_next_renderer = dict()
 
-    if not need_parse_dict_list:
-        return result
+    for key, value in renderer.items():
+        if re.sub(r"#_#\d+", "", key) == getter:
+            if expected_type is not None and not isinstance(value, expected_type):
+                continue
+            result.append(value)
+
+        if isinstance(value, dict):
+            for new_key, new_value in value.items():
+                if new_key in need_parse_next_renderer:
+                    new_key = f"{new_key}#_#{random.randint(10000, 9999999)}"
+                need_parse_next_renderer[new_key] = new_value
     depth -= 1
-    for value in need_parse_dict_list:
-        return __try_get_by_name(value, getter, result, depth, is_first=False)
-    else:
-        return result
+    return __try_get_by_name(need_parse_next_renderer, getter, result, depth=depth, is_first=False, expected_type=expected_type)
