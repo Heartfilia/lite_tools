@@ -102,6 +102,8 @@ def __handle_to_dict(data: dict, getter, expected_type):
     for key, value in data.items():
         if re.sub(r"#_#\d+", "", key) == getter:
             if expected_type is not None and not isinstance(value, expected_type):
+                if isinstance(value, dict):
+                    back_dict.update(__do_dict_sample(value))
                 continue
             back_result.append(value)
 
