@@ -78,13 +78,13 @@ def __try_get_by_name(renderer: dict, getter: str, expected_type, in_list, resul
     for key, value in renderer.items():
         if re.sub(r"#_#\d+", "", key) == getter:
             if expected_type is not None and not isinstance(value, expected_type):
+                if isinstance(value, dict):
+                    need_parse_next_renderer.update(__do_dict_sample(value))
                 continue
             result.append(value)
 
         if isinstance(value, dict):
-            for new_key, new_value in value.items():
-                new_key = f"{new_key}#_#{random.randint(100, 9999999)}"
-                need_parse_next_renderer[new_key] = new_value
+            need_parse_next_renderer.update(__do_dict_sample(value))
         if isinstance(value, list) and in_list is True:
             for item in value:
                 if isinstance(item, dict):
@@ -106,7 +106,13 @@ def __handle_to_dict(data: dict, getter, expected_type):
             back_result.append(value)
 
         if isinstance(value, dict):
-            for new_key, new_value in value.items():
-                new_key = f"{new_key}#_#{random.randint(100, 99999999)}"
-                back_dict[new_key] = new_value
+            back_dict.update(__do_dict_sample(value))
     return back_result, back_dict 
+
+
+def __do_dict_sample(data: dict):
+    back_dict = dict()
+    for new_key, new_value in data.items():
+        new_key = f"{new_key}#_#{random.randint(1, 9999999999)}"
+        back_dict[new_key] = new_value
+    return back_dict
