@@ -6,12 +6,13 @@ import random
 from loguru import logger
 
 
-def try_get(renderer: dict, getters, expected_type=None, log=False):
+def try_get(renderer: dict, getters, expected_type=None, default=None, log=False):
     """
     获取字典键值
     params renderer: 传入的需要解析的字典
     params getters : 获取途径 --> 示例: lambda x: x["detail"]["age"]  --> 取不到得到None  新增属性==>支持链式取值 如 a.b.c.d
     params expected_type: 期望获得的值类型 不是则为None  可多传如：  expected_type=(list, str)
+    params default: 默认的返回值, 默认返回None, 可以自定义返回值
     return : 如果取到则为值，否则为None
     """
     if isinstance(getters, str):
@@ -36,7 +37,7 @@ def try_get(renderer: dict, getters, expected_type=None, log=False):
             if log is True:
                 logger.error(f"try_get: {e} --line: {e.__traceback__.tb_lineno}")
     else:
-        return None
+        return default
 
 
 def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=None, log: bool = False, in_list: bool = False) -> list:
