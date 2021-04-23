@@ -6,7 +6,7 @@ import random
 from loguru import logger
 
 
-def try_get(renderer: dict, getters, expected_type=None, default=None, log=False):
+def try_get(renderer: dict, getters, default=None, expected_type=None, log=False):
     """
     获取字典键值
     params renderer: 传入的需要解析的字典
@@ -40,7 +40,7 @@ def try_get(renderer: dict, getters, expected_type=None, default=None, log=False
         return default
 
 
-def try_get_by_name(renderer: dict, getter: str, depth: int = 50, expected_type=None, log: bool = False, in_list: bool = False) -> list:
+def try_get_by_name(renderer: dict, getter: str, depth: int = 50, in_list: bool = False, expected_type=None, log: bool = False) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
