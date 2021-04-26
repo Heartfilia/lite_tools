@@ -20,7 +20,12 @@ from lite_tools import get_time, get_ua, get_navigator, try_get, try_get_by_name
 # about ua  ==> get_ua   //  get_navigator
 
 # print(get_ua())                            # Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2705.69 Safari/537.36
-# print(get_ua('linux', 'android', 'win'))   # Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2752.99 Safari/537.36
+# print(get_ua('linux', 'android', 'win', 'macos', 'ios'))   # 之前用的库比较老 现在手动添加了一些比较近一点的ua  
+# 上面那个可选参数如上面的扩号
+# 还有两个参数  pc  / mobile  对应了linux.macos.win / ios.android
+# print(get_ua('pc'))      # Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_0) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11
+# print(get_ua('mobile'))  # Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL Build/OPD1.170816.004) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Mobile Safari/537.36
+
 # print(get_navigator())
 # print(get_navigator('linux', 'android', 'win'))
 
@@ -91,7 +96,8 @@ test_json = {
 # print(try_get(test_json, 'x', default="hello"))    # hello ==> if not found 'x', then set default result
 # print(try_get_by_name(test_json, 'e', depth=10))                   # [-3, 3]       default depth = 50  this function return the list objection
 # print(try_get_by_name(test_json, 'e'))                             # [-3, 3, 10, {'yy': 'test', 'e': 'good_test'}, 'good_test']   default depth = 50
-# print(try_get_by_name(test_json, 'e', in_list=True))               # [-3, 3, 'newBee', 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 可以获取列表里面的字典的下面的值 默认不获取
+print(try_get_by_name(test_json, 'e', in_list=False))               # [-3, 3, 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 不获取列表下面的字典的参数
+print(try_get_by_name(test_json, 'e'))                   # [-3, 3, 'newBee', 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 可以获取列表里面的字典的下面的值 默认获取
 # print(try_get_by_name(test_json, 'e', expected_type=int))          # [-3, 3, 10]   default depth = 50
 # print(try_get_by_name(test_json, 'e', expected_type=(int, str)))   # [-3, 3, 10, 'good_test']   default depth = 50
 

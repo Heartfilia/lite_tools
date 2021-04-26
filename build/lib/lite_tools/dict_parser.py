@@ -40,7 +40,7 @@ def try_get(renderer: dict, getters, default=None, expected_type=None, log=False
         return default
 
 
-def try_get_by_name(renderer: dict, getter: str, depth: int = 50, in_list: bool = False, expected_type=None, log: bool = False) -> list:
+def try_get_by_name(renderer: dict, getter: str, depth: int = 50, in_list: bool = True, expected_type=None, log: bool = False) -> list:
     """
     通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
     :param renderer : 传入的字典
@@ -48,7 +48,7 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 50, in_list: bool 
     :param depth : 遍历深度,默认50层
     :param expected_type : 期望获得的值类型 不是则为None  可多传如：  expected_type=(list, str)
     :param log: 是否打印报错的提示日志 默认不打印
-    :param in_list: 如果结果在一个列表里面的`字典`里面是否获取 默认不获取 只判断列表里面的`字典`的值
+    :param in_list: 如果结果在一个列表里面的`字典`里面是否获取 默认获取 只判断列表里面的`字典`的值
     """
     try:
         result = __try_get_by_name(renderer=renderer, getter=getter, depth=depth, expected_type=expected_type, in_list=in_list)
