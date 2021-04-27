@@ -16,6 +16,7 @@ def try_get(renderer: dict, getters, default=None, expected_type=None, log=False
     return : 如果取到则为值，否则为None
     """
     if isinstance(getters, str):
+        getters = getters.strip('.|" "|\n|\r')  # 去掉首位特殊字符
         origin_getter = "_"
         if '.' in getters:
             getters = getters.split('.')

@@ -76,7 +76,7 @@ def _get_time_block(cursor):
     return tm_before
 
 
-def timer(fn):
+def timec(fn):  # time count
     @functools.wraps(fn)
     def inner(*args, **kwargs):
         t1 = time.time()

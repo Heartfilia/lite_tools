@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
-from lite_tools import get_time, get_ua, get_navigator, try_get, try_get_by_name, timer
+from lite_tools import get_time, get_ua, get_navigator, try_get, try_get_by_name, timec
 
 # about time  ==> get_time  timer
 
@@ -18,7 +18,7 @@ from lite_tools import get_time, get_ua, get_navigator, try_get, try_get_by_name
 # print(get_time(1617701814, fmt_str="%Y::%m::%d::%H~%M~%S"))    # 2021::04::06::17~36~54
 # timer 是一个装饰器 只用于统计被装饰的函数耗时 日志等级为 debug
 
-@timer
+@timec    # time count
 def run(name):
     time.sleep(0.2)
     print(f'hello {name} done')   # hello lite-tools done
