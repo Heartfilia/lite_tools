@@ -17,6 +17,8 @@ def get_ua(*args, **kwargs):
                 obj_list += ua_android
             if plt.lower() == 'macos':
                 obj_list += ua_macos
+            if plt.lower() == 'linux':
+                obj_list += ua_linux
             if plt.lower() == 'ios':
                 obj_list += ua_ios
             if plt.lower() == 'win':
