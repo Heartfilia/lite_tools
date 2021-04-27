@@ -8,12 +8,9 @@ from user_agent import generate_user_agent, generate_navigator, generate_navigat
 def get_ua(*args, **kwargs):
     obj_list = []
     if 'pc' in args or 'PC' in args:
-        obj_list += ua_win
-        obj_list += ua_macos
-        obj_list += ua_linux
+        obj_list = ua_pc
     elif 'mobile' in args or 'MOBILE' in args:
-        obj_list += ua_ios
-        obj_list += ua_android
+        obj_list = ua_mobile
     else:
         for plt in args:
             if plt.lower() == 'android':
@@ -27,6 +24,7 @@ def get_ua(*args, **kwargs):
         else:
             obj_list = ua_win
     random_ua = random.choice(obj_list)
+    del obj_list
     return random_ua
 
 
@@ -89,3 +87,6 @@ ua_macos = [
     'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Avant Browser)',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36'
 ]
+
+ua_pc = ua_win + ua_macos + ua_linux
+ua_mobile = ua_ios + ua_android
