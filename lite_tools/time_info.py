@@ -2,6 +2,7 @@
 # @Time   : 2021-04-06 15:27
 # @Author : Lodge
 import time
+import functools
 from loguru import logger
 
 
@@ -73,3 +74,13 @@ def _get_time_block(cursor):
     else:
         return "请输入正确的时间"
     return tm_before
+
+
+def timer(fn):
+    @functools.wraps(fn)
+    def inner(*args, **kwargs):
+        t1 = time.time()
+        bk = fn(*args, **kwargs)
+        logger.debug(f'>>> [{fn.__name__}] -- cost time:{time.time()-t1:.5f}')
+        return bk
+    return inner
