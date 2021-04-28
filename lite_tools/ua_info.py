@@ -23,7 +23,7 @@ def get_ua(*args, **kwargs):
                 obj_list += ua_ios
             if plt.lower() == 'win':
                 obj_list += ua_win
-        else:
+        if not obj_list:
             obj_list = ua_win
     random_ua = random.choice(obj_list)
     del obj_list
@@ -70,7 +70,6 @@ ua_win = [
     'Mozilla/5.0 (Windows NT 6.1; rv,2.0.1) Gecko/20100101 Firefox/4.0.1',
     'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0; SE 2.X MetaSr 1.0; SE 2.X MetaSr 1.0; .NET CLR 2.0.50727; SE 2.X MetaSr 1.0)',
     'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36',
-    ''
 ]
 
 ua_linux = [
