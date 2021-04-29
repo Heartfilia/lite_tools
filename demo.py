@@ -98,12 +98,12 @@ test_json = {
     "_a": -1
 }
 
-# print(try_get(test_json, 'a.d.e'))                 # 3   ==> support the Chain operation
-# print(try_get(test_json, lambda x: x['a']['b']))   # 1   ==> support the lambda operation
+# print(try_get(test_json, 'a.d.e'))                 # 3   ==> support the Chain operation  推荐这个写法 可以设置默认值 可以设置期望值类型
+# print(try_get(test_json, lambda x: x['a']['b']))   # 1   ==> support the lambda operation 
 # print(try_get(test_json, 'x'))                     # None  ==> not found      support `expected_type` too
-# print(try_get(test_json, 'x', default="hello"))    # hello ==> if not found 'x', then set default result
-# print(try_get_by_name(test_json, 'e', depth=10))                   # [-3, 3]       default depth = 50  this function return the list objection
-print(try_get_by_name(test_json, 'e', in_list=False))               # [-3, 3, 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 不获取列表下面的字典的参数
+# print(try_get(test_json, 'x', "hello"))            # hello ==> if not found 'x', then set default result
+# print(try_get_by_name(test_json, 'e', depth=10))       # [-3, 3]       default depth = 50  this function return the list objection
+print(try_get_by_name(test_json, 'e', in_list=False))    # [-3, 3, 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 不获取列表下面的字典的参数
 print(try_get_by_name(test_json, 'e'))                   # [-3, 3, 'newBee', 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 可以获取列表里面的字典的下面的值 默认获取
 # print(try_get_by_name(test_json, 'e', expected_type=int))          # [-3, 3, 10]   default depth = 50
 # print(try_get_by_name(test_json, 'e', expected_type=(int, str)))   # [-3, 3, 10, 'good_test']   default depth = 50
