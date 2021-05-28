@@ -2,20 +2,24 @@
 # @Time   : 2021-04-06 15:26
 # @Author : Lodge
 import re
+import json
 import random
-from sys import flags
 from loguru import logger
 
 
-def try_get(renderer: dict, getters, default=None, expected_type=None, log=False):
+def try_get(renderer, getters, default=None, expected_type=None, log=False):
     """
     获取字典键值
-    params renderer: 传入的需要解析的字典
-    params getters : 获取途径 --> 示例: lambda x: x["detail"]["age"]  --> 取不到得到None  新增属性==>支持链式取值 如 a.b.c.d
+    params renderer: 传入的需要解析的字典或者json串
+    params getters : 获取途径 --> 示例: lambda x: x["detail"]["age"]  --> 取不到得到None  新增属性==>支持链式取值 如 a.b.c.d 当然建议也是链式操作
     params expected_type: 期望获得的值类型 不是则为None  可多传如：  expected_type=(list, str)
     params default: 默认的返回值, 默认返回None, 可以自定义返回值
     return : 如果取到则为值，否则为None
     """
+    renderer = __judge_json(renderer)
+    if not renderer:
+        logger.error("这里需要传入字典或者json串 --> json格式化出错")
+        return expected_type
     if isinstance(getters, str):
         getters = getters.strip('.|" "|\n|\r')  # 去掉首位特殊字符
         origin_getter = "_"
@@ -42,10 +46,10 @@ def try_get(renderer: dict, getters, default=None, expected_type=None, log=False
         return default
 
 
-def try_get_by_name(renderer: dict, getter: str, depth: int = 50, in_list: bool = True, expected_type=None, filter: list = None, log: bool = False) -> list:
+def try_get_by_name(renderer, getter: str, filter: list = None, expected_type=None, depth: int = 50, in_list: bool = True, log: bool = False) -> list:
     """
-    通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
-    :param renderer : 传入的字典
+    通过名称获取字典里面的字符 这里做底层就是避免有的人乱调用 expected_type本身也是一种过滤器 和filter不建议共用 如果用了优先级高于filter
+    :param renderer : 传入的字典或者json串
     :param getter : 需要获取的键的名称
     :param depth : 遍历深度,默认50层
     :param expected_type : 期望获得的值类型 不是则为None  可多传如：  expected_type=(list, str)
@@ -53,9 +57,15 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 50, in_list: bool 
     :param in_list: 如果结果在一个列表里面的`字典`里面是否获取 默认获取 只判断列表里面的`字典`的值
     :param filter: 过滤器 -- 目前这个版本更新的是兄弟关系获取 如: [key=value]  key=value 键值关系 目前取值范围只有一个关系 兄弟关系 只会处理同一级字典内容的判断
                                                             示例: ["status>=200", "name='lodge'"]  表示获取的getter里面同一级关系为status>=200 和 name='lodge' 
+                    当前支持的条件: =/== 等于 < <= > >= 条件判断    A<-B 因为A只能为键所以这个: B in A   同理 A>-B : B not in A // 这个支持A的值是字符串或者可迭代对象 
+                    如: item[A] = str/tuple/dict/set  都可以用B来判断 B可以为字符串:判断item[A]的str结果是否包含B  B为数字或者字符串：判断item[A]的tuple/dict/set是否包含B 
     """
     try:
-        _ = __try_get_by_name(renderer=renderer, getter=getter, depth=depth, expected_type=expected_type, filter=filter, in_list=in_list)
+        renderer = __judge_json(renderer)
+        if not renderer:
+            logger.error("这里需要传入字典或者json串 --> json格式化出错")
+            return expected_type
+        _ = __try_get_by_name(renderer=renderer, getter=getter, depth=depth, expected_type=expected_type, filter=filter, in_list=in_list, log=log)
     except (AttributeError, KeyError, TypeError, IndexError) as e:
         if log is True:
             logger.error(f"try_get_by_name: {e} -- {type(e)} --line: {e.__traceback__.tb_lineno}")
@@ -64,9 +74,9 @@ def try_get_by_name(renderer: dict, getter: str, depth: int = 50, in_list: bool 
         return res.args[0] if res.args else []
 
 
-def __try_get_by_name(renderer: dict, getter: str, expected_type, in_list, result: list = None, filter=None, depth: int = 50, is_first=True) -> list:
+def __try_get_by_name(renderer: dict, getter: str, expected_type, in_list, result: list = None, filter=None, depth: int = 50, is_first=True, log=False) -> list:
     """
-    通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用
+    通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用  
     :param renderer : 传入的字典
     :param getter : 需要获取的键的名称
     :param result : 外面不需要传这个参数 这个作内部参数校验
@@ -87,7 +97,7 @@ def __try_get_by_name(renderer: dict, getter: str, expected_type, in_list, resul
                     need_parse_next_renderer.update(__do_dict_sample(value))
                 continue
             if filter is not None:
-                ok = __do_filter_func(filter, renderer)
+                ok = __do_filter_func(filter, renderer, log)
                 if ok:
                     result.append(value)
             else:
@@ -98,15 +108,15 @@ def __try_get_by_name(renderer: dict, getter: str, expected_type, in_list, resul
         if isinstance(value, list) and in_list is True:
             for item in value:
                 if isinstance(item, dict):
-                    res, need_dict = __handle_to_dict(item, getter, filter, expected_type)
+                    res, need_dict = __handle_to_dict(item, getter, filter, expected_type, log)
                     result += res
                     need_parse_next_renderer.update(need_dict)
 
     depth -= 1
-    return __try_get_by_name(need_parse_next_renderer, getter, expected_type, in_list, result, filter=filter, depth=depth, is_first=False)
+    return __try_get_by_name(need_parse_next_renderer, getter, expected_type, in_list, result, filter=filter, depth=depth, is_first=False, log=log)
 
 
-def __handle_to_dict(data: dict, getter, filter, expected_type):
+def __handle_to_dict(data: dict, getter, filter, expected_type, log):
     back_dict = dict()
     back_result = list()
     for key, value in data.items():
@@ -116,7 +126,7 @@ def __handle_to_dict(data: dict, getter, filter, expected_type):
                     back_dict.update(__do_dict_sample(value))
                 continue
             if filter is not None:
-                ok = __do_filter_func(filter, data)
+                ok = __do_filter_func(filter, data, log)
                 if ok:
                     back_result.append(value)
             else:
@@ -139,14 +149,20 @@ def __do_dict_sample(data: dict):
     return back_dict
 
 
-def __do_filter_func(filter, renderer):
+def __do_filter_func(filter, renderer, log=False):
     first = True    # 判断是否第一次给默认值
     ok = False
     for rule in filter:
         if first:
             ok = True
             first = False
-        flag = __handle_calculation(rule, renderer)
+        try:
+            flag = __handle_calculation(rule, renderer)
+        except Exception as err:
+            if log is True:
+                logger.error(f"类型错误 --> {err}")
+                exit(0)
+            return False
         if flag is True:
             ok = ok and True
         else:
@@ -160,37 +176,70 @@ def __handle_calculation(rule, renderer) -> bool:
     if "=" in rule:  
         filter_rule = rule.split('=')
         filter_key = str(filter_rule[0])
-        filter_value = filter_rule[1]
-        if renderer[filter_key] == eval(filter_value):
+        filter_value = eval(filter_rule[1])
+        if filter_key in renderer and renderer[filter_key] == filter_value:
+            return True
+    elif "<-" in rule:
+        filter_rule = rule.split('<-')
+        filter_key = str(filter_rule[0])
+        filter_value = eval(filter_rule[1])
+        if filter_key in renderer and isinstance(filter_value, str) and \
+            isinstance(renderer[filter_key], (str, list, tuple, set, frozenset)) and filter_value in renderer[filter_key]:
+            return True
+        elif filter_key in renderer and isinstance(filter_value, int) and \
+            isinstance(renderer[filter_key], (list, tuple, set, frozenset)) and filter_value in renderer[filter_key]:
+            return True
+    elif ">-" in rule:
+        filter_rule = rule.split('>-')
+        filter_key = str(filter_rule[0])
+        filter_value = eval(filter_rule[1])
+        if filter_key in renderer and isinstance(filter_value, str) and \
+            isinstance(renderer[filter_key], (str, list, tuple, set, frozenset)) and filter_value not in renderer[filter_key]:
+            return True
+        elif filter_key in renderer and isinstance(filter_value, int) and \
+            isinstance(renderer[filter_key], (list, tuple, set, frozenset)) and filter_value not in renderer[filter_key]:
             return True
     elif ">" in rule:
         filter_rule = rule.split('>')
         filter_key = str(filter_rule[0])
-        filter_value = filter_rule[1]
-        if renderer[filter_key] > eval(filter_value):
+        filter_value = eval(filter_rule[1])
+        if filter_key in renderer and renderer[filter_key] > filter_value:
             return True
     elif ">=" in rule:
         filter_rule = rule.split('>=')
         filter_key = str(filter_rule[0])
-        filter_value = filter_rule[1]
-        if renderer[filter_key] >= eval(filter_value):
+        filter_value = eval(filter_rule[1])
+        if filter_key in renderer and renderer[filter_key] >= filter_value:
             return True
     elif "<" in rule:
         filter_rule = rule.split('<')
         filter_key = str(filter_rule[0])
-        filter_value = filter_rule[1]
-        if renderer[filter_key] < eval(filter_value):
+        filter_value = eval(filter_rule[1])
+        if filter_key in renderer and renderer[filter_key] < filter_value:
             return True
     elif "<=" in rule:
         filter_rule = rule.split('<=')
         filter_key = str(filter_rule[0])
-        filter_value = filter_rule[1]
-        if renderer[filter_key] <= eval(filter_value):
+        filter_value = eval(filter_rule[1])
+        if filter_key in renderer and renderer[filter_key] <= filter_value:
             return True
     elif "!=" in rule:
         filter_rule = rule.split('!=')
         filter_key = str(filter_rule[0])
-        filter_value = filter_rule[1]
-        if renderer[filter_key] != eval(filter_value):
+        filter_value = eval(filter_rule[1])
+        if filter_key in renderer and renderer[filter_key] != filter_value:
             return True
+    
     return False
+
+
+def __judge_json(renderer):
+    if isinstance(renderer, dict):
+        return renderer
+    elif isinstance(renderer, str):
+        try:
+            data = json.loads(renderer)
+        except json.decoder.JSONDecodeError:
+            return None
+        else:
+            return data
