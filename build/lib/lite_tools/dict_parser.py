@@ -170,66 +170,26 @@ def __do_filter_func(filter, renderer, log=False):
     return ok
 
 
-def __handle_calculation(rule, renderer) -> bool:
+def __handle_calculation(rule, renderer: dict) -> bool:
     if '==' in rule:
         rule.replace('==', '=')
-    if "=" in rule:  
-        filter_rule = rule.split('=')
-        filter_key = str(filter_rule[0])
-        filter_value = eval(filter_rule[1])
-        if filter_key in renderer and renderer[filter_key] == filter_value:
-            return True
+    if "!=" in rule:
+        return __do_not_equal(rule, renderer)
+    elif "=" in rule:  
+        return __do_equal(rule, renderer)
     elif "<-" in rule:
-        filter_rule = rule.split('<-')
-        filter_key = str(filter_rule[0])
-        filter_value = eval(filter_rule[1])
-        if filter_key in renderer and isinstance(filter_value, str) and \
-            isinstance(renderer[filter_key], (str, list, tuple, set, frozenset)) and filter_value in renderer[filter_key]:
-            return True
-        elif filter_key in renderer and isinstance(filter_value, int) and \
-            isinstance(renderer[filter_key], (list, tuple, set, frozenset)) and filter_value in renderer[filter_key]:
-            return True
+        return __do_in(rule, renderer)
     elif ">-" in rule:
-        filter_rule = rule.split('>-')
-        filter_key = str(filter_rule[0])
-        filter_value = eval(filter_rule[1])
-        if filter_key in renderer and isinstance(filter_value, str) and \
-            isinstance(renderer[filter_key], (str, list, tuple, set, frozenset)) and filter_value not in renderer[filter_key]:
-            return True
-        elif filter_key in renderer and isinstance(filter_value, int) and \
-            isinstance(renderer[filter_key], (list, tuple, set, frozenset)) and filter_value not in renderer[filter_key]:
-            return True
-    elif ">" in rule:
-        filter_rule = rule.split('>')
-        filter_key = str(filter_rule[0])
-        filter_value = eval(filter_rule[1])
-        if filter_key in renderer and renderer[filter_key] > filter_value:
-            return True
-    elif ">=" in rule:
-        filter_rule = rule.split('>=')
-        filter_key = str(filter_rule[0])
-        filter_value = eval(filter_rule[1])
-        if filter_key in renderer and renderer[filter_key] >= filter_value:
-            return True
-    elif "<" in rule:
-        filter_rule = rule.split('<')
-        filter_key = str(filter_rule[0])
-        filter_value = eval(filter_rule[1])
-        if filter_key in renderer and renderer[filter_key] < filter_value:
-            return True
+        return __do_not_in(rule, renderer)
     elif "<=" in rule:
-        filter_rule = rule.split('<=')
-        filter_key = str(filter_rule[0])
-        filter_value = eval(filter_rule[1])
-        if filter_key in renderer and renderer[filter_key] <= filter_value:
-            return True
-    elif "!=" in rule:
-        filter_rule = rule.split('!=')
-        filter_key = str(filter_rule[0])
-        filter_value = eval(filter_rule[1])
-        if filter_key in renderer and renderer[filter_key] != filter_value:
-            return True
-    
+        return __do_less_than_equal(rule, renderer)
+    elif ">=" in rule:
+        return __do_more_than_equal(rule, renderer)
+    elif ">" in rule:
+        return __do_more_than(rule, renderer)
+    elif "<" in rule:
+        return __do_less_than(rule, renderer)
+
     return False
 
 
@@ -243,3 +203,82 @@ def __judge_json(renderer):
             return None
         else:
             return data
+
+
+def __do_not_equal(rule, renderer):
+    filter_rule = rule.split('!=')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1])
+    if filter_key in renderer and renderer[filter_key] != filter_value:
+        return True
+    return False
+
+
+def __do_equal(rule, renderer):
+    filter_rule = rule.split('=')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1])
+    if filter_key in renderer and renderer[filter_key] == filter_value:
+        return True
+    return False
+
+
+def __do_in(rule, renderer):
+    filter_rule = rule.split('<-')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1])
+    if filter_key in renderer and isinstance(filter_value, str) and \
+        isinstance(renderer[filter_key], (str, list, tuple, set, frozenset)) and filter_value in renderer[filter_key]:
+        return True
+    elif filter_key in renderer and isinstance(filter_value, int) and \
+        isinstance(renderer[filter_key], (list, tuple, set, frozenset)) and filter_value in renderer[filter_key]:
+        return True
+    return False
+
+
+def __do_not_in(rule, renderer):
+    filter_rule = rule.split('>-')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1])
+    if filter_key in renderer and isinstance(filter_value, str) and \
+        isinstance(renderer[filter_key], (str, list, tuple, set, frozenset)) and filter_value not in renderer[filter_key]:
+        return True
+    elif filter_key in renderer and isinstance(filter_value, int) and \
+        isinstance(renderer[filter_key], (list, tuple, set, frozenset)) and filter_value not in renderer[filter_key]:
+        return True
+    return False
+
+
+def __do_less_than_equal(rule, renderer):
+    filter_rule = rule.split('<=')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1])
+    if filter_key in renderer and renderer[filter_key] <= filter_value:
+        return True
+    return False
+
+
+def __do_more_than_equal(rule, renderer):
+    filter_rule = rule.split('>=')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1])
+    if filter_key in renderer and renderer[filter_key] >= filter_value:
+        return True
+    return False
+
+
+def __do_more_than(rule, renderer):
+    filter_rule = rule.split('>')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1])
+    if filter_key in renderer and renderer[filter_key] > filter_value:
+        return True
+    return False
+
+def __do_less_than(rule, renderer):
+    filter_rule = rule.split('<')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1])
+    if filter_key in renderer and renderer[filter_key] < filter_value:
+        return True
+    return False
