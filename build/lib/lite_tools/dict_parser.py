@@ -117,6 +117,7 @@ def __try_get_by_name(renderer: dict, getter: str, expected_type, in_list, resul
 
 
 def __handle_to_dict(data: dict, getter, filter, expected_type, log):
+    """就是判断字典里面值是否一样"""
     back_dict = dict()
     back_result = list()
     for key, value in data.items():
@@ -136,20 +137,22 @@ def __handle_to_dict(data: dict, getter, filter, expected_type, log):
             back_dict.update(__do_dict_sample(value))
         
         if isinstance(value, list):
-            back_dict.update({f"need_parse_next#_#{random.randint(1, 9999999999)}": value})
+            back_dict.update({f"need_parse_next#_#{random.randint(1, 999999999999)}": value})
         
     return back_result, back_dict 
 
 
 def __do_dict_sample(data: dict):
+    """这个操作是为了让字典扁平化的时候 避免外层和内层名称相同  上面处理了这个的操作意思是一样"""
     back_dict = dict()
     for new_key, new_value in data.items():
-        new_key = f"{new_key}#_#{random.randint(1, 9999999999)}"
+        new_key = f"{new_key}#_#{random.randint(1, 999999999999)}"
         back_dict[new_key] = new_value
     return back_dict
 
 
 def __do_filter_func(filter, renderer, log=False):
+    """这里是过滤器主逻辑控制的地方"""
     first = True    # 判断是否第一次给默认值
     ok = False
     for rule in filter:
@@ -171,16 +174,21 @@ def __do_filter_func(filter, renderer, log=False):
 
 
 def __handle_calculation(rule, renderer: dict) -> bool:
+    """处理各种逻辑判断的"""
     if '==' in rule:
-        rule.replace('==', '=')
+        rule.replace('==', '=')  # 避免有的人写了==来判断
     if "!=" in rule:
         return __do_not_equal(rule, renderer)
     elif "=" in rule:  
         return __do_equal(rule, renderer)
-    elif "<-" in rule:
+    elif "<-" in rule:   # 这个是 key value  ==>  value 在 key的值中
         return __do_in(rule, renderer)
-    elif ">-" in rule:
+    elif "->" in rule:   # 这个是 key value  ==>  key的值 在value中 这个只支持value是 list、tuple、set、frozenset
+        return __do_in_re(rule, renderer)
+    elif ">-" in rule:   # 这个是 key value  ==>  value 不在 key的值中
         return __do_not_in(rule, renderer)
+    elif "-<" in rule:   # 这个是 key value  ==>  key的值 不在value中 这个只支持value是 list、tuple、set、frozenset
+        return __do_not_in_re(rule, renderer) 
     elif "<=" in rule:
         return __do_less_than_equal(rule, renderer)
     elif ">=" in rule:
@@ -194,6 +202,7 @@ def __handle_calculation(rule, renderer: dict) -> bool:
 
 
 def __judge_json(renderer):
+    """判断传入进来的是json串还是字典 自动处理成字典"""
     if isinstance(renderer, dict):
         return renderer
     elif isinstance(renderer, str):
@@ -205,11 +214,20 @@ def __judge_json(renderer):
             return data
 
 
+def __get_dict_data(renderer: dict, filter_key):
+    """这里第一个返回值是判断键是否在字典里面 第二个是返回结果 --> 这里是处理扁平化后的结果"""
+    for key, value in renderer.items():
+        if re.sub(r"#_#\d+", "", key) == filter_key:
+            return True, value
+    return False, None
+
+
 def __do_not_equal(rule, renderer):
     filter_rule = rule.split('!=')
     filter_key = str(filter_rule[0])
-    filter_value = eval(filter_rule[1])
-    if filter_key in renderer and renderer[filter_key] != filter_value:
+    filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))  # eval在json串中会报错的地方的处理
+    flag, result = __get_dict_data(renderer, filter_key)
+    if flag and result != filter_value:
         return True
     return False
 
@@ -217,43 +235,75 @@ def __do_not_equal(rule, renderer):
 def __do_equal(rule, renderer):
     filter_rule = rule.split('=')
     filter_key = str(filter_rule[0])
-    filter_value = eval(filter_rule[1])
-    if filter_key in renderer and renderer[filter_key] == filter_value:
+    filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
+    flag, result = __get_dict_data(renderer, filter_key)
+    if flag and result == filter_value:
         return True
     return False
 
 
 def __do_in(rule, renderer):
+    # 这个过滤结果 --> 在键的 值 中
     filter_rule = rule.split('<-')
     filter_key = str(filter_rule[0])
-    filter_value = eval(filter_rule[1])
-    if filter_key in renderer and isinstance(filter_value, str) and \
-        isinstance(renderer[filter_key], (str, list, tuple, set, frozenset)) and filter_value in renderer[filter_key]:
+    filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
+    flag, result = __get_dict_data(renderer, filter_key)   # result == renderer[filter_key] 这个
+    if flag and isinstance(filter_value, str) and \
+        isinstance(result, (str, list, tuple, set, frozenset)) and filter_value in result:
         return True
-    elif filter_key in renderer and isinstance(filter_value, int) and \
-        isinstance(renderer[filter_key], (list, tuple, set, frozenset)) and filter_value in renderer[filter_key]:
+    elif flag and isinstance(filter_value, (int, float)) and \
+        isinstance(result, (list, tuple, set, frozenset)) and filter_value in result:
         return True
+    return False
+
+
+def __do_in_re(rule, renderer):
+    # 这个是键的值 在 过滤条件中
+    filter_rule = rule.split('->')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
+    if isinstance(filter_value, (list, tuple, set, frozenset)):
+        flag, result = __get_dict_data(renderer, filter_key)
+        if flag and result is None and result in filter_value:
+            return True
+        elif flag and isinstance(result, (bool, str, int, float)) and result in filter_value:
+            return True
     return False
 
 
 def __do_not_in(rule, renderer):
     filter_rule = rule.split('>-')
     filter_key = str(filter_rule[0])
-    filter_value = eval(filter_rule[1])
-    if filter_key in renderer and isinstance(filter_value, str) and \
-        isinstance(renderer[filter_key], (str, list, tuple, set, frozenset)) and filter_value not in renderer[filter_key]:
+    filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
+    flag, result = __get_dict_data(renderer, filter_key)
+    if flag and isinstance(filter_value, str) and \
+        isinstance(result, (str, list, tuple, set, frozenset)) and filter_value not in result:
         return True
-    elif filter_key in renderer and isinstance(filter_value, int) and \
-        isinstance(renderer[filter_key], (list, tuple, set, frozenset)) and filter_value not in renderer[filter_key]:
+    elif flag and isinstance(filter_value, (int, float)) and \
+        isinstance(result, (list, tuple, set, frozenset)) and filter_value not in result:
         return True
     return False
 
+
+def __do_not_in_re(rule, renderer):
+    # 这个是键的值 在 过滤条件中
+    filter_rule = rule.split('-<')
+    filter_key = str(filter_rule[0])
+    filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
+    if isinstance(filter_value, (list, tuple, set, frozenset)):
+        flag, result = __get_dict_data(renderer, filter_key)
+        if flag and result is None and result not in filter_value:
+            return True
+        elif flag and isinstance(result, (bool, str, int, float)) and result not in filter_value:
+            return True
+    return False
 
 def __do_less_than_equal(rule, renderer):
     filter_rule = rule.split('<=')
     filter_key = str(filter_rule[0])
     filter_value = eval(filter_rule[1])
-    if filter_key in renderer and renderer[filter_key] <= filter_value:
+    flag, result = __get_dict_data(renderer, filter_key)
+    if flag and isinstance(filter_value, (int, float)) and result <= filter_value:
         return True
     return False
 
@@ -262,7 +312,8 @@ def __do_more_than_equal(rule, renderer):
     filter_rule = rule.split('>=')
     filter_key = str(filter_rule[0])
     filter_value = eval(filter_rule[1])
-    if filter_key in renderer and renderer[filter_key] >= filter_value:
+    flag, result = __get_dict_data(renderer, filter_key)
+    if flag and isinstance(filter_value, (int, float)) and result >= filter_value:
         return True
     return False
 
@@ -271,14 +322,17 @@ def __do_more_than(rule, renderer):
     filter_rule = rule.split('>')
     filter_key = str(filter_rule[0])
     filter_value = eval(filter_rule[1])
-    if filter_key in renderer and renderer[filter_key] > filter_value:
+    flag, result = __get_dict_data(renderer, filter_key)
+    if flag and isinstance(filter_value, (int, float)) and result > filter_value:
         return True
     return False
+
 
 def __do_less_than(rule, renderer):
     filter_rule = rule.split('<')
     filter_key = str(filter_rule[0])
     filter_value = eval(filter_rule[1])
-    if filter_key in renderer and renderer[filter_key] < filter_value:
+    flag, result = __get_dict_data(renderer, filter_key)
+    if flag and isinstance(filter_value, (int, float)) and result < filter_value:
         return True
     return False

@@ -1,55 +1,11 @@
 Metadata-Version: 2.1
 Name: lite-tools
-Version: 0.4.5.4
+Version: 0.4.5.6
 Summary: 一些python小工具||some little tools
 Home-page: https://github.com/Heartfilia/lite_tools
 Author: Lodge
 Author-email: lodgeheartfilia@163.com
 License: MIT
-Description: # lite_tools
-        ```
-        python version:
-        	3.6+   // 因为使用了f_string
-        requirements :
-        	loguru
-        	user_agent
-        ```
-        
-        ### install
-        
-        ```bash
-        python setup.py install
-        
-        # or   # then chose one version 选择是需要whl还是tar.gz的安装包
-        cd dist
-        pip install xxxxx
-        
-        # or  # 可以直接通过pip安装 国内镜像可能会版本更新不及时 用国内镜像也可以
-        pip install lite-tools 
-        ```
-        
-        
-        
-        ### Interface
-        
-        ```python
-        get_time()         # 时间操作 示例见demo.py
-        get_ua()           # 获取随机ua 
-        get_navigator()    # 获取随机浏览器信息
-        try_get()          # 获取字典里面的键的值 返回一个结果 没有返回None // 没有获取到期望类型也是None
-        try_get_by_name()  # 获取字典里面的键的值 返回一个列表 没有返回空列表 // 没有获取到期望类型也是空列表 本次更新主要修复这里的bug
-        get_md5()          # 用md5加密 直接传入字符串就可以了 默认输出十六进制、可选二进制 也可选择输出大写
-        get_sha()          # 用sha加密 默认mode=256 可以选择其它加密模式
-        get_sha3()         # 用sha3加密 默认mode=256
-        get_b64e()         # 用baseXX加密 默认mode=64 可以输出字节串
-        get_b64d()         # 用baseXX解密 默认mode=64
-        
-        # Example in 'demo.py'  ||  示例见demo.py
-        ```
-        
-        
-        
-        see `demo.py`
 Platform: UNKNOWN
 Classifier: Intended Audience :: Developers
 Classifier: Operating System :: OS Independent
@@ -59,3 +15,50 @@ Classifier: Programming Language :: Python :: 3.7
 Classifier: Programming Language :: Python :: 3.8
 Classifier: Programming Language :: Python :: 3.9
 Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# lite_tools
+```
+python version:
+	3.6+   // 因为使用了f_string
+requirements :
+	loguru
+	user_agent
+```
+
+### install
+
+```bash
+python setup.py install
+
+# or   # then chose one version 选择是需要whl还是tar.gz的安装包
+cd dist
+pip install xxxxx
+
+# or  # 可以直接通过pip安装 国内镜像可能会版本更新不及时 用国内镜像也可以
+pip install lite-tools 
+```
+
+
+
+### Interface
+
+```python
+get_time()         # 时间操作 示例见demo.py
+get_ua()           # 获取随机ua 
+get_navigator()    # 获取随机浏览器信息
+try_get()          # 获取字典里面的键的值 返回一个结果 没有返回None // 没有获取到期望类型也是None
+try_get_by_name()  # 获取字典里面的键的值 返回一个列表 没有返回空列表 // 没有获取到期望类型也是空列表 本次更新主要修复这里的bug
+get_md5()          # 用md5加密 直接传入字符串就可以了 默认输出十六进制、可选二进制 也可选择输出大写
+get_sha()          # 用sha加密 默认mode=256 可以选择其它加密模式
+get_sha3()         # 用sha3加密 默认mode=256
+get_b64e()         # 用baseXX加密 默认mode=64 可以输出字节串
+get_b64d()         # 用baseXX解密 默认mode=64
+
+# Example in 'demo.py'  ||  示例见demo.py
+```
+
+
+
+see `demo.py`
+
