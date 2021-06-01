@@ -2,7 +2,6 @@
 # @Time   : 2021-04-06 15:28
 # @Author : Lodge
 import random
-from user_agent import generate_user_agent, generate_navigator, generate_navigator_js
 
 
 def get_ua(*args, **kwargs):
@@ -35,17 +34,6 @@ def get_ua(*args, **kwargs):
     return random_ua
 
 
-def get_navigator(*args, **kwargs):
-    if not args:
-        args = 'win'
-    navigator = kwargs.get('navigator')
-    platform = kwargs.get('platform')
-    device_type = kwargs.get('device_type')
-    if kwargs.get('js') is True:
-        return generate_navigator_js(os=args, navigator=navigator, platform=platform, device_type=device_type)
-    return generate_navigator(os=args, navigator=navigator, platform=platform, device_type=device_type)
-
-
 ua_android = [
     'Mozilla/5.0 (Linux; Android 6.0.1; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Mobile Safari/537.36',
     'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Mobile Safari/537.36',
@@ -54,7 +42,6 @@ ua_android = [
     'Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Mobile Safari/537.36',
     'Mozilla/5.0 (Linux; Android 6.0.1; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Mobile Safari/537.36 Edg/90.0.818.46',
     'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Mobile Safari/537.36 Edg/90.0.818.46',
-    'Mozilla/5.0 (hp-tablet; Linux; hpwOS/3.0.0; U; en-US) AppleWebKit/534.6 (KHTML, like Gecko) wOSBrowser/233.70 Safari/534.6 TouchPad/1.0'
 ]
 
 ua_ios = [

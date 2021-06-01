@@ -18,10 +18,10 @@ def try_get(renderer, getters, default=None, expected_type=None, log=False):
     """
     renderer = __judge_json(renderer)
     if not renderer:
-        logger.error("这里需要传入字典或者json串 --> json格式化出错")
+        logger.error(f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
         return expected_type
     if isinstance(getters, str):
-        getters = getters.strip('.|" "|\n|\r')  # 去掉首位特殊字符
+        getters = getters.strip('.|" "|\n|\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
         origin_getter = "_"
         if '.' in getters:
             getters = getters.split('.')
@@ -57,13 +57,13 @@ def try_get_by_name(renderer, getter: str, filter: list = None, expected_type=No
     :param in_list: 如果结果在一个列表里面的`字典`里面是否获取 默认获取 只判断列表里面的`字典`的值
     :param filter: 过滤器 -- 目前这个版本更新的是兄弟关系获取 如: [key=value]  key=value 键值关系 目前取值范围只有一个关系 兄弟关系 只会处理同一级字典内容的判断
                                                             示例: ["status>=200", "name='lodge'"]  表示获取的getter里面同一级关系为status>=200 和 name='lodge' 
-                    当前支持的条件: =/== 等于 < <= > >= 条件判断    A<-B 因为A只能为键所以这个: B in A   同理 A>-B : B not in A // 这个支持A的值是字符串或者可迭代对象 
+                    当前支持的条件: =/== 等于 < <= > >= 条件判断    A<#B 因为A只能为键所以这个: B in A   同理 A>#B : B not in A // 这个支持A的值是字符串或者可迭代对象 
                     如: item[A] = str/tuple/dict/set  都可以用B来判断 B可以为字符串:判断item[A]的str结果是否包含B  B为数字或者字符串：判断item[A]的tuple/dict/set是否包含B 
     """
     try:
         renderer = __judge_json(renderer)
         if not renderer:
-            logger.error("这里需要传入字典或者json串 --> json格式化出错")
+            logger.error(f"这里需要传入字典或者json串 --> 调用出错->[{getter}]")
             return expected_type
         _ = __try_get_by_name(renderer=renderer, getter=getter, depth=depth, expected_type=expected_type, filter=filter, in_list=in_list, log=log)
     except (AttributeError, KeyError, TypeError, IndexError) as e:
@@ -174,25 +174,25 @@ def __do_filter_func(filter, renderer, log=False):
 
 
 def __handle_calculation(rule, renderer: dict) -> bool:
-    """处理各种逻辑判断的"""
+    """处理各种逻辑判断的  之前用的<-  -> 这种样式 发现<> 右边的 - 很容易和数字发生问题 现在改成#"""
     if '==' in rule:
         rule.replace('==', '=')  # 避免有的人写了==来判断
     if "!=" in rule:
         return __do_not_equal(rule, renderer)
-    elif "=" in rule:  
-        return __do_equal(rule, renderer)
-    elif "<-" in rule:   # 这个是 key value  ==>  value 在 key的值中
+    elif "<#" in rule:   # 这个是 key value  ==>  value 在 key的值中
         return __do_in(rule, renderer)
-    elif "->" in rule:   # 这个是 key value  ==>  key的值 在value中 这个只支持value是 list、tuple、set、frozenset
+    elif "#>" in rule:   # 这个是 key value  ==>  key的值 在value中 这个只支持value是 list、tuple、set、frozenset
         return __do_in_re(rule, renderer)
-    elif ">-" in rule:   # 这个是 key value  ==>  value 不在 key的值中
+    elif ">#" in rule:   # 这个是 key value  ==>  value 不在 key的值中
         return __do_not_in(rule, renderer)
-    elif "-<" in rule:   # 这个是 key value  ==>  key的值 不在value中 这个只支持value是 list、tuple、set、frozenset
+    elif "#<" in rule:   # 这个是 key value  ==>  key的值 不在value中 这个只支持value是 list、tuple、set、frozenset
         return __do_not_in_re(rule, renderer) 
     elif "<=" in rule:
         return __do_less_than_equal(rule, renderer)
     elif ">=" in rule:
         return __do_more_than_equal(rule, renderer)
+    elif "=" in rule:  
+        return __do_equal(rule, renderer)
     elif ">" in rule:
         return __do_more_than(rule, renderer)
     elif "<" in rule:
@@ -244,7 +244,7 @@ def __do_equal(rule, renderer):
 
 def __do_in(rule, renderer):
     # 这个过滤结果 --> 在键的 值 中
-    filter_rule = rule.split('<-')
+    filter_rule = rule.split('<#')
     filter_key = str(filter_rule[0])
     filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
     flag, result = __get_dict_data(renderer, filter_key)   # result == renderer[filter_key] 这个
@@ -259,7 +259,7 @@ def __do_in(rule, renderer):
 
 def __do_in_re(rule, renderer):
     # 这个是键的值 在 过滤条件中
-    filter_rule = rule.split('->')
+    filter_rule = rule.split('#>')
     filter_key = str(filter_rule[0])
     filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
     if isinstance(filter_value, (list, tuple, set, frozenset)):
@@ -272,7 +272,7 @@ def __do_in_re(rule, renderer):
 
 
 def __do_not_in(rule, renderer):
-    filter_rule = rule.split('>-')
+    filter_rule = rule.split('>#')
     filter_key = str(filter_rule[0])
     filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
     flag, result = __get_dict_data(renderer, filter_key)
@@ -287,7 +287,7 @@ def __do_not_in(rule, renderer):
 
 def __do_not_in_re(rule, renderer):
     # 这个是键的值 在 过滤条件中
-    filter_rule = rule.split('-<')
+    filter_rule = rule.split('#<')
     filter_key = str(filter_rule[0])
     filter_value = eval(filter_rule[1].replace('true', "True").replace('false', 'False').replace('null', "None"))
     if isinstance(filter_value, (list, tuple, set, frozenset)):
