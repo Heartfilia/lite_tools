@@ -7,11 +7,11 @@ from hashlib import (
 )
 
 
-def get_md5(s: str, upper: bool = False, encoding='utf-8', to_bin: bool = False) -> str:
+def get_md5(s: str, up: bool = False, encoding='utf-8', to_bin: bool = False) -> str:
     """
     利用md5加密内容
     :param s: 加密前字符串
-    :param upper: 是否返回大写的字符串 默认 False --> 返回小写
+    :param up: 是否返回大写的字符串 默认 False --> 返回小写
     :param encoding: 字符串的编码方式 默认 utf-8
     :param to_bin: 是否返回二进制串   默认 False --> 返回十六进制
     :return: 加密后字符串
@@ -23,7 +23,7 @@ def get_md5(s: str, upper: bool = False, encoding='utf-8', to_bin: bool = False)
             result = md5_obj.digest()
         else:
             result = md5_obj.hexdigest()
-        if upper is True:
+        if up is True:
             result = result.upper()
         return result
     except Exception as e:
