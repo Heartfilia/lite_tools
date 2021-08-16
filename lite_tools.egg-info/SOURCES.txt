@@ -7,6 +7,7 @@ lite_tools/file_trans.py
 lite_tools/lib_base64.py
 lite_tools/lib_hashlib.py
 lite_tools/time_info.py
+lite_tools/try_decorater.py
 lite_tools/ua_info.py
 lite_tools.egg-info/PKG-INFO
 lite_tools.egg-info/SOURCES.txt
