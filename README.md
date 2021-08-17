@@ -39,13 +39,11 @@ get_b64e()         # 用baseXX加密 默认mode=64 可以输出字节串
 get_b64d()         # 用baseXX解密 默认mode=64
 
 # ==================================
-# 新增两个异常捕获装饰器
-try_catch
-try_catch(log=False)
+# 新增异常捕获装饰器 同时支持异步函数的捕获
+try_catch    # 普通的捕获 输出为单条记录
+try_catch(log=False)   # 普通捕获 不输出任何异常报错
+try_catch(catch=True)  # 栈捕获   可以输出详细的报错栈信息
 
-async_try_catch     
-# 这个暂时不对外使用 还需要调整一下 如果要测试 可以用 
-from lite_tools.try_decorater import async_try_catch
 
 # Example in 'demo.py'  ||  示例见demo.py
 ```
