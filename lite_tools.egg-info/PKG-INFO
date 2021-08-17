@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: lite-tools
-Version: 0.4.6.2
+Version: 0.4.6.4
 Summary: 一些python小工具||some little tools
 Home-page: https://github.com/Heartfilia/lite_tools
 Author: Lodge
@@ -50,7 +50,11 @@ Description: # lite_tools
         # 新增两个异常捕获装饰器
         try_catch
         try_catch(log=False)
-        async_try_catch              
+        
+        async_try_catch     
+        # 这个暂时不对外使用 还需要调整一下 如果要测试 可以用 
+        from lite_tools.try_decorater import async_try_catch
+        
         # Example in 'demo.py'  ||  示例见demo.py
         ```
         

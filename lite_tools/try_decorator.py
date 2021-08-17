@@ -22,7 +22,7 @@ def async_try_catch(func):
     return wrapper
 
 
-def try_catch(func=None, *, log=True):
+def try_catch(func=None, *, log=True, catch=False):
     """
     捕获异常的 默认是会打印日志
     使用方式如下
@@ -31,9 +31,12 @@ def try_catch(func=None, *, log=True):
 
     @try_catch(log=False)
     def test(): ...
+
+    @try_catch(catch=True)
+    def test(): ...
     """
     if func is None:
-        return partial(try_catch, log=log)
+        return partial(try_catch, log=log, catch=catch)
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -48,5 +51,8 @@ def try_catch(func=None, *, log=True):
                         line = "".join(re.findall(r'line (\d+)', item))
                         fl = ''.join(re.findall(r'File "(.*)"', item))
                         break
-                logger.error(f"[{func.__name__}] lineo.{line} -> {fl} - {results[-2]}: {results[-3].strip()}")
+                if catch is True:
+                    logger.opt(exception=True, colors=True, capture=True).error("Error Informations: ↓↓↓")
+                else:
+                    logger.error(f"[{func.__name__}] lineo.{line} -> {fl} - {results[-2]}: {results[-3].strip()}")
     return wrapper
