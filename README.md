@@ -41,8 +41,11 @@ get_b64d()         # 用baseXX解密 默认mode=64
 # ==================================
 # 新增异常捕获装饰器 同时支持异步函数的捕获
 try_catch    # 普通的捕获 输出为单条记录
-try_catch(log=False)   # 普通捕获 不输出任何异常报错
-try_catch(catch=True)  # 栈捕获   可以输出详细的报错栈信息
+
+# 下面扩号里面得参数可以混用 不过日志等级log>catch 如果设置了log=False那么catch不起作用
+try_catch(log=False)   # 普通捕获 不输出任何异常报错 默认是True
+try_catch(catch=True)  # 栈捕获   可以输出详细的报错栈信息 默认是False
+try_catch(default="xxx")   # 可以给定默认获取了异常后返回得默认值 默认返回None
 
 
 # Example in 'demo.py'  ||  示例见demo.py

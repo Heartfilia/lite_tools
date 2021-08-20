@@ -1,6 +1,4 @@
 import re
-import asyncio
-import warnings
 import traceback
 from functools import wraps, partial
 from asyncio import iscoroutinefunction
@@ -8,12 +6,9 @@ from asyncio import iscoroutinefunction
 from loguru import logger
 
 
-warnings.filterwarnings('ignore', category=RuntimeWarning)
-
-
-def try_catch(func=None, *, log=True, catch=False):
+def try_catch(func=None, *, default=None, log=True, catch=False):
     if func is None:
-        return partial(try_catch, log=log, catch=catch)
+        return partial(try_catch, default=default, log=log, catch=catch)
 
     def __judge__iscoroutine(function):
         try:
@@ -44,6 +39,7 @@ def try_catch(func=None, *, log=True, catch=False):
                     logger.opt(exception=True, colors=True, capture=True).error("More Informations: ↓↓↓")
                 else:
                     logger.error(f"[{func.__name__}] lineo.{line} -> {fl} - {exception_type}: {exception_detail}")
+            return default
     
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
@@ -56,6 +52,7 @@ def try_catch(func=None, *, log=True, catch=False):
                     logger.opt(exception=True, colors=True, capture=True).error("More Informations: ↓↓↓")
                 else:
                     logger.error(f"[{func.__name__}] lineo.{line} -> {fl} - {exception_type}: {exception_detail}")
+            return default
     
     if __judge__iscoroutine(func):
         return async_wrapper
