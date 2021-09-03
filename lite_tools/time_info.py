@@ -5,6 +5,11 @@ import time
 import functools
 from loguru import logger
 
+"""
+这里可以用 但是比较臃肿 
+后续将重构
+"""
+
 
 def get_time(goal=None, fmt=False, double=False, cursor=None, fmt_str="%Y-%m-%d %H:%M:%S"):
     """

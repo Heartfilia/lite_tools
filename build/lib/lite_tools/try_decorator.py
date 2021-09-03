@@ -32,6 +32,8 @@ def try_catch(func=None, *, default=None, log=True, catch=False):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except KeyboardInterrupt:
+            exit(0)
         except Exception:
             if log is True:   
                 line, fl, exception_type, exception_detail = __handle_exception()
@@ -45,6 +47,8 @@ def try_catch(func=None, *, default=None, log=True, catch=False):
     async def async_wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
+        except KeyboardInterrupt:
+            exit(0)
         except Exception:
             if log is True:   
                 line, fl, exception_type, exception_detail = __handle_exception()

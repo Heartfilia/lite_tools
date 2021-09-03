@@ -7,6 +7,10 @@ import random
 from loguru import logger
 
 
+"""
+try_get_by_name 的功能比较复杂 如果json太大可能效率不够 后续有时间再重构一下 目前是能用的 
+"""
+
 def try_get(renderer, getters, default=None, expected_type=None, log=False):
     """
     获取字典键值
@@ -65,6 +69,8 @@ def try_get_by_name(renderer, getter: str, filter: list = None, expected_type=No
         if not renderer:
             logger.error(f"这里需要传入字典或者json串 --> 调用出错->[{getter}]")
             return expected_type
+        if isinstance(renderer, list):
+            renderer = {"try_get_by_name_dict_data": renderer}
         _ = __try_get_by_name(renderer=renderer, getter=getter, depth=depth, expected_type=expected_type, filter=filter, in_list=in_list, log=log)
     except (AttributeError, KeyError, TypeError, IndexError) as e:
         if log is True:
