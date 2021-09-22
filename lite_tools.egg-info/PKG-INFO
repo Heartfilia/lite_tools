@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: lite-tools
-Version: 0.4.7.0
+Version: 0.4.7.2
 Summary: 一些python小工具||some little tools
 Home-page: https://github.com/Heartfilia/lite_tools
 Author: Lodge
@@ -61,8 +61,10 @@ Description: # lite_tools
         
         ##### TODO
         
-        ```tex
-        get_ua   --> 这里需要增加一个刷新数据的操作 还需要把数据放进sqlite(完成 -- 数据刷新的操作预留了)
+        ```text
+        filejar.py --> 一些文件转换的操作(以后再说)
+        
+        get_ua   --> 这里需要增加一个刷新数据的操作 (以后有稳定服务器的时候再弄)
         
         get_time --> 这里需要重构一下--优化细节 增加自动匹配功能(以后再说)
         
@@ -70,16 +72,18 @@ Description: # lite_tools
         
         try_get_by_name --> 需要优化代码(以后再说)
         
-        # 需要新增功能 (下面功能实现了 但是需要测试 目前是beta版本)
+        # 需要新增功能 (下面功能实现了 但是需要测试 目前0.4.7.5以下版本都算是beta版本)
         clean_string   --> 清理字符串("\x"  "\u"  标点  emoji)  -> 目前只设置这四个清理功能 默认全部清理
-        预设值clean_string(string, mode="xu")  # 意思就是  
+        预设值clean_string(string, mode="xuf")  # 意思就是  
         可选值:
         mode清除模式：
         	x : 清理\x符(\xa0)
         	u : 清理\u符(\ud8e0)
-        (小)p : 清理英文标点
+        (小)p : 清理英文标点--这里**包括空格**
         (大)P : 清理中文标点
         	e : 清理emoji
+        	f : 全角符号
+        	s : 特殊符号  --如\n \t 这里是**不包含了空格**
         ignore忽略字符:
         	忽略掉不用处理的字符 如:
         	a = "你好，牛逼啊（这个东西）"
@@ -98,4 +102,5 @@ Classifier: Programming Language :: Python :: 3.6
 Classifier: Programming Language :: Python :: 3.7
 Classifier: Programming Language :: Python :: 3.8
 Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
 Description-Content-Type: text/markdown

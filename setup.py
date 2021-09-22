@@ -10,7 +10,7 @@ with open("README.md", "r", encoding='utf-8') as fd:
 
 setup(
     name='lite-tools',
-    version='0.4.7.0',
+    version='0.4.7.2',
     description='一些python小工具||some little tools',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -28,5 +28,6 @@ setup(
 		'Programming Language :: Python :: 3.7',
 		'Programming Language :: Python :: 3.8',
 		'Programming Language :: Python :: 3.9',
+		'Programming Language :: Python :: 3.10',
     ]
 )

@@ -46,7 +46,7 @@ __u_range_list = [
 
 __x_range_list = [11, 12] + list(range(9)) + list(range(14, 32)) + list(range(127, 161))
 
-__p_range_list = [] + list(range(33, 48)) + list(range(58, 65)) + list(range(91, 97)) + list(range(123, 127))
+__p_range_list = [] + list(range(32, 48)) + list(range(58, 65)) + list(range(91, 97)) + list(range(123, 127))
 
 __P_range_list = [8230] + list(range(8208, 8224)) + list(range(12289, 12310)) + list(range(65072, 65107)) + list(range(65108, 65127))\
 + list(range(65128, 65132)) + list(range(65281, 65313))
@@ -56,7 +56,7 @@ __e_range_list = [] + list(range(57345, 57435)) + list(range(57601, 57691)) + li
 
 # 6068 6069 也是空白
 __s_range_list = [
-    9, 10, 13, 32, 6068, 6069
+    9, 10, 13, 6068, 6069
 ]
 
 __f_range_list = list(range(60928, 65520)) + list(range(65313, 65377))

@@ -10,9 +10,10 @@ def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
     '''
     清除字符串特殊符号的 -- 通过比对unicode码处理  如果u清理不干净 可以加上e
     :param string  : 传入的字符串
-    :param mode    : - 清理模式 可以组合使用 -> - "x"：\\x开头的符号 - "u": \\u开头的符号 - "p": 英文标点(不含空格) - "P": 中文标点 - "e": emoji - "s": 常用特殊符号 如'\t' '\n' 包含空格 - "f": 全角字符
+    :param mode    : - 清理模式 可以组合使用 -> - "x"：\\x开头的符号 - "u": \\u开头的符号 - "p": 英文标点(含空格) - "P": 中文标点 - "e": emoji - "s": 常用特殊符号 如'\t' '\n' 不包含空格 - "f": 全角字符
     :param ignore  : 清理的时候需要忽略的字符--组合使用少量排除 如 ignore="(,}"   不去掉字符串中的那三个字符
     '''
+    if not isinstance(string, str): return ""
     base_string = ""
     for ch in string:
         if "x" in mode and ord(ch) in __x_range_list and ch not in ignore: continue
