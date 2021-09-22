@@ -7,15 +7,22 @@ import random
 from loguru import logger
 
 
+
 """
 try_get_by_name 的功能比较复杂 如果json太大可能效率不够 后续有时间再重构一下 目前是能用的 
+`try_get需要新增的功能示例如下
+a = {"a": [{"a": 1}, {"b": 2}, {"b": 10}]}
+==>  try_get(a, "a.[1].b")  -> 2
+==>  try_get(a, "a.[*]b")   -> 2
+
 """
+
 
 def try_get(renderer, getters, default=None, expected_type=None, log=False):
     """
-    获取字典键值
+    获取字典键值  --> 只获取**一个结果** 如果碰到了列表 只获取**第一个值**或者**特定值**
     params renderer: 传入的需要解析的字典或者json串
-    params getters : 获取途径 --> 示例: lambda x: x["detail"]["age"]  --> 取不到得到None  新增属性==>支持链式取值 如 a.b.c.d 当然建议也是链式操作
+    params getters : 链式取值 如 a.b.c.d   或者 a.[2].b  或者 a.[*]b  也可以 
     params expected_type: 期望获得的值类型 不是则为None  可多传如：  expected_type=(list, str)
     params default: 默认的返回值, 默认返回None, 可以自定义返回值
     return : 如果取到则为值，否则为None
@@ -30,24 +37,54 @@ def try_get(renderer, getters, default=None, expected_type=None, log=False):
         if '.' in getters:
             getters = getters.split('.')
             for getter in getters:
-                origin_getter += f"['{getter}']"
+                if re.search(r"[\d+]", getter):
+                    origin_getter += getter
+                elif re.search(r"\[\*\]\w+", getter):
+                    renderer = handle_reg_rule(renderer, origin_getter, getter, "try重试1_get获取2_fail失败3")
+                    # 避免本来结果就是None或者什么情况
+                    if renderer == "try重试1_get获取2_fail失败3":
+                        return default
+                    origin_getter = "_"
+                else:
+                    origin_getter += f"['{getter}']"
         else:
             origin_getter += f"['{getters}']"
         getters = lambda _: eval(origin_getter)
+    return __main_try_get(renderer, getters, default, expected_type, log)
+
+
+def handle_reg_rule(renderer, origin_getter, getter, default):
+    """
+    这里是因为只会出现 [*]a  这种匹配规则 故结果一定是列表 不是的话返回自己规定的错误状态 
+    """
+    matching_var = getter[3:]
+    
+    # 这里先获取到列表 [{},{}]
+    getters = lambda _: eval(origin_getter)   # a.b.[0].c
+    results = __main_try_get(renderer, getters, default)
+
+    if isinstance(results, list):
+        for result in results:
+            if matching_var in result:
+                return result.get(matching_var, default)
+    return default
+
+
+def __main_try_get(renderer, getters, default=None, expected_type=None, log=False):
     if not isinstance(getters, (list, tuple)):
         getters = [getters]
     for getter in getters:
         try:
             result = getter(renderer)
-            if expected_type is None:
-                return result
-            elif isinstance(result, expected_type):
+            if expected_type is None or isinstance(result, expected_type):
                 return result
         except (AttributeError, KeyError, TypeError, IndexError) as e:
             if log is True:
                 logger.error(f"try_get: {e} --line: {e.__traceback__.tb_lineno}")
-    else:
-        return default
+    return default
+
+
+# ==============================================================================================================
 
 
 def try_get_by_name(renderer, getter: str, filter: list = None, expected_type=None, depth: int = 50, in_list: bool = True, log: bool = False) -> list:
@@ -82,7 +119,7 @@ def try_get_by_name(renderer, getter: str, filter: list = None, expected_type=No
 
 def __try_get_by_name(renderer: dict, getter: str, expected_type, in_list, result: list = None, filter=None, depth: int = 50, is_first=True, log=False) -> list:
     """
-    通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用  
+    通过名称获取字典里面的字符  这里做底层就是避免有的人乱调用  :不支持列表嵌套列表那种提取 一般碰不到 懒得弄 如: [[{"a": 1}]]
     :param renderer : 传入的字典
     :param getter : 需要获取的键的名称
     :param result : 外面不需要传这个参数 这个作内部参数校验
@@ -209,7 +246,7 @@ def __handle_calculation(rule, renderer: dict) -> bool:
 
 def __judge_json(renderer):
     """判断传入进来的是json串还是字典 自动处理成字典"""
-    if isinstance(renderer, dict):
+    if isinstance(renderer, (dict, list)):
         return renderer
     elif isinstance(renderer, str):
         try:
@@ -303,6 +340,7 @@ def __do_not_in_re(rule, renderer):
         elif flag and isinstance(result, (bool, str, int, float)) and result not in filter_value:
             return True
     return False
+
 
 def __do_less_than_equal(rule, renderer):
     filter_rule = rule.split('<=')

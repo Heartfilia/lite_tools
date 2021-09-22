@@ -51,6 +51,36 @@ try_catch(default="xxx")   # 可以给定默认获取了异常后返回得默认
 # Example in 'demo.py'  ||  示例见demo.py
 ```
 
+##### TODO
+
+```tex
+filejar.py --> 一些文件转换的操作(以后再说)
+
+get_ua   --> 这里需要增加一个刷新数据的操作 还需要把数据放进sqlite(完成 -- 数据刷新的操作预留了)
+
+get_time --> 这里需要重构一下--优化细节 增加自动匹配功能(以后再说)
+
+try_get --> 需要增加对列表的操作(搞定了具体操作见demo.py)
+
+try_get_by_name --> 需要优化代码(以后再说)
+
+# 需要新增功能 (下面功能实现了 但是需要测试 目前是beta版本)
+clean_string   --> 清理字符串("\x"  "\u"  标点  emoji)  -> 目前只设置这四个清理功能 默认全部清理
+预设值clean_string(string, mode="xu")  # 意思就是  
+可选值:
+mode清除模式：
+	x : 清理\x符(\xa0)
+	u : 清理\u符(\ud8e0)
+(小)p : 清理英文标点
+(大)P : 清理中文标点
+	e : 清理emoji
+ignore忽略字符:
+	忽略掉不用处理的字符 如:
+	a = "你好，牛逼啊（这个东西）"
+	b = clean_string(a, "P", "（）")
+b ====> "你好牛逼啊（这个东西）"
+```
+
 
 
 see `demo.py`

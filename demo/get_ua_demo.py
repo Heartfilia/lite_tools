@@ -1,4 +1,4 @@
-from lite_tools import get_ua
+from lite_tools import get_ua, update_ua
 
 
 print(get_ua())              # Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2705.69 Safari/537.36
@@ -10,6 +10,4 @@ print(get_ua('pc'))      # Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_0) AppleW
 print(get_ua('mobile'))  # Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL Build/OPD1.170816.004) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Mobile Safari/537.36
 
 
-# 下面的在新特性中移除了
-# print(get_navigator())   # 这东西好像没用 ua部分已经替换了自己搜集的资源 不用第三方包了
-# print(get_navigator('linux', 'android', 'win'))  # # 这东西好像没用 ua部分已经替换了自己搜集的资源 不用第三方包了
+update_ua()   # 建议独立执行这里 这个操作会刷新数据库里面的ua相关数据 不过目前没有布置到线上服务器 这里的功能先预留

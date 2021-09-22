@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from lite_tools import try_get, try_get_by_name
 
 # about try_get   // try_get_by_name
@@ -102,3 +103,34 @@ print(try_get_by_name(s2, 'nihao', filter=["yes#<[true, null]"]))       # [333]
 # log 这个报错参数只有在 有filter过滤器存在的时候并且过滤器错误会报错并停止程序  不用过滤器不会退出程序 只会报响应的错误 没有则不报错
 # 这种会报错 因为广告不作为字符串处理 这里【不打印】日志【不会停止】程序 【打印了日志】会直接【终结程序】并报相应错误,无返回值->直接推出了全部程序
 # print(try_get_by_name(s, 'name', filter=["describe<#广告"], log=True))  # 2021-05-28 10:37:01.777 | ERROR    | lite_tools.dict_parser:__do_filter_func:164 - 类型错误 --> name '广告' is not defined
+
+# 新更新功能 支持处理列表相关数据了
+test = {
+    "a": {
+        "b": [
+            {"c": [
+                    {"a": 5}, 
+                    {"b": 6}, 
+                    {"c": 7}
+                ]
+            }, 
+            {"c": 2}
+        ]
+    }
+}
+
+test2 = [
+    {"a": 9},
+    {"b": [
+        {"c": "1"}
+    ]}
+]
+
+test3 = [[{"c": 100}, {"b": 13}, {"a": 999}, {"d": [{"e": 88}]}]]
+
+print(try_get(test, "a.b.[0].c.[2].c" ))  # 等同于 test["a"]["b"][0]["c"][2]["c"]          -> 7 
+print(try_get(test, "a.b.[0].c.[*]c" ))   # 等同于 test["a"]["b"][0]["c"][自动匹配]["c"]    -> 7
+print(try_get(test2, "[1].b.[*]c" ))      # 等同于 test2[1]["b"][自动匹配]["c"]             -> 1
+print(try_get(test3, "[0].[1].b"))        # 等同于 test3[0][1]["b"]                        -> 13
+print(try_get(test3, "[0].[*]a"))        # 等同于 test3[0][自动匹配]["a"]                   -> 999
+print(try_get(test3, "[0].[*]d.[*]e"))    # 等同于 test3[0][自动匹配]["d"][自动匹配]["e"]    -> 88
