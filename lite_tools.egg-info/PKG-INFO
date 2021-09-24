@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: lite-tools
-Version: 0.4.7.3
+Version: 0.4.7.3.1
 Summary: 一些python小工具||some little tools
 Home-page: https://github.com/Heartfilia/lite_tools
 Author: Lodge
@@ -80,13 +80,15 @@ Description: # lite_tools
         预设值clean_string(string, mode="xuf")  # 意思就是  
         参数可选值:
         mode清除模式：
-        	x : 清理\x符(\xa0)
-        	u : 清理\u符(\ud8e0)
-        (小)p : 清理英文标点--这里**包括空格**
-        (大)P : 清理中文标点
-        	e : 清理emoji
-        	f : 全角符号
-        	s : 特殊符号  --如\n \t 这里是**不包含了空格**
+            "x"：\\x开头的符号 - 
+            "u": \\u转义报错的符号 还有空白字符 - 
+            "U": 在win上有字符linux上是空的字符 - 
+            "p": 英文标点(含空格) - 
+            "P": 中文标点 - 
+            "e": emoji - 
+            "s": 常用特殊符号 如'\\t' '\\n' 不包含空格 - 
+            "f": 全角字符  -- 
+            "r": 预留字符显示为 ֌这样的 -
         ignore忽略字符:
         	忽略掉不用处理的字符 如:
         	a = "你好，牛逼啊（这个东西）"

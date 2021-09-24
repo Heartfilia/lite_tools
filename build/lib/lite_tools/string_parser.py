@@ -10,16 +10,16 @@ def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
     x里面==不包含==s  常用的转义字符如:\\a \\b \\n \\v \\t \\r \\f
     :param string  : 传入的字符串
     :param mode    : 
-        - 清理模式 可以组合使用 -> - 
+        - 清理模式 可以任意排序组合使用 (下面前面括号内为速记单词(有的话)) -> - 
         "x"：\\x开头的符号 - 
         "u": \\u转义报错的符号 还有空白字符 - 
         "U": 在win上有字符linux上是空的字符 - 
-        "p": 英文标点(含空格) - 
-        "P": 中文标点 - 
-        "e": emoji - 
-        "s": 常用特殊符号 如'\\t' '\\n' 不包含空格 - 
-        "f": 全角字符  -- 
-        "r": 预留字符显示为 ֌这样的 -
+        "p": (punctuation 小写)英文标点(含空格) - 
+        "P": (Punctuation 大写)中文标点 - 
+        "e": (emoji) - 
+        "s": (special)常用特殊符号 如'\\t' '\\n' 不包含空格 - 
+        "f": (full-width characters)全角字符  -- 
+        "r": (reserve)预留字符显示为 ֌这样的 -
     :param ignore  : 清理的时候需要忽略的字符--组合使用少量排除 如 ignore="(,}"   不去掉字符串中的那三个字符
     '''
     if not isinstance(string, str): return ""
@@ -42,7 +42,7 @@ def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
 
 
 def __judge_x(char, ignore=""):
-    if char not in ignore and 0 <= ord(char) < 7 or 14 <= ord(char) < 32 or 127 <= ord(char) < 161:
+    if char not in ignore and (0 <= ord(char) < 7 or 14 <= ord(char) < 32 or 127 <= ord(char) < 161):
         return True
 
 
@@ -53,14 +53,14 @@ def __judge_s(char, ignore=""):
 
 def __judge_p(char, ignore=""):
     if char not in ignore and \
-    32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127:
+    (32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127):
         return True
 
 
 def __judge_P(char, ignore=""):
     if char not in ignore and \
-    8208 <= ord(char) < 8232 or 8240 <= ord(char) < 8287 or 12289 <= ord(char) < 12310 or\
-    65072 <= ord(char) < 65107 or 65108 <= ord(char) < 65127 or 65128 <= ord(char) < 65132 or 65281 <= ord(char) < 65313:
+    (8208 <= ord(char) < 8232 or 8240 <= ord(char) < 8287 or 12289 <= ord(char) < 12310 or 65072 <= ord(char) < 65107 
+    or 65108 <= ord(char) < 65127 or 65128 <= ord(char) < 65132 or 65281 <= ord(char) < 65313):
         return True
 
 
@@ -92,9 +92,7 @@ def __judge_r(char, ignore=""):
     888 <= ord(char) < 65535 and \
     ord(char) not in __u_range_list and \
     ord(char) not in __U_range_list and \
-    not __judge_x(char) and \
     not __judge_P(char) and \
-    not __judge_p(char) and \
     not __judge_f(char):
         return True
 
