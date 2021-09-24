@@ -17,18 +17,21 @@ print(clean_string(need_clean_string))
 "r": 预留字符显示为 ֌这样的 -
 
 >>> clean_string(need_clean_string)   # 默认就是清理 xuf  意思就是x:\\x开头 u:\\u开头 还有f:全角字符 
->>> 🙂哈哈 你好,不好.吃点《三体人》吧       哈哈
-还有什么哈哈哈
+>>> 🙂哈哈 你好,不好.吃点《三体人》吧	哈哈
+还有什么￿哈哈哈
 >>> clean_string(need_clean_string, "xufs")   # s是清理python的转义字符 目前只清理\\a \\b \\000 \\n \\v \\t \\r \\f  # 这里是和x有重叠 不过x不清理常用的符号如前面 \\n \\v \\t \\r \\f
->>>
+>>> 🙂哈哈 你好,不好.吃点《三体人》吧哈哈还有什么￿哈哈哈
 >>> clean_string(need_clean_string, "e")
->>>
+>>> 哈哈 你好,不好.吃点《三体人》吧	哈哈
+还有什么￿哈哈哈
 >>> clean_string(need_clean_string, "pP")
->>>
->>> clean_string(need_clean_string, "s")
->>>
+>>> 🙂哈哈你好不好吃点三体人吧	哈哈
+还有什么￿哈哈哈
+>>> clean_string(need_clean_string, "pP", ' ')   # 第三个参数是忽略的字符 可以填写多个的单个字符 
+>>> 🙂哈哈 你好不好吃点三体人吧	哈哈
+还有什么￿哈哈哈  
 >>> clean_string(need_clean_string, "sp")
->>>
+>>> 🙂哈哈你好不好吃点《三体人》吧哈哈还有什么￿哈哈哈
 >>> clean_string(need_clean_string, "us")
->>>
+>>> 🙂哈哈 你好,不好.吃点《三体人》吧哈哈还有什么￿哈哈哈
 """

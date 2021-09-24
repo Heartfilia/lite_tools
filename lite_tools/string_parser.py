@@ -28,15 +28,15 @@ def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
 
     for kill in kill_jar:
         if \
-        "x" in mode and __judge_x(kill, ignore) or \
-        "s" in mode and __judge_s(kill, ignore) or \
-        "p" in mode and __judge_p(kill, ignore) or \
-        "P" in mode and __judge_P(kill, ignore) or \
-        "f" in mode and __judge_f(kill, ignore) or \
-        "e" in mode and __judge_e(kill, ignore) or \
-        "u" in mode and __judge_u(kill, ignore) or \
-        "U" in mode and __judge_U(kill, ignore) or \
-        "r" in mode and __judge_r(kill, ignore): 
+        ("x" in mode and __judge_x(kill, ignore)) or \
+        ("s" in mode and __judge_s(kill, ignore)) or \
+        ("p" in mode and __judge_p(kill, ignore)) or \
+        ("P" in mode and __judge_P(kill, ignore)) or \
+        ("f" in mode and __judge_f(kill, ignore)) or \
+        ("e" in mode and __judge_e(kill, ignore)) or \
+        ("u" in mode and __judge_u(kill, ignore)) or \
+        ("U" in mode and __judge_U(kill, ignore)) or \
+        ("r" in mode and __judge_r(kill, ignore)): 
             string = string.replace(kill, "")
     return string
 
@@ -52,8 +52,7 @@ def __judge_s(char, ignore=""):
 
 
 def __judge_p(char, ignore=""):
-    if char not in ignore and \
-    (32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127):
+    if char not in ignore and (32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127):
         return True
 
 
