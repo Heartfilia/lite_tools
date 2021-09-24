@@ -42,7 +42,7 @@ def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
 
 
 def __judge_x(char, ignore=""):
-    if char not in ignore and 0 <= ord(char) < 7 or 14 <= ord(char) < 32 or 127 <= ord(char) < 161:
+    if char not in ignore and (0 <= ord(char) < 7 or 14 <= ord(char) < 32 or 127 <= ord(char) < 161):
         return True
 
 
@@ -53,14 +53,14 @@ def __judge_s(char, ignore=""):
 
 def __judge_p(char, ignore=""):
     if char not in ignore and \
-    32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127:
+    (32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127):
         return True
 
 
 def __judge_P(char, ignore=""):
     if char not in ignore and \
-    8208 <= ord(char) < 8232 or 8240 <= ord(char) < 8287 or 12289 <= ord(char) < 12310 or\
-    65072 <= ord(char) < 65107 or 65108 <= ord(char) < 65127 or 65128 <= ord(char) < 65132 or 65281 <= ord(char) < 65313:
+    (8208 <= ord(char) < 8232 or 8240 <= ord(char) < 8287 or 12289 <= ord(char) < 12310 or 65072 <= ord(char) < 65107 
+    or 65108 <= ord(char) < 65127 or 65128 <= ord(char) < 65132 or 65281 <= ord(char) < 65313):
         return True
 
 
