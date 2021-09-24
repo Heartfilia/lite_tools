@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: lite-tools
-Version: 0.4.7.2
+Version: 0.4.7.3
 Summary: 一些python小工具||some little tools
 Home-page: https://github.com/Heartfilia/lite_tools
 Author: Lodge
@@ -55,7 +55,8 @@ Description: # lite_tools
         try_catch(catch=True)  # 栈捕获   可以输出详细的报错栈信息 默认是False
         try_catch(default="xxx")   # 可以给定默认获取了异常后返回得默认值 默认返回None
         
-        
+        # ===================================
+        clean_string("今天😄嘿 嘿,活活《拉拉\n嘿嘿.", mode="xufpPs", ignore=".") -->今天嘿嘿活活拉拉嘿嘿.
         # Example in 'demo.py'  ||  示例见demo.py
         ```
         
@@ -64,6 +65,7 @@ Description: # lite_tools
         ```text
         filejar.py --> 一些文件转换的操作(以后再说)
         
+        # 下面的争取在0.4.7.5版本都修复或者优化
         get_ua   --> 这里需要增加一个刷新数据的操作 (以后有稳定服务器的时候再弄)
         
         get_time --> 这里需要重构一下--优化细节 增加自动匹配功能(以后再说)
@@ -73,9 +75,10 @@ Description: # lite_tools
         try_get_by_name --> 需要优化代码(以后再说)
         
         # 需要新增功能 (下面功能实现了 但是需要测试 目前0.4.7.5以下版本都算是beta版本)
+        # ===== 目前字符串处理已经优化 速度变快了 但是还是需要测试..... ========
         clean_string   --> 清理字符串("\x"  "\u"  标点  emoji)  -> 目前只设置这四个清理功能 默认全部清理
         预设值clean_string(string, mode="xuf")  # 意思就是  
-        可选值:
+        参数可选值:
         mode清除模式：
         	x : 清理\x符(\xa0)
         	u : 清理\u符(\ud8e0)
