@@ -10,4 +10,4 @@ from .uajar import get_ua, update_ua
 # from .filejar import word2pdf
 
 from .dict_parser import try_get, try_get_by_name
-from .string_parser import clean_string
+from .string_parser import clean_string, deco_clr
