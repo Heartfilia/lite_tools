@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from .__code_range import __u_range_list, __U_range_list
 """
-这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range
+这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
 
 def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
@@ -102,3 +102,27 @@ def _scaner(string: str):
         if ch.isalpha() or ch.isdigit(): continue
         jar.add(ch)
     return jar
+
+
+def deco_clr(string: str = "", *args) -> str:
+    """
+    给字体增加颜色 参数如下 使用直接  deco_clr("要加颜色的字体", 34, 5, 44) 需要加的颜色数字直接写下面 只有在规定范围内才能被提取 同一级写了多个只拿第一个
+    :param string: 传入的字符串
+    :param args   : 参数注解如下面所示
+    :param ft_clr : 字体颜色 -> (30, 黑色)(31, 红色)(32, 绿色)(33, 黄色)(34, 蓝色)(35, 紫红色)(36, 青蓝色)(37, 白色)
+    :param bk_clr : 背景颜色 -> (40, 黑色)(41, 红色)(42, 绿色)(43, 黄色)(44, 蓝色)(45, 紫红色)(46, 青蓝色)(47, 白色)
+    :param vt     : 显示方式 -> (0, 终端默认设置)(1, 高亮显示)(4, 使用下划线)(5, 闪烁)(7, 反白显示)(8, 不可见)   
+    """
+    base_string = '\033['
+    if string and args:
+        result_ftclr = list(filter(lambda x: x in args, range(30, 38)))
+        result_bkclr = list(filter(lambda x: x in args, range(40, 48)))
+        result_vt = list(filter(lambda x: x in args, [0, 1, 4, 5, 7, 8]))
+        if result_ftclr:
+            base_string += f'{result_ftclr[0]};'
+        if result_bkclr:
+            base_string += f'{result_bkclr[0]};'
+        if result_vt:
+            base_string += f'{result_vt[0]};'
+        return f"{base_string.strip(';')}m{string}\033[0m"
+    return string
