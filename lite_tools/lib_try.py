@@ -2,19 +2,12 @@ import re
 import traceback
 from functools import wraps, partial
 from asyncio import iscoroutinefunction
-
 from loguru import logger
 
 
 def try_catch(func=None, *, default=None, log=True, catch=False):
     if func is None:
         return partial(try_catch, default=default, log=log, catch=catch)
-
-    def __judge__iscoroutine(function):
-        try:
-            return iscoroutinefunction(function)
-        except Exception:
-            return False
 
     def __handle_exception():
         results = traceback.format_exc().split('\n')
@@ -27,6 +20,13 @@ def try_catch(func=None, *, default=None, log=True, catch=False):
         exception_type = results[-2]
         exception_detail = results[-3].strip()
         return line, fl, exception_type, exception_detail
+    
+    def __log_true():
+        line, fl, exception_type, exception_detail = __handle_exception()
+        if catch is True:
+            logger.opt(exception=True, colors=True, capture=True).error("More Informations: ↓↓↓")
+        else:
+            logger.error(f"[{func.__name__}] lineo.{line} -> {fl} - {exception_type}: {exception_detail}")
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -35,12 +35,7 @@ def try_catch(func=None, *, default=None, log=True, catch=False):
         except KeyboardInterrupt:
             exit(0)
         except Exception:
-            if log is True:   
-                line, fl, exception_type, exception_detail = __handle_exception()
-                if catch is True:
-                    logger.opt(exception=True, colors=True, capture=True).error("More Informations: ↓↓↓")
-                else:
-                    logger.error(f"[{func.__name__}] lineo.{line} -> {fl} - {exception_type}: {exception_detail}")
+            if log is True: __log_true()
             return default
     
     @wraps(func)
@@ -50,15 +45,7 @@ def try_catch(func=None, *, default=None, log=True, catch=False):
         except KeyboardInterrupt:
             exit(0)
         except Exception:
-            if log is True:   
-                line, fl, exception_type, exception_detail = __handle_exception()
-                if catch is True:
-                    logger.opt(exception=True, colors=True, capture=True).error("More Informations: ↓↓↓")
-                else:
-                    logger.error(f"[{func.__name__}] lineo.{line} -> {fl} - {exception_type}: {exception_detail}")
+            if log is True: __log_true()  
             return default
     
-    if __judge__iscoroutine(func):
-        return async_wrapper
-    else:
-        return wrapper
+    return async_wrapper if iscoroutinefunction(func) else wrapper

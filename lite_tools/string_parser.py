@@ -1,9 +1,93 @@
 # -*- coding: utf-8 -*-
-import itertools
-from .__code_range import __u_range_list, __U_range_list
+import functools
+from typing import Union, Optional
+
+from loguru import logger
+from __code_range import __u_range_list, __U_range_list, msyql_keywords
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
+
+def match_case(func):
+    """"
+    I have changed the name. (original name -> value_dispatch)
+    修改了原来的命名 使其更加好记 采用了如下源的代码
+    """
+    # This source file is part of the EdgeDB open source project.
+    #
+    # Copyright 2021-present MagicStack Inc. and the EdgeDB authors.
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    #
+    """Like singledispatch() but dispatches by value of the first arg.
+    Example:
+      @match_case
+      def eat(fruit):
+          return f"I don't want a {fruit}..."
+      @eat.register('apple')
+      def _eat_apple(fruit):
+          return "I love apples!"
+      @eat.register('eggplant')
+      @eat.register('squash')
+      def _eat_what(fruit):
+          return f"I didn't know {fruit} is a fruit!"
+    An alternative to applying multuple `register` decorators is to
+    use the `register_for_all` helper:
+      @eat.register_for_all({'eggplant', 'squash'})
+      def _eat_what(fruit):
+          return f"I didn't know {fruit} is a fruit!"
+    """
+
+    registry = {}
+
+    @functools.wraps(func)
+    def wrapper(arg0, *args, **kwargs):
+        try:
+            delegate = registry[arg0]
+        except KeyError:
+            pass
+        else:
+            return delegate(arg0, *args, **kwargs)
+
+        return func(arg0, *args, **kwargs)
+
+    def register(value):
+        def wrap(func):
+            if value in registry:
+                raise ValueError(
+                    f'@match_case: there is already a handler '
+                    f'registered for {value!r}'
+                )
+            registry[value] = func
+            return func
+        return wrap
+
+    def register_for_all(values):
+        def wrap(func):
+            for value in values:
+                if value in registry:
+                    raise ValueError(
+                        f'@match_case: there is already a handler '
+                        f'registered for {value!r}'
+                    )
+                registry[value] = func
+            return func
+        return wrap
+
+    wrapper.register = register
+    wrapper.register_for_all = register_for_all
+    return wrapper
+
 
 def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
     '''
@@ -108,20 +192,20 @@ def _scaner(string: str):
 def __get_color_front(color_string: str):
     # 这里是为了传入数字也可以搞
     lower_string = str(color_string).lower()
-    if lower_string in ['黑色', '黑', 'black', '30']: return 30
-    elif lower_string in ['红色', '红', 'red', 'r', '31']: return 31
-    elif lower_string in ['绿色', '绿', 'green', 'g', '32']: return 32
-    elif lower_string in ['黄色', '黄', 'yellow', 'y', '33']: return 33
-    elif lower_string in ['蓝色', '蓝', 'blue', 'b', '34']: return 34
-    elif lower_string in ['紫色', '紫', 'purple', 'p', '35']: return 35
-    elif lower_string in ['青蓝色', '青蓝', '靛色', '靛', 'cyan', 'c', '36']: return 36
-    elif lower_string in ['白色', '白', 'white', 'w', '37']: return 37
-    elif lower_string in ['深灰色', '灰色', '灰', 'darkgrey', 'dg', '90']: return 90
+    if lower_string in ['黑色', '黑', 'black', 'k', '30', '000000']: return 30
+    elif lower_string in ['红色', '红', 'red', 'r', '31', 'ff0000']: return 31
+    elif lower_string in ['绿色', '绿', 'green', 'g', '32', "008000"]: return 32
+    elif lower_string in ['黄色', '黄', 'yellow', 'y', '33', 'ffff00']: return 33
+    elif lower_string in ['蓝色', '蓝', 'blue', 'b', '34', '0000ff']: return 34
+    elif lower_string in ['紫色', '紫', 'purple', 'p', '35', '800080']: return 35
+    elif lower_string in ['青蓝色', '青蓝', '靛色', '靛', 'cyan', 'c', '36', '00ffff']: return 36
+    elif lower_string in ['白色', '白', 'white', 'w', '37', 'ffffff']: return 37
+    elif lower_string in ['深灰色', '灰色', '灰', 'darkgrey', 'dg', '90', 'a9a9a9']: return 90
     elif lower_string in ['亮红色', '亮红', 'lightred', 'lr', '91']: return 91
     elif lower_string in ['亮绿色', '亮绿', 'lightgreen', 'lg', '92']: return 92
     elif lower_string in ['亮黄色', '亮黄', 'lightyellow', 'ly', '93']: return 93
     elif lower_string in ['亮蓝色', '亮蓝', 'lightblue', 'lb', '94']: return 94
-    elif lower_string in ['粉色', '粉', 'pink', '少女粉', '猛男粉', '95']: return 95
+    elif lower_string in ['粉色', '粉', 'pink', '少女粉', '猛男粉', '95', 'ffc0cb']: return 95
     elif lower_string in ['亮青色', '亮青', 'lightcyan', 'lc', '96']: return 96
     return None
 
@@ -130,7 +214,7 @@ def __get_color_background(color_string: str, backgroud=True):
     # backgroud 这里是为了排除字体颜色的英文单词给搞到了背景颜色
     lower_string = str(color_string).lower()
     if backgroud is True and not lower_string.isdigit(): return None
-    if lower_string in ['黑色', '黑', 'black', '40']: return 40
+    if lower_string in ['黑色', '黑', 'black', 'k', '40']: return 40
     elif lower_string in ['红色', '红', 'red', 'r', '41']: return 41
     elif lower_string in ['绿色', '绿', 'green', 'g', '42']: return 42
     elif lower_string in ['黄色', '黄', 'yellow', 'y', '43']: return 43
@@ -155,9 +239,9 @@ def __get_view_mode(mode: str, viewer=True):
     return None
 
 
-def deco_clr(string: str = "", *args, **kwargs) -> str:
+def color_string(string: str = "", *args, **kwargs) -> str:
     """
-    给字体增加颜色 参数如下 使用直接  deco_clr("要加颜色的字体", 34, 5, 44) 需要加的颜色数字直接写下面 只有在规定范围内才能被提取 同一级写了多个只拿第一个
+    给字体增加颜色 参数如下 使用直接  color_string("要加颜色的字体", 34, 5, 44) 需要加的颜色数字直接写下面 只有在规定范围内才能被提取 同一级写了多个只拿第一个
     如果传入英文 只有RGBYWPC 可以缩写 黑色black需要写全 大小写都无所谓  英文属于<<字体颜色>> 
     可以使用字典传参 设置字体颜色背景颜色 显示方式 如：{"f": "red", "b": "yellow", "v": "default", 'lenght': 20}  # 这里限定了20个字符宽度(实际会大于20个只不过我这里做了处理) length 键弄l也可以
     :param string: 传入的字符串
@@ -175,17 +259,17 @@ def deco_clr(string: str = "", *args, **kwargs) -> str:
         if isinstance(lenght, int) or (isinstance(lenght, str) and lenght.isdigit()):
             lenght = int(lenght) 
 
-        f = kwargs.get('f')
+        f = kwargs.get('f') or kwargs.get('font')
         if f: 
             f_string = __get_color_front(f)
             base_string += f"{f_string};" if f_string is not None else ""
 
-        b = kwargs.get('b')
+        b = kwargs.get('b') or kwargs.get('background') or kwargs.get('backg')
         if b: 
             b_string = __get_color_background(b, backgroud=False) 
             base_string += f"{b_string};" if b_string is not None else ""
 
-        v = kwargs.get('v')
+        v = kwargs.get('v') or kwargs.get('view') or kwargs.get("viewtype")
         if v: 
             v_string = __get_view_mode(v, viewer=False)  
             base_string += f"{v_string:>02};" if v_string is not None else ""
@@ -209,3 +293,129 @@ def deco_clr(string: str = "", *args, **kwargs) -> str:
         return f"{base_string.strip(';')}m{string}\033[0m"
 
     return string
+
+
+deco_clr = color_string   # 兼容老版本名称
+
+
+class SqlString(object):
+    """
+    这里只负责拼接sql语句 不负责处理sql事务 // 还没有测试好 同clean_string 一样 后面某个版本才会成为完全体
+    """
+    def __init__(self, table_name: str) -> None:
+        self.table_name = table_name
+
+    def insert(self, keys: Union[dict, list, tuple], values: list=None, ignore: bool=False) -> Optional[str]:
+        """
+        如果是拼接单条sql: keys传入字典 自动提取键值  values不需要传
+        如果是多值拼接   : keys传入需要插入的字段命 可以列表 可以元组
+                        : values传入对应的值得列表 里面放元组 如: [(1, "a"), (99, "test")]  / 也可以[1, "a"] 这样就是单条插入
+        :param ignore   : 是否忽略插入中的重复值之类的 
+        """
+        if not keys: return None
+        whether_igonore = "IGNORE " if ignore is True else ""
+        base_insert = f"INSERT INTO {whether_igonore}{self.table_name} "
+        key_string, value_string = self.__handle_insert_data(keys, values)
+        if key_string == "": return None
+        insert_string = f"{base_insert} {key_string} VALUES {value_string};"
+        return self.__clear_string(insert_string)
+    
+    @staticmethod
+    def __clear_string(string):
+        return string.replace("'`", "`").replace("`'", "`").replace('"`', '`').replace('`"', "`").replace(
+            '= True', '= 1').replace('= False', '= 0').replace('= None', "IS NULL").replace(
+            '=True', '= 1').replace('=False', '= 0').replace('=None', "IS NULL")
+
+    def __handle_insert_data(self, key, value):
+        if isinstance(key, dict) and value is None:
+            keys = []
+            values = []
+            for key, name in key.items():
+                keys.append(key if key.upper() not in msyql_keywords else f"`{key}`")
+                values.append(name)
+            return f"{tuple(keys)}", f"{tuple(values)}"
+        elif isinstance(key, (list, tuple)) and isinstance(value, list):
+            keys = [k if k.upper() not in msyql_keywords else f"`{k}`" for k in key]
+            if value and isinstance(value[0], (list, tuple)):
+                # 这里是批量插入
+                values = ""
+                for v in value:
+                    if len(key) != len(v):
+                        logger.error(f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(v)};")
+                        return "", ""
+                    values += f"{tuple(v)}, "
+                values = values.rstrip(', ')
+            else:
+            # 这里只是兼容另外一种格式而已 推荐的还是字典
+                if len(key) != len(value):
+                    logger.error(f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};")
+                    return "", ""
+                values = f"{tuple(value)}"
+            return f"{tuple(keys)}", values
+        else:
+            logger.error("传入了不支持的数据类型")
+            return "", ""
+
+    def update(self, keys: dict, where: Union[dict, list, tuple, str]) -> Optional[str]:
+        """
+        更新数据操作, 传入需要更新的字典即可
+        :param key:  传入的更新部分的键值对啦
+        :param where: 当然是筛选条件 --> 如果用字典传入-> 相当于 "=" , 多个值会AND拼接 : True 会被替换为1 False会被替换为0 None 会被替换为NULL
+                                    # 想实现更加精准的条件就在下面自己写 推荐==>字符串的传入方式
+                                    --> 如果是列表传入按照 ['test<5', 'hello=1', 'tt LIKES "%VV%"'] 这样传入
+                                    --> 如果是字符串: 'test < 5 AND hello = 1'   这样传入
+        """
+        if not keys or not isinstance(keys, dict) or not where: return None
+
+        base_update = f"UPDATE {self.table_name} SET "
+        for key, value in keys.items():
+            base_update += f'{key if key.upper() not in msyql_keywords else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)}, '
+        base_update = base_update.rstrip(', ') + " WHERE "
+        if isinstance(where, dict):
+            for key, value in where.items():
+                base_update += f'{key if key.upper() not in msyql_keywords else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)} AND '
+        elif isinstance(where, (list, tuple)):
+            for value in where:
+                base_update += f"{value} AND "
+        elif isinstance(where, str):
+            base_update += where
+        else: return None
+        base_update = base_update.rstrip(' AND ') + ";"
+        return self.__clear_string(base_update)
+
+    def delete(self, where: Union[dict, str] = None) -> Optional[str]:
+        """
+        这里不推荐用list,tuple数据类型 如果有多个等值条件就写dict  否则自己写字符串
+        :param where: 当然是删除条件啦 不写的话就是全部删除
+        """
+        base_delete = f"DELETE FROM {self.table_name}"
+        if not where: return base_delete + ";"
+        base_delete += " WHERE "
+        if isinstance(where, dict):
+            for key, value in where.items():
+                base_delete += f'{key if key.upper() not in msyql_keywords else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)} AND '
+            base_delete = base_delete.rstrip(' AND ') + ";"
+        elif isinstance(where, str):
+            base_delete += where + ";"
+        else: return None
+        return self.__clear_string(base_delete)
+                
+    def truncate(self) -> Optional[str]:
+        """
+        不提供这个功能 navicat 永远的神
+        """
+    
+    def drop(self) -> Optional[str]:
+        """
+        不提供这个功能 删了还玩啥 还得create表 麻烦 用navicat多好
+        """
+
+    def select(self, condition="*", join_group="", where="", group_by="", distinct=False) -> Optional[str]:
+        """
+        #TODO(^_^)这东西太复杂了 不想写
+        """
+
+
+if __name__ == "__main__":
+    pass
+
