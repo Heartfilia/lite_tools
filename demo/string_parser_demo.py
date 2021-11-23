@@ -36,10 +36,10 @@ print(clean_string(need_clean_string))
 >>> 🙂哈哈 你好,不好.吃点《三体人》吧哈哈还有什么￿哈哈哈
 """
 
-from lite_tools import deco_clr
+from lite_tools import color_string
 from loguru import logger
 
-# deco_clr 第一个参数是传入的字符串
+# color_string 第一个参数是传入的字符串
 # 第二个参数 如果是单独的字或者数字 就是装饰字体的颜色
 #           如果是字典 那么就根据字典里面的参数来自定义颜色或者其它属性
 # 字典参数：
@@ -59,8 +59,53 @@ from loguru import logger
 :param v     : 显示方式 -> (0, 重置/reset)(1, 加粗/b/bold)(2, 禁止/disable)(4, 使用下划线/u/underline)(5, 闪烁/f/flash)(7, 反相/r/reverse)(8, 不可见/i/invisible)(9, 删除线/s/strikethrough)
 """
 print(f"{'hello':<20}", "aaaaa")
-print(deco_clr("hellow", {"f": "红", "b": "白", "v": "strikethrough", "lenght": 20}), "aaaaa")
-print(deco_clr("a", {"f": "红", "b": "白", "v": "strikethrough", "l": 20}), "aaaaa")
-print(deco_clr("hellow", {"f": "y", "b": "g"}), "aaaaa")
-print(deco_clr("hellow", **{"f": "b", "b": "r"}), "aaaaa")
-logger.info(f'{deco_clr("hellow", "红")} aaaaa')
+print(color_string("hellow", {"f": "红", "b": "白", "v": "strikethrough", "lenght": 20}), "aaaaa")
+print(color_string("a", {"f": "红", "b": "白", "v": "strikethrough", "l": 20}), "aaaaa")
+print(color_string("hellow", {"f": "y", "b": "g"}), "aaaaa")
+print(color_string("hellow", **{"f": "b", "b": "r"}), "aaaaa")
+logger.info(f'{color_string("hellow", "红")} aaaaa')
+
+
+# match_case  像match case一样使用
+from lite_tools import match_case
+# 下面的功能类似 if_else 也像其它语法的switch case
+
+@match_case
+def default_function(arg):
+    return f"这里是主入口 也是默认返回值:{arg}"
+
+
+@default_function.register("注册用名")
+def test1(arg):
+    return f"这里是注册好了的函数111111:传入的值>>{arg}"
+
+
+@default_function.register("测试2")
+@default_function.register("test2")
+def test2(arg):
+    return f"支持多层嵌套注册:传入的值>>{arg}"
+
+
+@default_function.register_all(["111", 222])
+def test3(arg):
+    return f"也支持列表，元组，集合的注册方式一次性注册完毕:传入的值>>{arg}"
+
+
+print(default_function("都没有"))  # 这里是主入口 也是默认返回值:都没有
+print(default_function("测试2"))   # 支持多层嵌套注册:传入的值>>测试2
+print(default_function(222))       # 也支持列表，元组，集合的注册方式一次性注册完毕:传入的值>>222
+
+
+# 下面是一些sql的语法拼接 目前只弄了增删改  查没有弄 删除也只弄了delete
+# 可能有些细节没有弄完 但是就这样了 懒得弄目前
+# 下面涉及到where操作的都可以用字符串处理 where用字典只能是 等值
+from lite_tools import SqlString
+
+
+sql_obj = SqlString("test")   # 这里传入表名
+print(sql_obj.insert({"name": "张三", "age": 12, "comment": "bad"}))   # INSERT INTO test (`name`, 'age', `comment`) VALUES ('张三', 12, 'bad');
+print(sql_obj.insert({"name": "张三", "age": 12}, ignore=True))   # INSERT INTO IGNORE test (`name`, 'age') VALUES ('张三', 12);
+print(sql_obj.update({"age": 66}, {"name": "张三"}))     # UPDATE test SET age = 66 WHERE `name` = '张三';
+print(sql_obj.update({"comment": "good"}, ["age<15", "name LIKES %张%"]))  # UPDATE test SET `comment` = 'good' WHERE age<15 AND name LIKES %张%;
+print(sql_obj.delete({"age": 12}))                       # DELETE FROM test WHERE age = 12;
+print(sql_obj.delete(where="age<12 AND name IS NULL"))   # DELETE FROM test WHERE age<12 AND name IS NULL;

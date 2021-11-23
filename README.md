@@ -52,6 +52,23 @@ clean_string("今天😄嘿 嘿,活活《拉拉\n嘿嘿.", mode="xufpPs", ignore
 # Example in 'demo.py'  ||  示例见demo.py
 ```
 
+```python
+# 临时新增下面功能  本次git提交为数据保存 暂时还不打包 等后续处理好了在弄
+@match_case  # 这是一个装饰器 修改自 the EdgeDB open source project.
+             # 这里的试用我会在demo中详细介绍 大体就是实现match_case的功能
+ 
+
+color_string(string, "红")  # 这种就只修改字体颜色
+color_string(string, {"font": "黄", "background": "b", "v": "b", "length": 10})
+# 字典参数也是有详细介绍 反正就是可以自定义字体颜色 背景颜色 显示模式 输出字体宽度  键也可以简写，值也可以简写，可以中文，可以英文，可以数字
+
+SqlString()   # 这是个类 只负责sql拼接的 目前只弄了插入，更新，(delete)删除的操作，详细操作后续介绍
+```
+
+
+
+
+
 ##### TODO
 
 ```text

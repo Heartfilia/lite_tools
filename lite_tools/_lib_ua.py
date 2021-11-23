@@ -3,7 +3,7 @@
 # @Author : Lodge
 import json
 import random
-from .__uainfo import ua_data
+from ._utils_uainfo import ua_data
 
 
 ua_win = []
@@ -18,7 +18,7 @@ ua_chrome = []
 ua_edge = []
 
 
-def __init__ua():
+def __init__ua(kwargs):
     # 暂时先不支持mac和linux  但是可以独立调用
     # 下面 的数据先写死 以后找到规律了再像chrome那样存模板和版本拼接
     inner_ua_ie = [
@@ -52,16 +52,33 @@ def __init__ua():
     chrome_base = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36'
     edge_base = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36 Edg/{}.0.864.67'
 
-    for version in ua_data["chrome_version"]: 
-        ua_chrome.append(chrome_base.format(version))
-        ua_win.append(chrome_base.format(version))
-        ua_pc.append(chrome_base.format(version))
-        ua_edge.append(edge_base.format(version, version[:2]))
-        ua_win.append(edge_base.format(version, version[:2]))
-        ua_pc.append(edge_base.format(version, version[:2]))
-        for android in ua_data["android_base"]:
-            ua_android.append(android.format(version))
-            ua_mobile.append(android.format(version))
+    version_max = kwargs.get('version_max')  # version_less_than
+    version_min = kwargs.get('version_min') # version_more_than
+    version_equal = kwargs.get('version_equal')   # version_equal
+    version_num = kwargs.get('version', 90)
+
+    for now_version, versions in ua_data["chrome_version"].items(): 
+        if version_max and version_min and version_min > version_max: continue  # 如果两个筛选都存在 并且要求大于的版本值比要求小于的版本值还要大就跳过
+        elif version_max and now_version > version_max: continue
+        elif version_min and now_version < version_min: continue
+        elif version_equal and now_version != version_equal: continue
+
+        if not version_max and not version_min and not version_equal and (now_version < version_num): continue
+        # 
+        for version in versions:
+            ua_chrome.append(chrome_base.format(version))
+            ua_win.append(chrome_base.format(version))
+            ua_pc.append(chrome_base.format(version))
+            ua_edge.append(edge_base.format(version, version[:2]))
+            ua_win.append(edge_base.format(version, version[:2]))
+            ua_pc.append(edge_base.format(version, version[:2]))
+            for android in ua_data["android_base"]:
+                ua_android.append(android.format(version))
+                ua_mobile.append(android.format(version))
+    
+    # 这里是给上面筛选了全部被pass掉了后加的默认值
+    if not ua_chrome or not ua_win or not ua_pc or not ua_mobile or not ua_android: 
+        __set_default(chrome_base, edge_base)
 
     for _uaios in inner_ua_ios: ua_ios.append(_uaios)
     for _uaie in inner_ua_ie: ua_ie.append(_uaie)
@@ -70,9 +87,18 @@ def __init__ua():
 
 
 def get_ua(*args, **kwargs):
-    """下面的都是实际存在的浏览器版本 很多没有拓展 不过chrome的已经够用了"""
+    """
+    下面的都是实际存在的浏览器版本 很多没有拓展 不过chrome的已经够用了
+    :param args :  直接传如需要获取的平台名称 
+                    可以写pc/PC  mobile/MOBILE android macos linux ios win chrome ie  (火狐还没有支持)  
+                    ==> eg. get_ua('win')  get_ua('chrome', 'ie')
+    :param kwagrs:  version_max: 限定最大的chrome版本
+                    version_min: 限定最小的chrome版本
+                    version : 同versionm 也就是小限制的chrome版本
+                    version_equal: 等于这版本的chrome
+    """
     if not ua_win or not ua_pc or not ua_mobile:
-        __init__ua()
+        __init__ua(kwargs)
 
     obj_list = []
     if 'pc' in args or 'PC' in args:
@@ -100,6 +126,18 @@ def get_ua(*args, **kwargs):
     random_ua = random.choice(obj_list)
     del obj_list
     return random_ua
+
+
+def __set_default(chrome_base, edge_base):
+    ua_chrome.append(chrome_base.format(ua_data["default_version"]))
+    ua_win.append(chrome_base.format(ua_data["default_version"]))
+    ua_pc.append(chrome_base.format(ua_data["default_version"]))
+    ua_edge.append(edge_base.format(ua_data["default_version"], ua_data["default_version"][:2]))
+    ua_win.append(edge_base.format(ua_data["default_version"], ua_data["default_version"][:2]))
+    ua_pc.append(edge_base.format(ua_data["default_version"], ua_data["default_version"][:2]))
+    for android in ua_data["android_base"]:
+        ua_android.append(android.format(ua_data["default_version"]))
+        ua_mobile.append(android.format(ua_data["default_version"]))
 
 
 def update_ua():

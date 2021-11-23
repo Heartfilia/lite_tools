@@ -10,7 +10,7 @@ with open("README.md", "r", encoding='utf-8') as fd:
 
 setup(
     name='lite-tools',
-    version='0.4.7.3.5',
+    version='0.4.7.4',
     description='一些python小工具||some little tools',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -19,7 +19,7 @@ setup(
     url='https://github.com/Heartfilia/lite_tools',
     packages=['lite_tools'],
     license='MIT',
-    install_requires=['loguru'],
+    install_requires=['loguru', 'datetime'],
     classifiers=[
 		'Intended Audience :: Developers',
 		'Operating System :: OS Independent',

@@ -6,6 +6,8 @@ from hashlib import (
     sha3_224, sha3_256, sha3_384, sha3_512
 )
 
+__ALL__ = ["get_md5", "get_sha", "get_sha3"]
+
 
 def get_md5(s: str, up: bool = False, encoding='utf-8', to_bin: bool = False) -> str:
     """

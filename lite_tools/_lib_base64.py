@@ -5,6 +5,7 @@ from base64 import (
     b16encode, b32encode, b64encode, b85encode,
     b16decode, b32decode, b64decode, b85decode)
 
+__ALL__ = ['get_b64e', 'get_b64d']
 
 def get_b64e(s: str, mode: int = 64, encoding='utf-8', to_bin: bool = False) -> str:
     """

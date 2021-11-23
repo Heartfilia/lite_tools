@@ -5,9 +5,21 @@ from asyncio import iscoroutinefunction
 from loguru import logger
 
 
-def try_catch(func=None, *, default=None, log=True, catch=False):
+__ALL__ = ["try_catch"]
+
+
+def try_catch(func=None, *, default=None, log=True, catch=False, err_callback=None):
+    """
+    异常捕获装饰器
+    -->不加参数 就是把异常捕获了 返回None
+    -->加了参数==参数如下:
+    :param default     : 默认的返回值
+    :param log         : 是否打印报错信息,默认是打印的
+    :param catch       : 按栈方式捕获异常
+    :param err_callback: 当出现错误的时候调用的回调函数,只需要传入方法名即可
+    """
     if func is None:
-        return partial(try_catch, default=default, log=log, catch=catch)
+        return partial(try_catch, default=default, log=log, catch=catch, err_callback=err_callback)
 
     def __handle_exception():
         results = traceback.format_exc().split('\n')
@@ -23,6 +35,12 @@ def try_catch(func=None, *, default=None, log=True, catch=False):
     
     def __log_true():
         line, fl, exception_type, exception_detail = __handle_exception()
+        if err_callback is not None:
+            try:
+                err_callback()
+            except Exception as err:
+                if log is True:
+                    logger.error(f"传入的回调函数不存在或者报错: {err}")
         if catch is True:
             logger.opt(exception=True, colors=True, capture=True).error("More Informations: ↓↓↓")
         else:

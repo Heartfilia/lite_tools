@@ -3,15 +3,21 @@ import functools
 from typing import Union, Optional
 
 from loguru import logger
-from __code_range import __u_range_list, __U_range_list, msyql_keywords
+from ._utils_code_range import __u_range_list, __U_range_list
+from ._utils_sql_base_string import MysqlKeywordsList
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
 
+__ALL__ = ["match_case", "clean_string", "color_string", "SqlString"]
+
+
 def match_case(func):
     """"
+    也是一个装饰器来着
     I have changed the name. (original name -> value_dispatch)
     修改了原来的命名 使其更加好记 采用了如下源的代码
+    新增优化,支持了类 内部函数的调用->同原方案一样 主要是 dispatches by value of the first arg""
     """
     # This source file is part of the EdgeDB open source project.
     #
@@ -31,21 +37,21 @@ def match_case(func):
     #
     """Like singledispatch() but dispatches by value of the first arg.
     Example:
-      @match_case
-      def eat(fruit):
-          return f"I don't want a {fruit}..."
-      @eat.register('apple')
-      def _eat_apple(fruit):
-          return "I love apples!"
-      @eat.register('eggplant')
-      @eat.register('squash')
-      def _eat_what(fruit):
-          return f"I didn't know {fruit} is a fruit!"
+        @match_case
+        def eat(fruit):
+            return f"I don't want a {fruit}..."
+        @eat.register('apple')
+        def _eat_apple(fruit):
+            return "I love apples!"
+        @eat.register('eggplant')
+        @eat.register('squash')
+        def _eat_what(fruit):
+            return f"I didn't know {fruit} is a fruit!"
     An alternative to applying multuple `register` decorators is to
-    use the `register_for_all` helper:
-      @eat.register_for_all({'eggplant', 'squash'})
-      def _eat_what(fruit):
-          return f"I didn't know {fruit} is a fruit!"
+    use the `register_all` helper:
+        @eat.register_all({'eggplant', 'squash'})
+        def _eat_what(fruit):
+            return f"I didn't know {fruit} is a fruit!"
     """
 
     registry = {}
@@ -53,6 +59,7 @@ def match_case(func):
     @functools.wraps(func)
     def wrapper(arg0, *args, **kwargs):
         try:
+            if args: arg0 = args[0]  # 这里是给类使用
             delegate = registry[arg0]
         except KeyError:
             pass
@@ -72,7 +79,7 @@ def match_case(func):
             return func
         return wrap
 
-    def register_for_all(values):
+    def register_all(values):
         def wrap(func):
             for value in values:
                 if value in registry:
@@ -85,14 +92,14 @@ def match_case(func):
         return wrap
 
     wrapper.register = register
-    wrapper.register_for_all = register_for_all
+    wrapper.register_all = register_all
     return wrapper
 
 
 def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
     '''
     清除字符串**特殊符号**(并不是清除常用字符)的 -- 通过比对unicode码处理  如果u清理不干净 可以加上e
-    x里面==不包含==s  常用的转义字符如:\\a \\b \\n \\v \\t \\r \\f
+    x里面==不包含==s  常用的转义字符如:\\a \\b \\n \\v \\t \\r \\f   ==> 目前大部分可以清理干净 还有清理不干净的或者会报错的还在研究样本
     :param string  : 传入的字符串
     :param mode    : 
         - 清理模式 可以任意排序组合使用 (下面前面括号内为速记单词(有的话)) -> - 
@@ -269,7 +276,7 @@ def color_string(string: str = "", *args, **kwargs) -> str:
             b_string = __get_color_background(b, backgroud=False) 
             base_string += f"{b_string};" if b_string is not None else ""
 
-        v = kwargs.get('v') or kwargs.get('view') or kwargs.get("viewtype")
+        v = kwargs.get('v') or kwargs.get('view') or kwargs.get("viewtype") or kwargs.get('vt')
         if v: 
             v_string = __get_view_mode(v, viewer=False)  
             base_string += f"{v_string:>02};" if v_string is not None else ""
@@ -295,9 +302,6 @@ def color_string(string: str = "", *args, **kwargs) -> str:
     return string
 
 
-deco_clr = color_string   # 兼容老版本名称
-
-
 class SqlString(object):
     """
     这里只负责拼接sql语句 不负责处理sql事务 // 还没有测试好 同clean_string 一样 后面某个版本才会成为完全体
@@ -314,7 +318,7 @@ class SqlString(object):
         """
         if not keys: return None
         whether_igonore = "IGNORE " if ignore is True else ""
-        base_insert = f"INSERT INTO {whether_igonore}{self.table_name} "
+        base_insert = f"INSERT INTO {whether_igonore}{self.table_name}"
         key_string, value_string = self.__handle_insert_data(keys, values)
         if key_string == "": return None
         insert_string = f"{base_insert} {key_string} VALUES {value_string};"
@@ -331,11 +335,11 @@ class SqlString(object):
             keys = []
             values = []
             for key, name in key.items():
-                keys.append(key if key.upper() not in msyql_keywords else f"`{key}`")
+                keys.append(key if key.upper() not in MysqlKeywordsList else f"`{key}`")
                 values.append(name)
             return f"{tuple(keys)}", f"{tuple(values)}"
         elif isinstance(key, (list, tuple)) and isinstance(value, list):
-            keys = [k if k.upper() not in msyql_keywords else f"`{k}`" for k in key]
+            keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in key]
             if value and isinstance(value[0], (list, tuple)):
                 # 这里是批量插入
                 values = ""
@@ -369,11 +373,11 @@ class SqlString(object):
 
         base_update = f"UPDATE {self.table_name} SET "
         for key, value in keys.items():
-            base_update += f'{key if key.upper() not in msyql_keywords else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)}, '
+            base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)}, '
         base_update = base_update.rstrip(', ') + " WHERE "
         if isinstance(where, dict):
             for key, value in where.items():
-                base_update += f'{key if key.upper() not in msyql_keywords else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)} AND '
+                base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)} AND '
         elif isinstance(where, (list, tuple)):
             for value in where:
                 base_update += f"{value} AND "
@@ -393,7 +397,7 @@ class SqlString(object):
         base_delete += " WHERE "
         if isinstance(where, dict):
             for key, value in where.items():
-                base_delete += f'{key if key.upper() not in msyql_keywords else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)} AND '
+                base_delete += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)} AND '
             base_delete = base_delete.rstrip(' AND ') + ";"
         elif isinstance(where, str):
             base_delete += where + ";"
