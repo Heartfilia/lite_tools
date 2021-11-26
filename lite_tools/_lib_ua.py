@@ -18,7 +18,7 @@ ua_chrome = []
 ua_edge = []
 
 
-def __init__ua(kwargs):
+def __init__ua(kwargs: dict={}):
     # 暂时先不支持mac和linux  但是可以独立调用
     # 下面 的数据先写死 以后找到规律了再像chrome那样存模板和版本拼接
     inner_ua_ie = [
@@ -55,7 +55,7 @@ def __init__ua(kwargs):
     version_max = kwargs.get('version_max')  # version_less_than
     version_min = kwargs.get('version_min') # version_more_than
     version_equal = kwargs.get('version_equal')   # version_equal
-    version_num = kwargs.get('version', 90)
+    version_num = kwargs.get('version', 70)
 
     for now_version, versions in ua_data["chrome_version"].items(): 
         if version_max and version_min and version_min > version_max: continue  # 如果两个筛选都存在 并且要求大于的版本值比要求小于的版本值还要大就跳过
@@ -86,19 +86,30 @@ def __init__ua(kwargs):
     for _uamacos in inner_ua_macos: ua_macos.append(_uamacos)
 
 
-def get_ua(*args, **kwargs):
+def init_ua(**kwargs) -> None:
     """
-    下面的都是实际存在的浏览器版本 很多没有拓展 不过chrome的已经够用了
-    :param args :  直接传如需要获取的平台名称 
-                    可以写pc/PC  mobile/MOBILE android macos linux ios win chrome ie  (火狐还没有支持)  
-                    ==> eg. get_ua('win')  get_ua('chrome', 'ie')
+    这里是初始化ua的 可以先在需要处理的文件头先运行这个地方 限定下面的get_ua的版本的控制
+    这里只需要调用一次
+
     :param kwagrs:  version_max: 限定最大的chrome版本
                     version_min: 限定最小的chrome版本
                     version : 同versionm 也就是小限制的chrome版本
                     version_equal: 等于这版本的chrome
     """
+    __init__ua(kwargs)
+
+
+def get_ua(*args):
+    """
+    下面的都是实际存在的浏览器版本 很多没有拓展 不过chrome的已经够用了
+    版本控制试用 init_ua(这里面传入规定)  在全局调用一次即可 后续使用get_ua都直接用的这里的数据
+    :param args :  直接传如需要获取的平台名称 
+                    可以写pc/PC  mobile/MOBILE android macos linux ios win chrome ie  (火狐还没有支持)  
+                    ==> eg. get_ua('win')  get_ua('chrome', 'ie')
+    """
     if not ua_win or not ua_pc or not ua_mobile:
-        __init__ua(kwargs)
+        # 这里是
+        __init__ua()
 
     obj_list = []
     if 'pc' in args or 'PC' in args:
@@ -107,22 +118,14 @@ def get_ua(*args, **kwargs):
         obj_list = ua_mobile
     else:
         for plt in args:
-            if plt.lower() == 'android':
-                obj_list += ua_android
-            if plt.lower() == 'macos':
-                obj_list += ua_macos
-            if plt.lower() == 'linux':
-                obj_list += ua_linux
-            if plt.lower() == 'ios':
-                obj_list += ua_ios
-            if plt.lower() == 'win':   # 这里还缺少firefox版本 后续增加现在这个和chrome相等
-                obj_list += ua_win
-            if plt.lower() == 'chrome':
-                obj_list += ua_chrome
-            if plt.lower() == 'ie':
-                obj_list += ua_ie
-        if not obj_list:
-            obj_list = ua_win
+            if plt.lower() == 'android': obj_list += ua_android
+            if plt.lower() == 'macos': obj_list += ua_macos
+            if plt.lower() == 'linux': obj_list += ua_linux
+            if plt.lower() == 'ios': obj_list += ua_ios
+            if plt.lower() == 'win': obj_list += ua_win   # 这里还缺少firefox版本 后续增加现在这个和chrome相等
+            if plt.lower() == 'chrome': obj_list += ua_chrome
+            if plt.lower() == 'ie': obj_list += ua_ie
+        if not obj_list: obj_list = ua_win
     random_ua = random.choice(obj_list)
     del obj_list
     return random_ua

@@ -9,5 +9,5 @@ from ._lib_hashlib import get_md5, get_sha, get_sha3
 from ._lib_ua import get_ua              # update_ua 后续放出
 # from ._filejar import word2pdf
 
-from ._lib_dict_parser import try_get, try_get_by_name
-from ._lib_string_parser import clean_string, color_string, SqlString, match_case
+from ._lib_dict_parser import try_get, try_get_by_name, match_case
+from ._lib_string_parser import clean_string, color_string, SqlString
