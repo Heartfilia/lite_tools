@@ -7,6 +7,7 @@ from base64 import (
 
 __ALL__ = ['get_b64e', 'get_b64d']
 
+
 def get_b64e(s: str, mode: int = 64, encoding='utf-8', to_bin: bool = False) -> str:
     """
     用baseXX加密字符串

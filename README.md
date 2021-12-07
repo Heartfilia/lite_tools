@@ -1,36 +1,37 @@
 # lite_tools
+
+### 项目说明
+```
+本项目只是封装了 - python**自带包**的功能 不过还是装了另外两个包
+-- loguru(打印日志的) datetime(目前没有用到 后续会改进get_date)
+-- 0.5.0以下均为beta版本(就是为了试错 改bug的)
+```
 ```
 python version:
-	3.6+   // 因为使用了f_string
+    3.6+   // 因为使用了f_string
 requirements :
-	loguru
+    loguru
+    datetime
 ```
 
 ### install
 
 ```bash
-python setup.py install
-
-# or   # then chose one version 选择是需要whl还是tar.gz的安装包
-cd dist
-pip install xxxxx
-
-# or  # 可以直接通过pip安装 国内镜像可能会版本更新不及时 用国内镜像也可以
-pip install lite-tools 
+# 安装
+cmd/bash >> pip install lite-tools   # 有的人的pip是pip3
 ```
-
 
 
 ### Interface
 
-```python
+```bash
 get_time()         # 时间操作 示例见demo.py
 get_ua()           # 获取随机ua 
 timec              # 时间统计装饰器
 
 # ==============下面是推荐使用的功能===================
-try_get()          # 获取*字典或者json串*里面的键的值 返回一个结果 没有默认返回None // 没有获取到期望类型也是None
-try_get_by_name()  # 获取*字典或者json串*里面的键的值 返回一个列表 没有返回空列表 // 没有获取到期望类型也是空列表
+try_get()          # 字典或者json串操作
+try_get_by_name()  # 获取字典里键对应的值们 或者值对应的键们 --> 列表
 # =================================
 get_md5()          # 用md5加密 直接传入字符串就可以了 默认输出十六进制、可选二进制 也可选择输出大写
 get_sha()          # 用sha加密 默认mode=256 可以选择其它加密模式
@@ -49,6 +50,10 @@ try_catch(default="xxx")   # 可以给定默认获取了异常后返回得默认
 
 # ===================================
 clean_string("今天😄嘿 嘿,活活《拉拉\n嘿嘿.", mode="xufpPs", ignore=".") -->今天嘿嘿活活拉拉嘿嘿.
+
+math_string("x^2 + y^5 = z")       --> x² + y⁵ = z
+math_string("2H_2 + O_2 = 2H_2O")  --> 2H₂ + O₂ = 2H₂O
+
 # Example in 'demo.py'  ||  示例见demo.py
 ```
 
@@ -74,7 +79,7 @@ SqlString()   # 这是个类 只负责sql拼接的 目前只弄了插入，更�
 ```text
 filejar.py --> 一些文件转换的操作(以后再说)
 
-# 下面的争取在0.4.7.5版本都修复或者优化
+# 下面的争取在0.5.0版本都修复或者优化
 get_ua   --> 这里需要增加一个刷新数据的操作 (以后有稳定服务器的时候再弄)
 
 get_time --> 这里需要重构一下--优化细节 增加自动匹配功能(以后再说)
@@ -83,7 +88,7 @@ try_get --> 需要增加对列表的操作(搞定了具体操作见demo.py)
 
 try_get_by_name --> 需要优化代码(以后再说)
 
-# 需要新增功能 (下面功能实现了 但是需要测试 目前0.4.7.5以下版本都算是beta版本)
+# 需要新增功能 (下面功能实现了 但是需要测试 目前0.5.0以下版本都算是beta版本)
 # ===== 目前字符串处理已经优化 速度变快了 但是还是需要测试..... ========
 clean_string   --> 清理字符串("\x"  "\u"  标点  emoji)  -> 目前只设置这四个清理功能 默认全部清理
 预设值clean_string(string, mode="xuf")  # 意思就是  

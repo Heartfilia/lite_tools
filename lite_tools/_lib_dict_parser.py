@@ -2,8 +2,9 @@
 # @Time   : 2021-04-06 15:26
 # @Author : Lodge
 import re
-import json
+import json as _json
 import functools
+from typing import Any
 
 from loguru import logger
 
@@ -19,45 +20,59 @@ a = {"a": [{"a": 1}, {"b": 2}, {"b": 10}]}
 __ALL__ = ["match_case", 'try_get', 'try_get_by_name']
 
 
-def try_get(renderer, getters, default=None, expected_type=None, log=False, *args, **kwargs):
+def try_get(
+        renderer, getters=None, default=None, expected_type=None, log=False,
+        json=False, options: dict = None):
     """
     获取字典键值  --> 只获取**一个结果** 如果碰到了列表 只获取**第一个值**或者**特定值**
-    params renderer: 传入的需要解析的字典或者json串
-    params getters : 链式取值 如 a.b.c.d   a[2].b 或者 a.[2].b  或者 a.[*]b ->*是代表不知道是哪一个列表下面出现的b 如果都有那就取第一个 
-    params expected_type: 期望获得的值类型 不是则为None  可多传如：  expected_type=(list, str)
-    params default: 默认的返回值, 默认返回None, 可以自定义返回值
-    return : 如果取到则为值，否则为None
+    只传入一个json串 那么就是转换为字典
+    如果传入一个字典 json=True 那么就是转为json字符串
+    :param renderer: 传入的需要解析的字典或者json串
+    :param getters : 链式取值 -- 不传入那么就只是单纯的格式化json传 这里支持管道符多匹配辣 如: a.b.c|a.b.d[-1]|a.c.d
+               示例:a.b.c.d   a[2].b 或者 a.[2].b  或者 a.[*]b ->*是代表不知道是哪一个列表下面出现的b 如果都有那就取第一个
+    :param default : 默认的返回值, 默认返回None, 可以自定义返回值
+    :param expected_type: 期望获得的值类型 不是则为 default  可多传如：  expected_type=(list, str)
+    :param log     :  是否打印日志
+    :param json    :  设置为True 返回值会返回默认的json串
+    :param options : 这里就是json.dumps的参数 变成了字典传入 不过我默认值有修改 ensure_ascii=False json那默认的是True
+    return         : 如果取到则为值，否则为 default 设置的值 默认None
     """
-    renderer = __judge_json(renderer)
+    renderer = __judge_json(renderer, json, options)
     if not renderer:
         if log is True:
             logger.error(f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
         return expected_type
+    elif json is True or getters is None:
+        return renderer
     if isinstance(getters, str):
-        getters = getters.strip('.|" "|\n|\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
-        origin_getter = "_"
-        if '.' in getters:
-            getters = getters.split('.')
-            for getter in getters:
-                if re.findall(r"\w+\[\d+\]", getter):  # a[2].b
-                    getter_head = getter.split('[')[0]
-                    origin_getter += f"['{getter_head}']"
-                    getter_foot = "[" + getter.split('[')[1]
-                    origin_getter += getter_foot
-                elif re.search(r"\[\*\]\w+", getter):
-                    renderer = handle_reg_rule(renderer, origin_getter, getter, "try重试1_get获取2_fail失败3")
-                    # 避免本来结果就是None或者什么情况
-                    if renderer == "try重试1_get获取2_fail失败3":
-                        return default
-                    origin_getter = "_"
-                elif re.search(r"[\d+]", getter):
-                    origin_getter += getter   # 这里是为了兼容  a.[2].b  这种格式
-                else:
-                    origin_getter += f"['{getter}']"
-        else:
-            origin_getter += f"['{getters}']"
-        getters = lambda _: eval(origin_getter)
-    return __main_try_get(renderer, getters, default, expected_type, log)
+        for each_getter in getters.split("|"):       # 兼容 | 管道符号可以多个条件一起操作
+            getter = each_getter.strip('.|" "|\n|\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
+            origin_getter = "_"
+            if '.' in getter:
+                getter = getter.split('.')
+                for now_getter in getter:
+                    if re.findall(r"\w+\[-?\d+\]", now_getter):  # a[2].b
+                        getter_head = now_getter.split('[')[0]
+                        origin_getter += f"['{getter_head}']"
+                        getter_foot = "[" + now_getter.split('[')[1]
+                        origin_getter += getter_foot
+                    elif re.search(r"\[\*\]\w+", now_getter):
+                        renderer = handle_reg_rule(
+                            renderer, origin_getter, now_getter, "try重试１ダ_get获取２メ_fail失败３よ")
+                        # 避免本来结果就是None或者什么情况
+                        if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
+                            continue
+                        origin_getter = "_"
+                    elif re.search(r"[\d+]", now_getter):
+                        origin_getter += now_getter   # 这里是为了兼容  a.[2].b  这种格式
+                    else:
+                        origin_getter += f"['{now_getter}']"
+            else:
+                origin_getter += f"['{each_getter}']"
+            now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
+            if now_result != default:
+                return now_result
+    return default
 
 
 def handle_reg_rule(renderer, origin_getter, getter, default):
@@ -67,8 +82,7 @@ def handle_reg_rule(renderer, origin_getter, getter, default):
     matching_var = getter[3:]
     
     # 这里先获取到列表 [{},{}]
-    getters = lambda _: eval(origin_getter)   # a.b.[0].c
-    results = __main_try_get(renderer, getters, default)
+    results = __main_try_get(renderer, lambda _: eval(origin_getter), default)
 
     if isinstance(results, list):
         for result in results:
@@ -77,7 +91,7 @@ def handle_reg_rule(renderer, origin_getter, getter, default):
     return default
 
 
-def __main_try_get(renderer, getters, default=None, expected_type=None, log=False):
+def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log=False):
     if not isinstance(getters, (list, tuple)):
         getters = [getters]
     for getter in getters:
@@ -98,14 +112,14 @@ def __main_try_get(renderer, getters, default=None, expected_type=None, log=Fals
 """
 
 
-def try_get_by_name(renderer, getter: str, mode: str="key", expected_type=None, log: bool=False, *args, **kwargs) -> list:
+def try_get_by_name(renderer, getter: str, mode: str = "key", expected_type=None, log: bool = False) -> list:
     """
     批量获取结果json、字典的键值结果
     :param renderer: 传入的json串或者字典
     :param getter  : 需要匹配的值-->配合mode
     :param mode    : 默认通过键模式匹配(key)->匹配getter相同的键返回值; value-->匹配相同结果的值的键
-    :expected_type : 期望获取到的结果的类型(就是一个简单的类型过滤器)
-    :log           : 报错的时候是否打印日志
+    :param expected_type : 期望获取到的结果的类型(就是一个简单的类型过滤器)
+    :param log           : 报错的时候是否打印日志
     """
     renderer = __judge_json(renderer)
     if not renderer:
@@ -122,12 +136,13 @@ def try_get_by_name(renderer, getter: str, mode: str="key", expected_type=None, 
     return results_list
 
 
-def _try_get_results_iter(renderer, getter: str, mode: str="key"):
+def _try_get_results_iter(renderer, getter: str, mode: str = "key"):
     if isinstance(renderer, dict):
         key_value_iter = (iter_obj for iter_obj in renderer.items())
     elif isinstance(renderer, list):
         key_value_iter = (iter_obj for iter_obj in enumerate(renderer))
-    else: return
+    else:
+        return
 
     for key, value in key_value_iter:
         if mode == 'key' and key == getter:
@@ -138,14 +153,34 @@ def _try_get_results_iter(renderer, getter: str, mode: str="key"):
             yield from _try_get_results_iter(value, getter, mode)
 
 
-def __judge_json(renderer):
-    """判断传入进来的是json串还是字典 自动处理成字典"""
+def __judge_json(renderer, json=False, options=None):
+    """
+    判断传入进来的是json串还是字典 自动处理成字典
+    如果传入了options那么就可以转成json
+    """
     if isinstance(renderer, (dict, list)):
+        if json is True:
+            try:
+                print(options)
+                return _json.dumps(
+                    renderer,
+                    skipkeys=options.get('skipkeys', False),
+                    ensure_ascii=options.get('ensure_ascii', False),   # 这里我是按照了自己常用修改成这个了
+                    check_circular=options.get('check_circular', True),
+                    allow_nan=options.get('allow_nan', True),
+                    cls=options.get('cls', None),
+                    indent=options.get('indent', None),
+                    separators=options.get('separators', None),
+                    default=options.get('default', None),
+                    sort_keys=options.get('sort_keys', False)
+                )
+            except Exception as err:
+                return str(err)
         return renderer
     elif isinstance(renderer, str):
         try:
-            data = json.loads(renderer)
-        except json.decoder.JSONDecodeError:
+            data = _json.loads(renderer)
+        except _json.decoder.JSONDecodeError:
             return None
         else:
             return data
@@ -198,7 +233,8 @@ def match_case(func):
     @functools.wraps(func)
     def wrapper(arg0, *args, **kwargs):
         try:
-            if args and "__module__" in dir(arg0): arg0 = args[0]  # 这里是给类使用
+            if args and "__module__" in dir(arg0):
+                arg0 = args[0]  # 这里是给类使用
             delegate = registry[arg0]
         except KeyError:
             pass
@@ -233,3 +269,8 @@ def match_case(func):
     wrapper.register = register
     wrapper.register_all = register_all
     return wrapper
+
+
+if __name__ == "__main__":
+    a = {"a": "你好"}
+    print(try_get(a, 'a'))

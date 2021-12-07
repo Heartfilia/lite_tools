@@ -15,7 +15,7 @@ from loguru import logger
 __ALL__ = ['get_date', 'get_time']
 
 
-def get_date(timedelta: tuple=None):
+def get_date(timedelta: tuple = None):
     """
     这里是为了将get_time里面关于日期操作的独立出来 可以独立调用也可以由get_time调用
     # datetime模块太复杂了 还需要考虑一下怎么合并处理 先不给用这个模块

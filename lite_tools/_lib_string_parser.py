@@ -3,49 +3,49 @@ import re
 from typing import Union, Optional
 
 from loguru import logger
-from ._utils_code_range import __u_range_list, __U_range_list
-from ._utils_sql_base_string import MysqlKeywordsList
-from ._utils_subsup_string import SSHASHMAP
+from lite_tools._utils_code_range import __u_range_list, __U_range_list
+from lite_tools._utils_sql_base_string import MysqlKeywordsList
+from lite_tools._utils_subsup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
 
-__ALL__ = ["clean_string", "color_string", "SqlString"]
+__ALL__ = ["clean_string", "color_string", "SqlString", "math_string"]
 
 
 def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
-    '''
+    """
     清除字符串**特殊符号**(并不是清除常用字符)的 -- 通过比对unicode码处理  如果u清理不干净 可以加上e
     x里面==不包含==s  常用的转义字符如:\\a \\b \\n \\v \\t \\r \\f   ==> 目前大部分可以清理干净 还有清理不干净的或者会报错的还在研究样本
     :param string  : 传入的字符串
-    :param mode    : 
-        - 清理模式 可以任意排序组合使用 (下面前面括号内为速记单词(有的话)) -> - 
-        "x"：\\x开头的符号 - 
-        "u": \\u转义报错的符号 还有空白字符 - 
-        "U": 在win上有字符linux上是空的字符 - 
-        "p": (punctuation 小写)英文标点(含空格) - 
-        "P": (Punctuation 大写)中文标点 - 
-        "e": (emoji) - 
-        "s": (special)常用特殊符号 如'\\t' '\\n' 不包含空格 - 
-        "f": (full-width characters)全角字符  -- 
+    :param mode    :
+        - 清理模式 可以任意排序组合使用 (下面前面括号内为速记单词(有的话)) -> -
+        "a": 直接清理下面全部所有操作
+        "x"：\\x开头的符号 -
+        "u": \\u转义报错的符号 还有空白字符 -
+        "U": 在win上有字符linux上是空的字符 -
+        "p": (punctuation 小写)英文标点(含空格) -
+        "P": (Punctuation 大写)中文标点 -
+        "e": (emoji) -
+        "s": (special)常用特殊符号 如'\\t' '\\n' 不包含空格 -
+        "f": (full-width characters)全角字符  --
         "r": (reserve)预留字符显示为 ֌这样的 -
     :param ignore  : 清理的时候需要忽略的字符--组合使用少量排除 如 ignore="(,}"   不去掉字符串中的那三个字符
-    '''
-    if not isinstance(string, str): return ""
+    """
+    if not isinstance(string, str):
+        return ""
 
-    kill_jar = _scaner(string)
+    kill_jar = _scanner(string)
+
+    if "a" in mode or "A" in mode:  # 如果设置了 -a- 那么就是全清理模式
+        mode = "xuUpPesfr"
 
     for kill in kill_jar:
-        if \
-        ("x" in mode and __judge_x(kill, ignore)) or \
-        ("s" in mode and __judge_s(kill, ignore)) or \
-        ("p" in mode and __judge_p(kill, ignore)) or \
-        ("P" in mode and __judge_P(kill, ignore)) or \
-        ("f" in mode and __judge_f(kill, ignore)) or \
-        ("e" in mode and __judge_e(kill, ignore)) or \
-        ("u" in mode and __judge_u(kill, ignore)) or \
-        ("U" in mode and __judge_U(kill, ignore)) or \
-        ("r" in mode and __judge_r(kill, ignore)): 
+        if ("x" in mode and __judge_x(kill, ignore)) or ("s" in mode and __judge_s(kill, ignore)) or (
+                "p" in mode and __judge_p(kill, ignore)) or ("P" in mode and __judge_P(kill, ignore)) or (
+                "f" in mode and __judge_f(kill, ignore)) or ("e" in mode and __judge_e(kill, ignore)) or (
+                "u" in mode and __judge_u(kill, ignore)) or ("U" in mode and __judge_U(kill, ignore)) or (
+                "r" in mode and __judge_r(kill, ignore)):
             string = string.replace(kill, "")
     return string
 
@@ -61,14 +61,16 @@ def __judge_s(char, ignore=""):
 
 
 def __judge_p(char, ignore=""):
-    if char not in ignore and (32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127):
+    if char not in ignore and (
+            32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127):
         return True
 
 
 def __judge_P(char, ignore=""):
-    if char not in ignore and \
-    (8208 <= ord(char) < 8232 or 8240 <= ord(char) < 8287 or 12289 <= ord(char) < 12310 or 65072 <= ord(char) < 65107 
-    or 65108 <= ord(char) < 65127 or 65128 <= ord(char) < 65132 or 65281 <= ord(char) < 65313):
+    if char not in ignore and (
+            8208 <= ord(char) < 8232 or 8240 <= ord(char) < 8287 or 12289 <= ord(char) < 12310 or
+            65072 <= ord(char) < 65107 or 65108 <= ord(char) < 65127 or 65128 <= ord(char) < 65132 or
+            65281 <= ord(char) < 65313):
         return True
 
 
@@ -105,7 +107,7 @@ def __judge_r(char, ignore=""):
         return True
 
 
-def _scaner(string: str):
+def _scanner(string: str):
     jar = set()
     for ch in string: 
         if ch.isalpha() or ch.isdigit(): continue
@@ -113,53 +115,86 @@ def _scaner(string: str):
     return jar
 
 
-def __get_color_front(color_string: str):
+def __get_color_front(string: str):
     # 这里是为了传入数字也可以搞
-    lower_string = str(color_string).lower()
-    if lower_string in ['黑色', '黑', 'black', 'k', '30', '000000']: return 30
-    elif lower_string in ['红色', '红', 'red', 'r', '31', 'ff0000']: return 31
-    elif lower_string in ['绿色', '绿', 'green', 'g', '32', "008000"]: return 32
-    elif lower_string in ['黄色', '黄', 'yellow', 'y', '33', 'ffff00']: return 33
-    elif lower_string in ['蓝色', '蓝', 'blue', 'b', '34', '0000ff']: return 34
-    elif lower_string in ['紫色', '紫', 'purple', 'p', '35', '800080']: return 35
-    elif lower_string in ['青蓝色', '青蓝', '靛色', '靛', 'cyan', 'c', '36', '00ffff']: return 36
-    elif lower_string in ['白色', '白', 'white', 'w', '37', 'ffffff']: return 37
-    elif lower_string in ['深灰色', '灰色', '灰', 'darkgrey', 'dg', '90', 'a9a9a9']: return 90
-    elif lower_string in ['亮红色', '亮红', 'lightred', 'lr', '91']: return 91
-    elif lower_string in ['亮绿色', '亮绿', 'lightgreen', 'lg', '92']: return 92
-    elif lower_string in ['亮黄色', '亮黄', 'lightyellow', 'ly', '93']: return 93
-    elif lower_string in ['亮蓝色', '亮蓝', 'lightblue', 'lb', '94']: return 94
-    elif lower_string in ['粉色', '粉', 'pink', '少女粉', '猛男粉', '95', 'ffc0cb']: return 95
-    elif lower_string in ['亮青色', '亮青', 'lightcyan', 'lc', '96']: return 96
+    lower_string = str(string).lower()
+    if lower_string in ['黑色', '黑', 'black', 'k', '30', '000000']:
+        return 30
+    elif lower_string in ['红色', '红', 'red', 'r', '31', 'ff0000']:
+        return 31
+    elif lower_string in ['绿色', '绿', 'green', 'g', '32', "008000"]:
+        return 32
+    elif lower_string in ['黄色', '黄', 'yellow', 'y', '33', 'ffff00']:
+        return 33
+    elif lower_string in ['蓝色', '蓝', 'blue', 'b', '34', '0000ff']:
+        return 34
+    elif lower_string in ['紫色', '紫', 'purple', 'p', '35', '800080']:
+        return 35
+    elif lower_string in ['青蓝色', '青蓝', '靛色', '靛', 'cyan', 'c', '36', '00ffff']:
+        return 36
+    elif lower_string in ['白色', '白', 'white', 'w', '37', 'ffffff']:
+        return 37
+    elif lower_string in ['深灰色', '灰色', '灰', 'darkgrey', 'dg', '90', 'a9a9a9']:
+        return 90
+    elif lower_string in ['亮红色', '亮红', 'lightred', 'lr', '91']:
+        return 91
+    elif lower_string in ['亮绿色', '亮绿', 'lightgreen', 'lg', '92']:
+        return 92
+    elif lower_string in ['亮黄色', '亮黄', 'lightyellow', 'ly', '93']:
+        return 93
+    elif lower_string in ['亮蓝色', '亮蓝', 'lightblue', 'lb', '94']:
+        return 94
+    elif lower_string in ['粉色', '粉', 'pink', '少女粉', '猛男粉', '95', 'ffc0cb']:
+        return 95
+    elif lower_string in ['亮青色', '亮青', 'lightcyan', 'lc', '96']:
+        return 96
     return None
 
 
-def __get_color_background(color_string: str, backgroud=True):
-    # backgroud 这里是为了排除字体颜色的英文单词给搞到了背景颜色
-    lower_string = str(color_string).lower()
-    if backgroud is True and not lower_string.isdigit(): return None
-    if lower_string in ['黑色', '黑', 'black', 'k', '40']: return 40
-    elif lower_string in ['红色', '红', 'red', 'r', '41']: return 41
-    elif lower_string in ['绿色', '绿', 'green', 'g', '42']: return 42
-    elif lower_string in ['黄色', '黄', 'yellow', 'y', '43']: return 43
-    elif lower_string in ['蓝色', '蓝', 'blue', 'b', '44']: return 44
-    elif lower_string in ['紫色', '紫', 'purple', 'p', '45']: return 45
-    elif lower_string in ['青蓝色', '青蓝', '靛色', '靛', 'cyan', 'c', '46']: return 46
-    elif lower_string in ['白色', '白', 'white', 'w', '47']: return 47
+def __get_color_background(string: str, background=True):
+    # background 这里是为了排除字体颜色的英文单词给搞到了背景颜色
+    lower_string = str(string).lower()
+    if background is True and not lower_string.isdigit():
+        return None
+    if lower_string in ['黑色', '黑', 'black', 'k', '40']:
+        return 40
+    elif lower_string in ['红色', '红', 'red', 'r', '41']:
+        return 41
+    elif lower_string in ['绿色', '绿', 'green', 'g', '42']:
+        return 42
+    elif lower_string in ['黄色', '黄', 'yellow', 'y', '43']:
+        return 43
+    elif lower_string in ['蓝色', '蓝', 'blue', 'b', '44']:
+        return 44
+    elif lower_string in ['紫色', '紫', 'purple', 'p', '45']:
+        return 45
+    elif lower_string in ['青蓝色', '青蓝', '靛色', '靛', 'cyan', 'c', '46']:
+        return 46
+    elif lower_string in ['白色', '白', 'white', 'w', '47']:
+        return 47
     return None
 
 
 def __get_view_mode(mode: str, viewer=True):
     lower_string = str(mode).lower()
-    if viewer is True and not lower_string.isdigit(): return None
-    if lower_string in ["reset", "重置", "0"]: return 0            # 不输出任何样式
-    elif lower_string in ["bold", "加粗", "b", "1"]: return 1           # 加粗
-    elif lower_string in ["disable", "禁用", "2"]: return 2        # 不知道这个有什么效果 看不出来
-    elif lower_string in ["underline", "下划线", "u", "4"]: return 4      # 下划线
-    elif lower_string in ["flash", "闪烁", "f", "5"]: return 5          # 闪烁
-    elif lower_string in ["reverse", "反相", "r", "7"]: return 7        # 反相
-    elif lower_string in ["invisible", "消失", "不可见", "i", "8"]: return 8      # 不可见
-    elif lower_string in ["strikethrough", "删除线", "s", "9"]: return 9  # 删除线
+    if viewer is True and not lower_string.isdigit():
+        return None
+    if lower_string in ["reset", "重置", "0"]:
+        return 0         # 不输出任何样式
+    elif lower_string in ["bold", "加粗", "b", "1"]:
+        return 1         # 加粗
+    elif lower_string in ["disable", "禁用", "2"]:
+        return 2         # 不知道这个有什么效果 看不出来
+    elif lower_string in ["underline", "下划线", "u", "4"]:
+        return 4          # 下划线
+    elif lower_string in ["flash", "闪烁", "f", "5"]:
+        return 5          # 闪烁
+    elif lower_string in ["reverse", "反相", "r", "7"]:
+        return 7          # 反相
+    elif lower_string in ["invisible", "消失", "不可见", "i", "8"]:
+        return 8          # 不可见
+    elif lower_string in ["strikethrough", "删除线", "s", "9"]:
+        return 9          # 删除线
     return None
 
 
@@ -167,21 +202,26 @@ def color_string(string: str = "", *args, **kwargs) -> str:
     """
     给字体增加颜色 参数如下 使用直接  color_string("要加颜色的字体", 34, 5, 44) 需要加的颜色数字直接写下面 只有在规定范围内才能被提取 同一级写了多个只拿第一个
     如果传入英文 只有RGBYWPC 可以缩写 黑色black需要写全 大小写都无所谓  英文属于<<字体颜色>> 
-    可以使用字典传参 设置字体颜色背景颜色 显示方式 如：{"f": "red", "b": "yellow", "v": "default", 'lenght': 20}  # 这里限定了20个字符宽度(实际会大于20个只不过我这里做了处理) length 键弄l也可以
+    可以使用字典传参 设置字体颜色背景颜色 显示方式 如：{"f": "red", "b": "yellow", "v": "default", 'length': 20}
+                                                # 这里限定了20个字符宽度(实际会大于20个只不过我这里做了处理) length 键弄l也可以
     :param string: 传入的字符串
     :param args  : 参数注解如下面所示  传入非字典类型的时候 只有第一个参数起作用在字体颜色上面  -->传入字典同下操作
     :param kwargs: 这里传入需要用 **{}   
-    :param f     : 字体颜色 -> (30, 黑色/black)(31, 红色/r/red)(32, 绿色/g/green)(33, 黄色/y/yellow)(34, 蓝色/b/blue)(35, 紫色/p/purple)(36, 青蓝色/c/cyan)(37, 白色/w/white)
-                            -> (90, darkgrey)(91, lightred)(92, lightgreen)(93, lightyellow)(94, lightblue)(95, pink)(96, lightcyan)
-    :param b     : 背景颜色 -> (40, 黑色/black)(41, 红色/r/red)(42, 绿色/g/green)(43, 黄色/y/yellow)(44, 蓝色/b/blue)(45, 紫色/p/purple)(46, 青蓝色/c/cyan)(47, 白色/w/white)
-    :param v     : 显示方式 -> (0, 重置/reset)(1, 加粗/b/bold)(2, 禁止/disable)(4, 使用下划线/u/underline)(5, 闪烁/f/flash)(7, 反相/r/reverse)(8, 不可见/i/invisible)(9, 删除线/s/strikethrough)   
+    :param f     : 字体颜色 -> (30, 黑色/black)(31, 红色/r/red)(32, 绿色/g/green)(33, 黄色/y/yellow)(34, 蓝色/b/blue)
+                                (35, 紫色/p/purple)(36, 青蓝色/c/cyan)(37, 白色/w/white)(90, darkgrey)(91, lightred)
+                                (92, lightgreen)(93, lightyellow)(94, lightblue)(95, pink)(96, lightcyan)
+    :param b     : 背景颜色 -> (40, 黑色/black)(41, 红色/r/red)(42, 绿色/g/green)(43, 黄色/y/yellow)(44, 蓝色/b/blue)
+                                (45, 紫色/p/purple)(46, 青蓝色/c/cyan)(47, 白色/w/white)
+    :param v     : 显示方式 -> (0, 重置/reset)(1, 加粗/b/bold)(2, 禁止/disable)(4, 使用下划线/u/underline)(5, 闪烁/f/flash)
+                                (7, 反相/r/reverse)(8, 不可见/i/invisible)(9, 删除线/s/strikethrough)
     """
     base_string = '\033['
     if (string and kwargs) or (string and args and isinstance(args[0], dict)):
-        if string and args and isinstance(args[0], dict): kwargs = args[0]
-        lenght = kwargs.get('lenght', 0) or kwargs.get('l', 0)
-        if isinstance(lenght, int) or (isinstance(lenght, str) and lenght.isdigit()):
-            lenght = int(lenght) 
+        if string and args and isinstance(args[0], dict):
+            kwargs = args[0]
+        length = kwargs.get('length', 0) or kwargs.get('l', 0)
+        if isinstance(length, int) or (isinstance(length, str) and length.isdigit()):
+            length = int(length)
 
         f = kwargs.get('f') or kwargs.get('font')
         if f: 
@@ -190,7 +230,7 @@ def color_string(string: str = "", *args, **kwargs) -> str:
 
         b = kwargs.get('b') or kwargs.get('background') or kwargs.get('backg')
         if b: 
-            b_string = __get_color_background(b, backgroud=False) 
+            b_string = __get_color_background(b, background=False)
             base_string += f"{b_string};" if b_string is not None else ""
 
         v = kwargs.get('v') or kwargs.get('view') or kwargs.get("viewtype") or kwargs.get('vt')
@@ -198,10 +238,12 @@ def color_string(string: str = "", *args, **kwargs) -> str:
             v_string = __get_view_mode(v, viewer=False)  
             base_string += f"{v_string:>02};" if v_string is not None else ""
         
-        if base_string == '\033[': return string    # 如果操作一通后还是和原来字符串一样就不装饰
-        if not kwargs.get('lenght') and not kwargs.get('l', 0): lenght = 0
-        else: lenght -= len(string)
-        return f"{base_string.strip(';')}m{string}{' ' * lenght}\033[0m"
+        if base_string == '\033[':
+            return string    # 如果操作一通后还是和原来字符串一样就不装饰
+        if not kwargs.get('lenght') and not kwargs.get('l', 0):
+            length = 0
+        else: length -= len(string)
+        return f"{base_string.strip(';')}m{string}{' ' * length}\033[0m"
 
     elif string and args:
         result_ftclr = list(filter(__get_color_front, map(__get_color_front, args)))
@@ -225,18 +267,21 @@ class SqlString(object):
     def __init__(self, table_name: str) -> None:
         self.table_name = table_name
 
-    def insert(self, keys: Union[dict, list, tuple], values: list=None, ignore: bool=False) -> Optional[str]:
+    def insert(self, keys: Union[dict, list, tuple], values: list = None, ignore: bool = False) -> Optional[str]:
         """
         如果是拼接单条sql: keys传入字典 自动提取键值  values不需要传
         如果是多值拼接   : keys传入需要插入的字段命 可以列表 可以元组
                         : values传入对应的值得列表 里面放元组 如: [(1, "a"), (99, "test")]  / 也可以[1, "a"] 这样就是单条插入
-        :param ignore   : 是否忽略插入中的重复值之类的 
+        :param keys
+        :param values
+        :param ignore   : 是否忽略插入中的重复值之类的
         """
         if not keys: return None
-        whether_igonore = "IGNORE " if ignore is True else ""
-        base_insert = f"INSERT INTO {whether_igonore}{self.table_name}"
+        whether_ignore = "IGNORE " if ignore is True else ""
+        base_insert = f"INSERT INTO {whether_ignore}{self.table_name}"
         key_string, value_string = self.__handle_insert_data(keys, values)
-        if key_string == "": return None
+        if key_string == "":
+            return None
         insert_string = f"{base_insert} {key_string} VALUES {value_string};"
         return self.__clear_string(insert_string)
     
@@ -246,16 +291,16 @@ class SqlString(object):
             '= True', '= 1').replace('= False', '= 0').replace('= None', "IS NULL").replace(
             '=True', '= 1').replace('=False', '= 0').replace('=None', "IS NULL")
 
-    def __handle_insert_data(self, key, value):
+    @staticmethod
+    def __handle_insert_data(key, value):
         if isinstance(key, dict) and value is None:
             keys = []
             values = []
             for key, name in key.items():
                 keys.append(key if key.upper() not in MysqlKeywordsList else f"`{key}`")
                 values.append(name)
-            return f"{tuple(keys)}", f"{tuple(values)}"
+            return f"{tuple(keys)}".replace("'", ""), f"{tuple(values)}"
         elif isinstance(key, (list, tuple)) and not value and isinstance(key[0], dict):
-            # [{"name": "lodge", "age": 1, "comment": "bad"}, {"name": "heartfilia", "age": 2, "comment": "good"}]
             result_dict = {}
             # 第一步构造键值对
             for item in key:
@@ -270,7 +315,7 @@ class SqlString(object):
                 return "", ""
             keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in result_dict.keys()]
             # 开始拼接 // 下面值 处理方式感谢 咸鱼python群@微信会员 大佬提供解决思路
-            return f"{tuple(keys)}", f"{list(zip(*result_dict.values()))}"[1:-1]
+            return f"{tuple(keys)}".replace("'", ""), f"{list(zip(*result_dict.values()))}"[1:-1]
         elif isinstance(key, (list, tuple)) and isinstance(value, list):
             keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in key]
             if value and isinstance(value[0], (list, tuple)):
@@ -283,12 +328,12 @@ class SqlString(object):
                     values += f"{tuple(v)}, "
                 values = values.rstrip(', ')
             else:
-            # 这里只是兼容另外一种格式而已 推荐的还是字典
+                # 这里只是兼容另外一种格式而已 推荐的还是字典
                 if len(key) != len(value):
                     logger.error(f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};")
                     return "", ""
                 values = f"{tuple(value)}"
-            return f"{tuple(keys)}", values
+            return f"{tuple(keys)}".replace("'", ""), values
         else:
             logger.error("传入了不支持的数据类型")
             return "", ""
@@ -296,13 +341,14 @@ class SqlString(object):
     def update(self, keys: dict, where: Union[dict, list, tuple, str]) -> Optional[str]:
         """
         更新数据操作, 传入需要更新的字典即可
-        :param key:  传入的更新部分的键值对啦
+        :param keys :  传入的更新部分的键值对啦
         :param where: 当然是筛选条件 --> 如果用字典传入-> 相当于 "=" , 多个值会AND拼接 : True 会被替换为1 False会被替换为0 None 会被替换为NULL
                                     # 想实现更加精准的条件就在下面自己写 推荐==>字符串的传入方式
                                     --> 如果是列表传入按照 ['test<5', 'hello=1', 'tt LIKES "%VV%"'] 这样传入
                                     --> 如果是字符串: 'test < 5 AND hello = 1'   这样传入
         """
-        if not keys or not isinstance(keys, dict) or not where: return None
+        if not keys or not isinstance(keys, dict) or not where:
+            return None
 
         base_update = f"UPDATE {self.table_name} SET "
         for key, value in keys.items():
@@ -363,13 +409,15 @@ def math_string(string: str) -> str:
     # 第一步提取出原字符串中可能是上下规则的字符
     # 第二步直接从对应的hash表获取替换关系
     new_string = string
-    for rule in set(re.findall("\^\S|_\S|&\w+;", string)):
-        getter = SSHASHMAP.get(rule)
+    for rule in set(re.findall(r"\^\S|_\S|&\w+;", string)):
+        getter = SUB_SUP_WORDS_HASH.get(rule)
         if getter:
             new_string = new_string.replace(rule, getter)
     return new_string
 
 
 if __name__ == "__main__":
-    pass
+    sql_obj = SqlString('test')
+    obj = {"age": 1, "comment": "xxxx", "name": "lodge"}
+    print(sql_obj.update(obj, where={"age": 1}))
 
