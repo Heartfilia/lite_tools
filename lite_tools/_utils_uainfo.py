@@ -79,13 +79,13 @@ versions = {
 # 这里存放各个平台对应的浏览器内核
 # 下面手机基本都只有chromium 是因为一样的 只有安卓和苹果的区分
 platform_data = {
-	"win": ["chromium", "firefox", "ie", "opera"],
-	"pc": ["chromium", "firefox", "ie", "opera", "safari"],
-	"linux": ["chromium", "firefox", "opera"],
-	"mac": ["chromium", "firefox", "opera", "safari"],
-	"mobile": ["chromium"],
-	"android": ["chromium"],
-	"ios": ["chromium"]
+	"win": ["chrome", "firefox", "ie", "edge"],
+	"pc": ["chrome", "firefox", "ie", "safari", "edge"],
+	"linux": ["chrome", "firefox"],
+	"mac": ["chrome", "firefox", "safari", "edge"],
+	"mobile": ["chrome"],
+	"android": ["chrome"],
+	"ios": ["chrome"]
 }
 
 # 浏览器的string 这里存了各种浏览器的拼接模板 需要结合version_data
@@ -100,7 +100,7 @@ browser_data = {
 	},
 	"safari": {
 		"mapping": "",
-		"base": []
+		"base": ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15"]
 	},
 	"firefox": {
 		"mapping": "",

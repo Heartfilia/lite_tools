@@ -3,8 +3,9 @@
 # @Author : Lodge
 import random
 import json as _json
-from lite_tools._utils_uainfo import ua_data
+
 from lite_tools._lib_dict_parser import match_case
+from lite_tools._utils_uainfo import platform_data, browser_data
 
 __ALL__ = ["init_ua", "get_ua", "update_ua"]
 
@@ -72,16 +73,30 @@ def init_ua(**kwargs) -> None:
 
 def get_ua(*args):
     """
-    #TODO(这里需要调整取值逻辑 可以从多个平台里面 随机取出平台 然后随机取值)
     下面的都是实际存在的浏览器版本 很多没有拓展 不过chrome的已经够用了
-    版本控制试用 init_ua(这里面传入规定)  在全局调用一次即可 后续使用get_ua都直接用的这里的数据
-    :param args :  直接传如需要获取的平台名称 
+    :param args :  直接传如需要获取的平台名称 -- 可以传系统 可以传浏览器 如果是浏览器 就是pc端的
                     可以写pc/PC  mobile/MOBILE android macos linux ios win chrome ie  (火狐还没有支持)  
                     ==> eg. get_ua('win')  get_ua('chrome', 'ie')
     """
-    print(args)
-    platform = random.choice(args)
-    print(platform)
+    if args:
+        mode = random.choice(args)
+        if mode.lower() in platform_data:
+            browser = random.choice(platform_data.get(mode.lower()))
+        elif mode.lower()in browser_data:
+            browser = mode.lower()
+        else:
+            browser = "chrome"
+    else:
+        browser = "chrome"
+    
+
+
+@match_case
+def judge_ua(platform):
+    return ""   # 这里默认返回chrome相关的资源
+
+
+def judge_
 
 
 def update_ua():
