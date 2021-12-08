@@ -10,6 +10,7 @@ from loguru import logger
 """
 这里可以用 但是比较臃肿 
 后续将重构
+#TODO(时间处理这里将增加一批时间格式规则 后续将会自动匹配样式 没有匹配或者可以手动指定匹配)
 """
 
 __ALL__ = ['get_date', 'get_time']
@@ -41,7 +42,7 @@ def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None
             sure_time = time.mktime(time.strptime(goal, fmt_str))
             return sure_time
         except Exception as e:
-            logger.error(f"请输入正确的[ fmt_str ]格式，错误为:{e}")
+            logger.error(f"请输入正确的[ fmt ]格式，错误为:{e}")
             return -1
     elif goal and not double:
         if isinstance(goal, int):
