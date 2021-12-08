@@ -7,18 +7,18 @@ import json as _json
 from lite_tools._lib_dict_parser import match_case
 from lite_tools._utils_uainfo import platform_data, browser_data
 
-__ALL__ = ["init_ua", "get_ua", "update_ua"]
+__ALL__ = ["get_ua"]
 
-ua_win = []
-ua_pc = []
-ua_mobile = []
-ua_linux = []
-ua_ie = []
-ua_macos = []
-ua_ios = []
-ua_android = []
-ua_chrome = []
-ua_edge = []
+"""
+下面操作的实现逻辑如下
+
+输入参数 ---随机选择--[浏览器]--->browser_data --随机选择--> versions ==> 可用ua
+            |⌈``⌉                   ↑
+            ||系|                   |
+            ||统|                   |
+            ↓⌊__⌋    		        |
+        platform_data --随机选择--[浏览器]
+"""
 
 
 def __init__ua(kwargs: dict = None):
@@ -26,10 +26,6 @@ def __init__ua(kwargs: dict = None):
     # 下面 的数据先写死 以后找到规律了再像chrome那样存模板和版本拼接
     if kwargs is None:
         kwargs = {}
-    inner_ua_ie = [
-        'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko',
-        'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.3; Trident/7.0; .NET4.0E; .NET4.0C)'
-    ]  # version 11
 
     inner_ua_linux = [
         'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/51.0',
@@ -53,9 +49,6 @@ def __init__ua(kwargs: dict = None):
         'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
     ]
-
-    chrome_base = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36'
-    edge_base = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36 Edg/{}.0.864.67'
 
 
 def init_ua(**kwargs) -> None:
@@ -82,7 +75,7 @@ def get_ua(*args):
         mode = random.choice(args)
         if mode.lower() in platform_data:
             browser = random.choice(platform_data.get(mode.lower()))
-        elif mode.lower()in browser_data:
+        elif mode.lower() in browser_data:
             browser = mode.lower()
         else:
             browser = "chrome"
@@ -90,19 +83,12 @@ def get_ua(*args):
         browser = "chrome"
     
 
-
 @match_case
 def judge_ua(platform):
     return ""   # 这里默认返回chrome相关的资源
 
 
-def judge_
 
-
-def update_ua():
-    """
-    这里会有个同步线上的数据更新到本地数据 不过目前没有搭建稳定的资源库服务器 暂时搁置
-    """
 
 
 if __name__ == "__main__":

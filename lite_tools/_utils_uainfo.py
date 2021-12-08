@@ -1,7 +1,6 @@
 # 这里存放各个浏览器的版本
 # 这里是不参与浏览器外部参数筛选的 仅供下面 platform_data browser_data 使用
 versions = {
-	"fresh_date": "2021-11-23",
 	"chromium": {
 		"base_string": {
 			"edge": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36 Edg/{}.0.864.67",
@@ -79,13 +78,65 @@ versions = {
 # 这里存放各个平台对应的浏览器内核
 # 下面手机基本都只有chromium 是因为一样的 只有安卓和苹果的区分
 platform_data = {
-	"win": ["chrome", "firefox", "ie", "edge"],
-	"pc": ["chrome", "firefox", "ie", "safari", "edge"],
-	"linux": ["chrome", "firefox"],
-	"mac": ["chrome", "firefox", "safari", "edge"],
-	"mobile": ["chrome"],
-	"android": ["chrome"],
-	"ios": ["chrome"]
+	"win": [
+		{"chrome": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36"},
+		{"firefox": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{}.0) Gecko/20100101 Firefox/{}.0"},
+		{"ie": [
+			"Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko",
+			"Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; rv:11.0) like Gecko"
+		]},
+		{"edge": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36 Edg/{}"}
+	],
+	"pc": [
+		{"chrome": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36"},
+		{"safari": ""},
+		{"firefox": [
+			"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{}.0) Gecko/20100101 Firefox/{}.0",
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 13.8; rv,{}.1) Gecko/20100101 Firefox/{}.1"
+		]},
+		{"ie": [
+			"Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko",
+			"Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; rv:11.0) like Gecko"
+		]},
+		{"edge": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36 Edg/{}"}
+	],
+	"linux": [
+		{"chrome": [
+			"Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36",
+			"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36"
+		]},
+		{"firefox": [
+			"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:{}.0) Gecko/20100101 Firefox/{}.0",
+			"Mozilla/5.0 (X11; Linux x86_64; rv:{}.0) Gecko/20100101 Firefox/{}.0"
+		]}
+	],
+	"mac": [
+		{"chrome": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Safari/537.36"},
+		{"safari": ""},
+		{"firefox": ""},
+		{"edge": ""}
+	],
+	"mobile": [
+		{"chrome": [
+			"Mozilla/5.0 (Linux; Android 11; SAMSUNG SM-G973U) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/14.2 Chrome/{} Mobile Safari/537.36",
+			"Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Mobile Safari/537.36 Edg/{}",
+			"Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL Build/OPD1.170816.004) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Mobile Safari/537.36 Edg/{}",
+			"Mozilla/5.0 (Linux; Android 6.0.1; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Mobile Safari/537.36"
+		]}
+	],
+	"android": [
+		{"chrome": [
+			"Mozilla/5.0 (Linux; Android 11; SAMSUNG SM-G973U) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/14.2 Chrome/{} Mobile Safari/537.36"
+			"Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Mobile Safari/537.36 Edg/{}",
+			"Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL Build/OPD1.170816.004) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Mobile Safari/537.36 Edg/{}",
+			"Mozilla/5.0 (Linux; Android 6.0.1; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{} Mobile Safari/537.36"
+		]}
+	],
+	"ios": [
+		{"chrome": [
+			""
+		]}
+	]
 }
 
 # 浏览器的string 这里存了各种浏览器的拼接模板 需要结合version_data
@@ -104,29 +155,12 @@ browser_data = {
 	},
 	"firefox": {
 		"mapping": "",
-		"base": [
-			"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0 ",
-			"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0",
-			"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:94.0) Gecko/20100101 Firefox/94.0 "
-		]
+		"base": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{}.0) Gecko/20100101 Firefox/{}.0"
 	},
 	"ie": {
 		"mapping": "",
 		"base": ""
 	},
-	"opera": {
-		"mapping": "",
-		"base": ""
-	}
 }
-
-"""
-上述操作的实现逻辑如下
-
-输入参数 ---随机选择--[浏览器]--browser_data --随机选择--> versions ==> 可用ua
-			|[系                   ↑
-			↓ 统]     		       |
-		platform_data --随机选择--[浏览器]
-"""
 
 ua_data = {}
