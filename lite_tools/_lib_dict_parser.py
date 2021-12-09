@@ -43,6 +43,7 @@ def try_get(
             logger.error(f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
         return expected_type
     elif json is True or getters is None:
+        # 如果是需要json字符串或者只是单纯想转换字符串 不要传对应值就好了
         return renderer
     if isinstance(getters, str):
         for each_getter in getters.split("|"):       # 兼容 | 管道符号可以多个条件一起操作
@@ -56,6 +57,11 @@ def try_get(
                         origin_getter += f"['{getter_head}']"
                         getter_foot = "[" + now_getter.split('[')[1]
                         origin_getter += getter_foot
+                    elif re.findall(r"\[-?\d+\]\w+", now_getter):  # a.[2]b   # 这里是为了兼容 不推荐这样写
+                        getter_head = now_getter.split(']')[0]
+                        origin_getter += getter_head + "]"
+                        getter_foot = now_getter.split(']')[1]
+                        origin_getter += f"['{getter_foot}']"
                     elif re.search(r"\[\*\]\w+", now_getter):
                         renderer = handle_reg_rule(
                             renderer, origin_getter, now_getter, "try重试１ダ_get获取２メ_fail失败３よ")
@@ -68,11 +74,46 @@ def try_get(
                     else:
                         origin_getter += f"['{now_getter}']"
             else:
-                origin_getter += f"['{each_getter}']"
+                if re.search(r"\[\*\]\w+", each_getter):
+                    renderer = handle_reg_rule(
+                        renderer, origin_getter, each_getter, "try重试１ダ_get获取２メ_fail失败３よ")
+                    # 避免本来结果就是None或者什么情况
+                    if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
+                        continue
+                    origin_getter = "_"
+                elif re.findall(r"\w+\[-?\d+\]", each_getter):  # a[2]
+                    getter_head = each_getter.split('[')[0]
+                    origin_getter += f"['{getter_head}']"
+                    getter_foot = "[" + each_getter.split('[')[1]
+                    origin_getter += getter_foot
+                elif re.findall(r"\[-?\d+\]\w+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
+                    getter_head = each_getter.split(']')[0]
+                    origin_getter += getter_head + "]"
+                    getter_foot = each_getter.split(']')[1]
+                    origin_getter += f"['{getter_foot}']"
+                else:
+                    origin_getter += f"['{each_getter}']"
+            print(origin_getter)
             now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
             if now_result != default:
                 return now_result
     return default
+
+
+def judge_reg_rules(origin_getter: str, now_getter: str) -> str:
+    """
+    因为上面的都有可能出现这里的情况 我就独立出来处理
+    """
+    if re.findall(r"\w+\[-?\d+\]", now_getter):  # a[2].b
+        getter_head = now_getter.split('[')[0]
+        origin_getter += f"['{getter_head}']"
+        getter_foot = "[" + now_getter.split('[')[1]
+        origin_getter += getter_foot
+    elif re.search(r"[\d+]", now_getter):
+        origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
+    else:
+        origin_getter += f"['{now_getter}']"
+    return origin_getter
 
 
 def handle_reg_rule(renderer, origin_getter, getter, default):
@@ -158,10 +199,11 @@ def __judge_json(renderer, json=False, options=None):
     判断传入进来的是json串还是字典 自动处理成字典
     如果传入了options那么就可以转成json
     """
+    if options is None:
+        options = {}
     if isinstance(renderer, (dict, list)):
         if json is True:
             try:
-                print(options)
                 return _json.dumps(
                     renderer,
                     skipkeys=options.get('skipkeys', False),
@@ -179,6 +221,8 @@ def __judge_json(renderer, json=False, options=None):
         return renderer
     elif isinstance(renderer, str):
         try:
+            if json is True:
+                return renderer
             data = _json.loads(renderer)
         except _json.decoder.JSONDecodeError:
             return None
@@ -269,8 +313,3 @@ def match_case(func):
     wrapper.register = register
     wrapper.register_all = register_all
     return wrapper
-
-
-if __name__ == "__main__":
-    a = {"a": "你好"}
-    print(try_get(a, 'a'))

@@ -3,7 +3,6 @@
 # @Author : Lodge
 import re
 import random
-import json as _json
 
 from lite_tools._utils_uainfo import platform_data, browser_data, versions
 
@@ -19,7 +18,6 @@ __ALL__ = ["get_ua"]
             ↓⌊__⌋    		        |
         platform_data --随机选择--[浏览器]
 """
-
 
 
 def get_ua(*args) -> str:
@@ -40,6 +38,8 @@ def get_ua(*args) -> str:
                     template = random.choice(templates)
                 else:
                     template = templates
+            else:
+                browser = "chrome"  # 走不到这里 但是不写这里 pycharm会标注pep8问题
         elif mode.lower() in browser_data:
             browser = mode.lower()
             template = browser_data.get(browser)
@@ -53,7 +53,8 @@ def get_ua(*args) -> str:
 
 def judge_ua(browser, template) -> str:
     # 判断模版里面有多少个 {}
-    p_nums = len(re.findall(r"\{\}", template))
+    rule = r"\{\}"  # 不写出来 写在re里面会给我报黄
+    p_nums = len(re.findall(rule, template))
     # 提取版本号
     if not p_nums:
         return template   # 如果没有匹配到证明是完整的ua 不需要组合
