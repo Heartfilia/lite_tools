@@ -72,7 +72,8 @@ test = {
                 ]
             }, 
             {"c": 2}
-        ]
+        ],
+        "c": [1, 2, 3]
     }
 }
 
@@ -84,6 +85,11 @@ test2 = [
 ]
 
 test3 = [[{"c": 100}, {"b": 13}, {"a": 999}, {"d": [{"e": 88}]}]]
+
+test4 = {"a": [{"b": 1}, {"c": 2}]}
+print(try_get(test4, "a.[0]b" ))           # 1
+print(try_get(test4, "a[0].b" ))           # 1  这两个是等价的  所以这两种格式之间得注意 不要a[0]b 这样子写 得有个.
+print(try_get(test4, "b.a|c.b|a[-1].c" ))  # 2   ---> 本次更新的支持管道符多值匹配
 
 print(try_get(test, "a.b.[0].c.[2].c" ))  # 等同于 test["a"]["b"][0]["c"][2]["c"]          -> 7 
 print(try_get(test, "a.b[0].c[2].c" ))    # 等同于 test["a"]["b"][0]["c"][2]["c"]          -> 7 
@@ -103,7 +109,6 @@ print(try_get(test3, "[*].[*]d.[*]e"))  # 错误  -> None
 print(try_get(test3, "[*][*]d.[*]e"))   # 错误  -> None
 
 print(try_get(test_json, 'a.d.e'))                 # 3   ==> support the Chain operation  **推荐**这个写法 可以设置默认值 可以设置期望值类型
-print(try_get(test_json, lambda x: x['a']['b']))   # 1   ==> support the lambda operation 
 print(try_get(test_json, 'x'))                     # None  ==> not found      support `expected_type` too
 print(try_get(test_json, 'x', "hello"))            # hello ==> if not found 'x', then set default result  **设置默认**返回值**
 print(try_get_by_name(test_json, 'e'))                   # [-3, 3, 'newBee', 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 可以获取列表里面的字典的下面的值 默认获取

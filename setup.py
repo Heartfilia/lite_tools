@@ -10,7 +10,7 @@ with open("README.md", "r", encoding='utf-8') as fd:
 
 setup(
     name='lite-tools',
-    version='0.4.7.5',
+    version='0.4.7.5.2',
     description='一些python小工具||some little tools',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -21,13 +21,13 @@ setup(
     license='MIT',
     install_requires=['loguru', 'datetime'],
     classifiers=[
-		'Intended Audience :: Developers',
-		'Operating System :: OS Independent',
-		'Natural Language :: Chinese (Simplified)',
-		'Programming Language :: Python :: 3.6',
-		'Programming Language :: Python :: 3.7',
-		'Programming Language :: Python :: 3.8',
-		'Programming Language :: Python :: 3.9',
-		'Programming Language :: Python :: 3.10',
+        'Intended Audience :: Developers',
+        'Operating System :: OS Independent',
+        'Natural Language :: Chinese (Simplified)',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ]
 )

@@ -93,27 +93,10 @@ def try_get(
                     origin_getter += f"['{getter_foot}']"
                 else:
                     origin_getter += f"['{each_getter}']"
-            print(origin_getter)
             now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
-            if now_result != default:
+            if now_result != default and now_result != "try重试１ダ_get获取２メ_fail失败３よ":
                 return now_result
     return default
-
-
-def judge_reg_rules(origin_getter: str, now_getter: str) -> str:
-    """
-    因为上面的都有可能出现这里的情况 我就独立出来处理
-    """
-    if re.findall(r"\w+\[-?\d+\]", now_getter):  # a[2].b
-        getter_head = now_getter.split('[')[0]
-        origin_getter += f"['{getter_head}']"
-        getter_foot = "[" + now_getter.split('[')[1]
-        origin_getter += getter_foot
-    elif re.search(r"[\d+]", now_getter):
-        origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
-    else:
-        origin_getter += f"['{now_getter}']"
-    return origin_getter
 
 
 def handle_reg_rule(renderer, origin_getter, getter, default):
