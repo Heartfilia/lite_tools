@@ -41,7 +41,8 @@ get_b64d()         # 用baseXX解密 默认mode=64
 
 # ==================================
 # 新增异常捕获装饰器 同时支持异步函数的捕获
-try_catch    # 普通的捕获 输出为单条记录
+@try_catch    # 普通的捕获 输出为单条记录
+def test(): ...
 
 # 下面扩号里面得参数可以混用 不过日志等级log>catch 如果设置了log=False那么catch不起作用
 try_catch(log=False)   # 普通捕获 不输出任何异常报错 默认是True
@@ -57,17 +58,22 @@ math_string("2H_2 + O_2 = 2H_2O")  --> 2H₂ + O₂ = 2H₂O
 # Example in 'demo.py'  ||  示例见demo.py
 ```
 
-```python
+```bash
 # 临时新增下面功能  本次git提交为数据保存 暂时还不打包 等后续处理好了在弄
-@match_case  # 这是一个装饰器 修改自 the EdgeDB open source project.
-             # 这里的试用我会在demo中详细介绍 大体就是实现match_case的功能
- 
+@match_case      # 这是一个装饰器 修改自 the EdgeDB open source project.
+def test(): ...  # 这里的试用我会在demo中详细介绍 大体就是实现match_case的功能
 
-color_string(string, "红")  # 这种就只修改字体颜色
-color_string(string, {"font": "黄", "background": "b", "v": "b", "length": 10})
+color_string(string, "红")  # 这种就只修改字体颜色 修改整句
+
 # 字典参数也是有详细介绍 反正就是可以自定义字体颜色 背景颜色 显示模式 输出字体宽度  键也可以简写，值也可以简写，可以中文，可以英文，可以数字
+color_string(string, {"font": "黄", "background": "b", "v": "b", "length": 10})  # 这种
+# 新增颜色方案 多种颜色混合写法就这么简单
+color_string("<red>今天</red>，我新增了一个<yellow>颜色</yellow>方案，让<blue>color string</blue>使用更加<green>方便.</green>")
 
-SqlString()   # 这是个类 只负责sql拼接的 目前只弄了插入，更新，(delete)删除的操作，详细操作后续介绍
+sql_obj = SqlString("table_name")   # 这是个类 只负责sql拼接的 目前只弄了插入，更新，(delete)删除的操作，详细操作后续介绍
+sql_obj.insert({})
+sql_obj.update({})
+sql_obj.delete(where={})
 ```
 
 

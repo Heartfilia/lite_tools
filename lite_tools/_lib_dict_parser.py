@@ -2,12 +2,11 @@
 # @Time   : 2021-04-06 15:26
 # @Author : Lodge
 import re
-import traceback
 import json as _json
 import functools
 from typing import Any
 
-from lite_tools._utils_logs import my_logger
+from lite_tools._utils_logs import my_logger, get_using_line_info
 
 
 """
@@ -41,7 +40,8 @@ def try_get(
     renderer = __judge_json(renderer, json, options)
     if not renderer:
         if log is True:
-            my_logger("", "try_get", "", f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
+            line, fl = get_using_line_info()
+            my_logger(fl, "try_get", line, f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
         return expected_type
     elif json is True or getters is None:
         # 如果是需要json字符串或者只是单纯想转换字符串 不要传对应值就好了
@@ -86,6 +86,9 @@ def try_get(
                 now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
             except Exception:
                 # 因为有些时候lambda 那里可能会出现问题
+                if log is True:
+                    line, fl = get_using_line_info()
+                    my_logger(fl, "try_get", line, f"请不要连写一堆操作符在 -- [{getters}] 这上面")
                 return default
             if now_result != default and now_result != "try重试１ダ_get获取２メ_fail失败３よ":
                 return now_result
@@ -144,7 +147,8 @@ def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log
                 return result
         except (AttributeError, KeyError, TypeError, IndexError) as e:
             if log is True:
-                my_logger("", "try_get", e.__traceback__.tb_lineno, e)
+                line, fl = get_using_line_info()
+                my_logger(fl, "try_get", line, e)
     return default
 
 
@@ -167,7 +171,8 @@ def try_get_by_name(renderer, getter, mode: str = "key", expected_type=None, log
     renderer = __judge_json(renderer)
     if not renderer:
         if log is True:
-            my_logger("", "try_get_by_name", "", f"请传入标准的json传或者python字典数据")
+            line, fl = get_using_line_info()
+            my_logger(fl, "try_get_by_name", line, f"请传入标准的json串或者python字典数据")
         return []
     results_list = []
     for result in _try_get_results_iter(renderer, getter, mode, expected_type):
@@ -296,10 +301,7 @@ def match_case(func):
     def register(value):
         def wrap(func):
             if value in registry:
-                raise ValueError(
-                    f'@match_case: there is already a handler '
-                    f'registered for {value!r}'
-                )
+                return func
             registry[value] = func
             return func
         return wrap
@@ -308,10 +310,7 @@ def match_case(func):
         def wrap(func):
             for value in values:
                 if value in registry:
-                    raise ValueError(
-                        f'@match_case: there is already a handler '
-                        f'registered for {value!r}'
-                    )
+                    continue
                 registry[value] = func
             return func
         return wrap
@@ -319,4 +318,3 @@ def match_case(func):
     wrapper.register = register
     wrapper.register_all = register_all
     return wrapper
-

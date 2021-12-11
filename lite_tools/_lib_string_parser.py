@@ -8,7 +8,6 @@ from lite_tools._utils_sql_base_string import MysqlKeywordsList
 from lite_tools._utils_subsup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
-TODO(coming soon) color_string  会增加一个更加便捷的格式化样式
 """
 __ALL__ = ["clean_string", "color_string", "SqlString", "math_string"]
 
@@ -198,8 +197,54 @@ def __get_view_mode(mode: str, viewer=True):
     return None
 
 
+def _trans_color(string: str, color: str = ""):
+    color_map = {
+        "black": 30,
+        "red": 31,
+        "green": 32,
+        "yellow": 33,
+        "blue": 34,
+        "purple": 35,
+        "cyan": 36,
+        "white": 37,
+        "pink": 95
+    }
+    if color.lower() not in color_map:
+        return string
+    fresh_string = "".join(re.findall(">(.*?)<", string))
+    return f"\033[{color_map[color]}m{fresh_string}\033[0m"
+
+
+def _decorate_string(string: str):
+    """
+    这里只能装饰指定的颜色 只能修改字体 颜色装饰方案如下
+    <red>xxx</red>          -- 红色
+    <yellow>xxx</yellow>    -- 黄色
+    <blue>xxx</blue>        -- 蓝色
+    <green>xxx</green>      -- 绿色
+    <cyan>xxx</cyan>        -- 青色
+    <purple>xxx</purple>    -- 紫色
+    <pink>xxx</pink>        -- 粉丝
+    <black>xxx</black>      -- 黑色
+    <white>xxx</white>      -- 白色
+    """
+    need_trans_strings = re.findall(r"<\w+>.*?</\w+>", string)
+    for color_info_string in need_trans_strings:
+        color = re.findall(r"<(\w+)>", color_info_string)[0]
+        check_color = re.findall(r"</(\w+)>", color_info_string)[0]
+        if color != check_color:  # 主要是为了避免 <red>xx</blue> 这种特殊情况
+            continue
+        could_replace = _trans_color(color_info_string, color)
+        string = string.replace(color_info_string, could_replace)
+
+    return string
+
+
 def color_string(string: str = "", *args, **kwargs) -> str:
     """
+    新加方案二 --> 直接可以修改对应块的颜色 -- 旧方案依旧保留 -- 毕竟旧方案可以设置背景和显示样式
+             --> <red>今天</red>，我新增了一个<yellow>颜色</yellow>方案，让<blue>color string</blue>使用更加<green>方便.</green>
+
     给字体增加颜色 参数如下 使用直接  color_string("要加颜色的字体", 34, 5, 44) 需要加的颜色数字直接写下面 只有在规定范围内才能被提取 同一级写了多个只拿第一个
     如果传入英文 只有RGBYWPC 可以缩写 黑色black需要写全 大小写都无所谓  英文属于<<字体颜色>> 
     可以使用字典传参 设置字体颜色背景颜色 显示方式 如：{"f": "red", "b": "yellow", "v": "default", 'length': 20}
@@ -215,6 +260,10 @@ def color_string(string: str = "", *args, **kwargs) -> str:
     :param v     : 显示方式 -> (0, 重置/reset)(1, 加粗/b/bold)(2, 禁止/disable)(4, 使用下划线/u/underline)(5, 闪烁/f/flash)
                                 (7, 反相/r/reverse)(8, 不可见/i/invisible)(9, 删除线/s/strikethrough)
     """
+    if not args and not kwargs and not string:
+        return ""
+    elif not args and not kwargs:
+        return _decorate_string(string)
     base_string = '\033['
     if (string and kwargs) or (string and args and isinstance(args[0], dict)):
         if string and args and isinstance(args[0], dict):

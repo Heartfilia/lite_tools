@@ -65,6 +65,21 @@ print(color_string("hellow", {"f": "y", "b": "g"}), "aaaaa")
 print(color_string("hellow", **{"f": "b", "b": "r"}), "aaaaa")
 logger.info(f'{color_string("hellow", "红")} aaaaa')
 
+"""
+这里是color_string 新增加的方案 这里只能装饰指定的颜色 --只能修改字体-- 颜色装饰方案如下
+<red>xxx</red>          -- 红色
+<yellow>xxx</yellow>    -- 黄色
+<blue>xxx</blue>        -- 蓝色
+<green>xxx</green>      -- 绿色
+<cyan>xxx</cyan>        -- 青色
+<purple>xxx</purple>    -- 紫色
+<pink>xxx</pink>        -- 粉丝
+<black>xxx</black>      -- 黑色
+<white>xxx</white>      -- 白色
+"""
+# 使用案例
+print(color_string("<red>今天</red>，我新增了一个<yellow>颜色</yellow>方案，让<blue>color string</blue>使用更加<green>方便.</green>"))
+
 
 # match_case  像match case一样使用
 from lite_tools import match_case

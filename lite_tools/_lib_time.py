@@ -5,7 +5,9 @@ import time
 import datetime
 import functools
 from typing import Union
-from lite_tools._utils_logs import my_logger
+from inspect import currentframe
+
+from lite_tools._utils_logs import my_logger, get_using_line_info
 
 """
 这里可以用 但是比较臃肿 
@@ -42,7 +44,9 @@ def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None
             sure_time = time.mktime(time.strptime(goal, fmt_str))
             return sure_time
         except Exception as e:
-            my_logger("", "get_time", "", f"请输入正确的[ fmt ]格式，错误为:{e}")
+            _, fl = get_using_line_info()
+            line = str(currentframe().f_back.f_lineno)
+            my_logger(fl, "get_time", line, f"请输入正确的[ fmt ]格式: {e}")
             return -1
     elif goal and not double:
         if isinstance(goal, int):
@@ -54,7 +58,9 @@ def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None
                 limit_len_time = goal[:10]
                 int_time = int(f"{limit_len_time:<010}")
             else:
-                my_logger("", "get_time", "", f"请输入正确的内容:传入的是非数字类型的则会默认当前时间的格式化样式")
+                _, fl = get_using_line_info()
+                line = str(currentframe().f_back.f_lineno)
+                my_logger(fl, "get_time", line, f"请输入正确的[ goal ]:传入的是非数字类型的则会默认当前时间的格式化样式")
                 int_time = int(time.time())
         return time.strftime(fmt_str, time.localtime(int_time))
     else:
@@ -103,6 +109,8 @@ def timec(fn):  # time count
     def inner(*args, **kwargs):
         t1 = time.time()
         bk = fn(*args, **kwargs)
-        my_logger("", fn.__name__, "", f'cost time: {time.time()-t1:.5f}')
+        _, fl = get_using_line_info(limit=8)
+        line = str(currentframe().f_back.f_lineno)
+        my_logger(fl, fn.__name__, line, f'cost time: {time.time()-t1:.5f}')
         return bk
     return inner

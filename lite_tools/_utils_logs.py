@@ -20,7 +20,7 @@
 """
 import re
 import sys
-import time
+import traceback
 from loguru import logger
 
 
@@ -69,5 +69,15 @@ def handle_exception(traceback_format_info: str, function_name: str):
     return line, fl, exception_type, exception_detail
 
 
-
-
+def get_using_line_info(limit: int = 7):
+    """
+    这里只是读取栈信息
+    """
+    try:
+        tb_data = traceback.format_stack(limit=limit)
+        strings = "".join(tb_data).split('\n')[0]
+        line = "".join(re.findall(r'line (\d+)', strings))
+        fl = ''.join(re.findall(r'File "(.*)"', strings))
+        return line, fl
+    except Exception:
+        return "", ""
