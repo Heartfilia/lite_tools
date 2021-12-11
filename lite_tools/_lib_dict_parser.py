@@ -2,11 +2,12 @@
 # @Time   : 2021-04-06 15:26
 # @Author : Lodge
 import re
+import traceback
 import json as _json
 import functools
 from typing import Any
 
-from loguru import logger
+from lite_tools._utils_logs import my_logger
 
 
 """
@@ -35,16 +36,17 @@ def try_get(
     :param log     :  是否打印日志
     :param json    :  设置为True 返回值会返回默认的json串
     :param options : 这里就是json.dumps的参数 变成了字典传入 不过我默认值有修改 ensure_ascii=False json那默认的是True
-    return         : 如果取到则为值，否则为 default 设置的值 默认None
+    :return         : 如果取到则为值，否则为 default 设置的值 默认None
     """
     renderer = __judge_json(renderer, json, options)
     if not renderer:
         if log is True:
-            logger.error(f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
+            my_logger("", "try_get", "", f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
         return expected_type
     elif json is True or getters is None:
         # 如果是需要json字符串或者只是单纯想转换字符串 不要传对应值就好了
         return renderer
+
     if isinstance(getters, str):
         for each_getter in getters.split("|"):       # 兼容 | 管道符号可以多个条件一起操作
             getter = each_getter.strip('.|" "|\n|\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
@@ -52,51 +54,66 @@ def try_get(
             if '.' in getter:
                 getter = getter.split('.')
                 for now_getter in getter:
-                    if re.findall(r"\w+\[-?\d+\]", now_getter):  # a[2].b
-                        getter_head = now_getter.split('[')[0]
-                        origin_getter += f"['{getter_head}']"
-                        getter_foot = "[" + now_getter.split('[')[1]
-                        origin_getter += getter_foot
-                    elif re.findall(r"\[-?\d+\]\w+", now_getter):  # a.[2]b   # 这里是为了兼容 不推荐这样写
-                        getter_head = now_getter.split(']')[0]
-                        origin_getter += getter_head + "]"
-                        getter_foot = now_getter.split(']')[1]
-                        origin_getter += f"['{getter_foot}']"
+                    if re.findall(r"\w+\[-?\d+\]", now_getter):
+                        origin_getter += _get_w_d_rules(now_getter)
+                    elif re.findall(r"\[-?\d+\]\w+", now_getter):
+                        origin_getter += _get_d_w_rules(now_getter)
                     elif re.search(r"\[\*\]\w+", now_getter):
-                        renderer = handle_reg_rule(
+                        # 这里因为会改 render的结构 所以就不要单独处理了
+                        renderer, origin_getter = handle_reg_rule(
                             renderer, origin_getter, now_getter, "try重试１ダ_get获取２メ_fail失败３よ")
                         # 避免本来结果就是None或者什么情况
                         if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
                             continue
-                        origin_getter = "_"
                     elif re.search(r"[\d+]", now_getter):
-                        origin_getter += now_getter   # 这里是为了兼容  a.[2].b  这种格式
+                        origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
                     else:
                         origin_getter += f"['{now_getter}']"
             else:
                 if re.search(r"\[\*\]\w+", each_getter):
-                    renderer = handle_reg_rule(
+                    renderer, origin_getter = handle_reg_rule(
                         renderer, origin_getter, each_getter, "try重试１ダ_get获取２メ_fail失败３よ")
                     # 避免本来结果就是None或者什么情况
                     if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
                         continue
-                    origin_getter = "_"
                 elif re.findall(r"\w+\[-?\d+\]", each_getter):  # a[2]
-                    getter_head = each_getter.split('[')[0]
-                    origin_getter += f"['{getter_head}']"
-                    getter_foot = "[" + each_getter.split('[')[1]
-                    origin_getter += getter_foot
+                    origin_getter += _get_w_d_rules(each_getter)
                 elif re.findall(r"\[-?\d+\]\w+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
-                    getter_head = each_getter.split(']')[0]
-                    origin_getter += getter_head + "]"
-                    getter_foot = each_getter.split(']')[1]
-                    origin_getter += f"['{getter_foot}']"
+                    origin_getter += _get_d_w_rules(each_getter)
                 else:
                     origin_getter += f"['{each_getter}']"
-            now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
+            try:
+                now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
+            except Exception:
+                # 因为有些时候lambda 那里可能会出现问题
+                return default
             if now_result != default and now_result != "try重试１ダ_get获取２メ_fail失败３よ":
                 return now_result
     return default
+
+
+def _get_w_d_rules(now_getter):
+    """
+    这里是之规则为 -- \\w+\\[-?\\d+\\] 的
+    """
+    origin_getter = ""
+    getter_head = now_getter.split('[')[0]
+    origin_getter += f"['{getter_head}']"
+    getter_foot = "[" + now_getter.split('[')[1]
+    origin_getter += getter_foot
+    return origin_getter
+
+
+def _get_d_w_rules(now_getter):
+    """
+    这里是之规则为 -- [-?\\d+\\]\\w+ 的
+    """
+    origin_getter = ""
+    getter_head = now_getter.split(']')[0]
+    origin_getter += getter_head + "]"
+    getter_foot = now_getter.split(']')[1]
+    origin_getter += f"['{getter_foot}']"
+    return origin_getter
 
 
 def handle_reg_rule(renderer, origin_getter, getter, default):
@@ -110,9 +127,11 @@ def handle_reg_rule(renderer, origin_getter, getter, default):
 
     if isinstance(results, list):
         for result in results:
+            if not isinstance(result, dict):
+                continue
             if matching_var in result:
-                return result.get(matching_var, default)
-    return default
+                return result.get(matching_var, default), "_"
+    return default, origin_getter
 
 
 def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log=False):
@@ -120,12 +139,12 @@ def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log
         getters = [getters]
     for getter in getters:
         try:
-            result = getter(renderer)
+            result = getter(renderer)  # lambda function
             if expected_type is None or isinstance(result, expected_type):
                 return result
         except (AttributeError, KeyError, TypeError, IndexError) as e:
             if log is True:
-                logger.error(f"try_get: {e} --line: {e.__traceback__.tb_lineno}")
+                my_logger("", "try_get", e.__traceback__.tb_lineno, e)
     return default
 
 
@@ -136,7 +155,7 @@ def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log
 """
 
 
-def try_get_by_name(renderer, getter: str, mode: str = "key", expected_type=None, log: bool = False) -> list:
+def try_get_by_name(renderer, getter, mode: str = "key", expected_type=None, log: bool = False) -> list:
     """
     批量获取结果json、字典的键值结果
     :param renderer: 传入的json串或者字典
@@ -148,19 +167,15 @@ def try_get_by_name(renderer, getter: str, mode: str = "key", expected_type=None
     renderer = __judge_json(renderer)
     if not renderer:
         if log is True:
-            logger.error(f"请传入标准的json传或者python字典数据")
+            my_logger("", "try_get_by_name", "", f"请传入标准的json传或者python字典数据")
         return []
     results_list = []
-    for result in _try_get_results_iter(renderer, getter, mode):
-        if expected_type is None:
-            results_list.append(result)
-        else:
-            if isinstance(result, expected_type):
-                results_list.append(result)
+    for result in _try_get_results_iter(renderer, getter, mode, expected_type):
+        results_list.append(result)
     return results_list
 
 
-def _try_get_results_iter(renderer, getter: str, mode: str = "key"):
+def _try_get_results_iter(renderer, getter, mode: str = "key", expected_type=None):
     if isinstance(renderer, dict):
         key_value_iter = (iter_obj for iter_obj in renderer.items())
     elif isinstance(renderer, list):
@@ -170,9 +185,17 @@ def _try_get_results_iter(renderer, getter: str, mode: str = "key"):
 
     for key, value in key_value_iter:
         if mode == 'key' and key == getter:
-            yield value
+            if expected_type is None:
+                yield value
+            else:
+                if isinstance(value, expected_type):
+                    yield value
         elif mode == 'value' and value == getter:
-            yield key
+            if expected_type is None:
+                yield key
+            else:
+                if isinstance(value, expected_type):
+                    yield key
         if isinstance(value, (dict, list)):
             yield from _try_get_results_iter(value, getter, mode)
 
@@ -296,3 +319,4 @@ def match_case(func):
     wrapper.register = register
     wrapper.register_all = register_all
     return wrapper
+

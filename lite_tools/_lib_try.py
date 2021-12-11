@@ -1,8 +1,8 @@
-import re
 import traceback
 from functools import wraps, partial
 from asyncio import iscoroutinefunction
-from loguru import logger
+
+from lite_tools._utils_logs import my_logger, logger, handle_exception
 
 
 __ALL__ = ["try_catch"]
@@ -21,22 +21,10 @@ def try_catch(func=None, *, default=None, log=True, catch=False, err_callback=No
     :param err_args    : 如果有参数请用元组方式传进来 这里需要结合你自己的err_callback 参考见demo
     """
     if func is None:
-        return partial(try_catch, default=default, log=log, catch=catch, err_callback=err_callback)
-
-    def __handle_exception():
-        results = traceback.format_exc().split('\n')
-        line = fl = '/'
-        for item in results[::-1]:
-            if func.__name__ in item:
-                line = "".join(re.findall(r'line (\d+)', item))
-                fl = ''.join(re.findall(r'File "(.*)"', item))
-                break
-        exception_type = results[-2]
-        exception_detail = results[-3].strip()
-        return line, fl, exception_type, exception_detail
+        return partial(try_catch, default=default, log=log, catch=catch, err_callback=err_callback, err_args=err_args)
     
     def __log_true():
-        line, fl, exception_type, exception_detail = __handle_exception()
+        line, fl, exception_type, exception_detail = handle_exception(traceback.format_exc(), func.__name__)
         if err_callback is not None:
             try:
                 if isinstance(err_args, tuple):
@@ -49,7 +37,7 @@ def try_catch(func=None, *, default=None, log=True, catch=False, err_callback=No
         if catch is True:
             logger.opt(exception=True, colors=True, capture=True).error("Information: ↓ ↓ ↓ ")
         else:
-            logger.error(f"[{func.__name__}] lineNo.{line} -> {fl} - {exception_type}: {exception_detail}")
+            my_logger(fl, func.__name__, line, f"{exception_type} --> {exception_detail}")
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -58,7 +46,8 @@ def try_catch(func=None, *, default=None, log=True, catch=False, err_callback=No
         except KeyboardInterrupt:
             exit(0)
         except Exception:
-            if log is True: __log_true()
+            if log is True:
+                __log_true()
             return default
     
     @wraps(func)
@@ -68,7 +57,8 @@ def try_catch(func=None, *, default=None, log=True, catch=False, err_callback=No
         except KeyboardInterrupt:
             exit(0)
         except Exception:
-            if log is True: __log_true()  
+            if log is True:
+                __log_true()
             return default
     
     return async_wrapper if iscoroutinefunction(func) else wrapper

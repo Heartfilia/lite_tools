@@ -2,6 +2,14 @@
 from lite_tools import try_get, try_get_by_name
 
 # about try_get   // try_get_by_name
+"""
+关于一些写法的推荐
+1. 涉及到列表                            如  a[0].b     不建议 a.[0]b   -- 虽然结果一样的,我做了兼容的
+2. 列表的每个操作符之间最好不要合并写       如  a[0].[1]   不要写 a[0][1]
+3. 在列表的智能匹配这里写前面不要写后面     如  a.[*]b     不要写 a[*].b
+4. 每个提取操作最好都是用 . 分开           如  [0].a[1]   不要写 [0]a[1]
+5. 有些时候要是不知道怎么写了 就单独提取数据 如  a.[0].b.c.[1] 
+"""
 test_json = {
     "a": {
         "b": 1,
@@ -112,7 +120,8 @@ print(try_get(test_json, 'a.d.e'))                 # 3   ==> support the Chain o
 print(try_get(test_json, 'x'))                     # None  ==> not found      support `expected_type` too
 print(try_get(test_json, 'x', "hello"))            # hello ==> if not found 'x', then set default result  **设置默认**返回值**
 print(try_get_by_name(test_json, 'e'))                   # [-3, 3, 'newBee', 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 可以获取列表里面的字典的下面的值 默认获取
-print(try_get_by_name(test_json, 'e', expected_type=int))          # [-3, 3, 10]   
+print(try_get_by_name(test_json, 100, "value"))    # 根据值找键
+print(try_get_by_name(test_json, 'e', expected_type=int))          # [-3, 3, 10]
 print(try_get_by_name(test_json, 'e', expected_type=(int, str)))   # [-3, 3, 10, 'good_test']  
 
 """

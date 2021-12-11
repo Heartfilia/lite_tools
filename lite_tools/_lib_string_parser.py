@@ -2,14 +2,14 @@
 import re
 from typing import Union, Optional
 
-from loguru import logger
+from lite_tools._utils_logs import logger
 from lite_tools._utils_code_range import __u_range_list, __U_range_list
 from lite_tools._utils_sql_base_string import MysqlKeywordsList
 from lite_tools._utils_subsup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
+TODO(coming soon) color_string  会增加一个更加便捷的格式化样式
 """
-
 __ALL__ = ["clean_string", "color_string", "SqlString", "math_string"]
 
 
@@ -242,7 +242,8 @@ def color_string(string: str = "", *args, **kwargs) -> str:
             return string    # 如果操作一通后还是和原来字符串一样就不装饰
         if not kwargs.get('lenght') and not kwargs.get('l', 0):
             length = 0
-        else: length -= len(string)
+        else:
+            length -= len(string)
         return f"{base_string.strip(';')}m{string}{' ' * length}\033[0m"
 
     elif string and args:
@@ -362,7 +363,8 @@ class SqlString(object):
                 base_update += f"{value} AND "
         elif isinstance(where, str):
             base_update += where
-        else: return None
+        else:
+            return None
         base_update = base_update.rstrip(' AND ') + ";"
         return self.__clear_string(base_update)
 
@@ -380,7 +382,8 @@ class SqlString(object):
             base_delete = base_delete.rstrip(' AND ') + ";"
         elif isinstance(where, str):
             base_delete += where + ";"
-        else: return None
+        else:
+            return None
         return self.__clear_string(base_delete)
                 
     def truncate(self) -> Optional[str]:
@@ -414,10 +417,3 @@ def math_string(string: str) -> str:
         if getter:
             new_string = new_string.replace(rule, getter)
     return new_string
-
-
-if __name__ == "__main__":
-    sql_obj = SqlString('test')
-    obj = {"age": 1, "comment": "xxxx", "name": "lodge"}
-    print(sql_obj.update(obj, where={"age": 1}))
-

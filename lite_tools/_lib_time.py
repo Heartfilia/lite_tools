@@ -5,7 +5,7 @@ import time
 import datetime
 import functools
 from typing import Union
-from loguru import logger
+from lite_tools._utils_logs import my_logger
 
 """
 这里可以用 但是比较臃肿 
@@ -42,7 +42,7 @@ def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None
             sure_time = time.mktime(time.strptime(goal, fmt_str))
             return sure_time
         except Exception as e:
-            logger.error(f"请输入正确的[ fmt ]格式，错误为:{e}")
+            my_logger("", "get_time", "", f"请输入正确的[ fmt ]格式，错误为:{e}")
             return -1
     elif goal and not double:
         if isinstance(goal, int):
@@ -54,7 +54,7 @@ def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None
                 limit_len_time = goal[:10]
                 int_time = int(f"{limit_len_time:<010}")
             else:
-                logger.error("请输入正确的内容:传入的是非数字类型的则会默认当前时间的格式化样式")
+                my_logger("", "get_time", "", f"请输入正确的内容:传入的是非数字类型的则会默认当前时间的格式化样式")
                 int_time = int(time.time())
         return time.strftime(fmt_str, time.localtime(int_time))
     else:
@@ -103,6 +103,6 @@ def timec(fn):  # time count
     def inner(*args, **kwargs):
         t1 = time.time()
         bk = fn(*args, **kwargs)
-        logger.debug(f'>>> [{fn.__name__}] -- cost time:{time.time()-t1:.5f}')
+        my_logger("", fn.__name__, "", f'cost time: {time.time()-t1:.5f}')
         return bk
     return inner

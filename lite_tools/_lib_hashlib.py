@@ -20,7 +20,7 @@ def get_md5(s: str, up: bool = False, encoding='utf-8', to_bin: bool = False) ->
     """
     md5_obj = md5()
     try:
-        md5_obj.update(s.encode(encoding))
+        md5_obj.update(str(s).encode(encoding))
         if to_bin is True:
             result = md5_obj.digest()
         else:
@@ -44,7 +44,7 @@ def get_sha(s: str, mode: int = 256, encoding='utf-8', to_bin: bool = False) -> 
     if mode in [1, 224, 256, 384, 512]:
         sha_obj = eval(f"sha{mode}()")
         try:
-            sha_obj.update(s.encode(encoding))
+            sha_obj.update(str(s).encode(encoding))
         except Exception as e:
             return f"数据异常: {e}"
         if to_bin is True:
@@ -69,7 +69,7 @@ def get_sha3(s: str = "", mode=256, encoding='utf-8', to_bin: bool = False) -> s
     if mode in [224, 256, 384, 512]:
         sha_obj = eval(f"sha3_{mode}()")
         try:
-            sha_obj.update(s.encode(encoding))
+            sha_obj.update(str(s).encode(encoding))
         except Exception as e:
             return f"数据异常: {e}"
         if to_bin is True:
