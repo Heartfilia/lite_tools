@@ -26,7 +26,7 @@ from loguru import logger
 
 def my_logger(file_root, log_function, log_line, message, log_level="error"):
     """
-    因为是我自己用 我只用warning 和 error
+    因为是我自己用 我只用 warning 和 error 和 debug
     :param file_root:     日志报错路径
     :param log_function:  函数名称
     :param log_line:      报错行数
@@ -43,6 +43,8 @@ def my_logger(file_root, log_function, log_line, message, log_level="error"):
     )
     if log_level.lower() == 'error':
         logger.error(message)
+    elif log_level.lower() == "debug":
+        logger.debug(message)
     else:
         logger.warning(message)
     # 复原系统自带的状态
@@ -58,7 +60,7 @@ def handle_exception(traceback_format_info: str, function_name: str):
     :return --> 报错行，报错文件路径，报错类型，报错详细介绍
     """
     results = traceback_format_info.split('\n')
-    line = fl = '/'
+    line = fl = ''
     for item in results[::-1]:
         if function_name in item:
             line = "".join(re.findall(r'line (\d+)', item))

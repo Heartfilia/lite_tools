@@ -12,7 +12,6 @@ from lite_tools._utils_logs import my_logger, get_using_line_info
 """
 这里可以用 但是比较臃肿 
 后续将重构
-#TODO(时间处理这里将增加一批时间格式规则 后续将会自动匹配样式 没有匹配或者可以手动指定匹配)
 """
 
 __ALL__ = ['get_date', 'get_time']
@@ -28,11 +27,12 @@ def get_date(timedelta: tuple = None):
 
 def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None, *args, **kwargs):
     """
+    TODO(my_logger 的路径有问题)
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
-    params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
+    params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换 TODO(会自动匹配时间)
     params double: 返回小数的时间 还是整数 默认整数  如果搭配goal那么返回浮点数 因为是要把字符串转换为数字来着
-    params cursor: 传入游标单位/天  可以是正可以是负 可以是整数可以是字符串
+    params cursor: 传入游标单位/天  可以是正可以是负 可以是整数可以是字符串 TODO(后续会增加更细的游标设置)
     """
     if isinstance(fmt, bool):
         fmt_str = "%Y-%m-%d %H:%M:%S"
@@ -111,6 +111,6 @@ def timec(fn):  # time count
         bk = fn(*args, **kwargs)
         _, fl = get_using_line_info(limit=8)
         line = str(currentframe().f_back.f_lineno)
-        my_logger(fl, fn.__name__, line, f'cost time: {time.time()-t1:.5f}')
+        my_logger(fl, fn.__name__, line, f' Time consuming: {time.time()-t1:.5f}', log_level='debug')
         return bk
     return inner

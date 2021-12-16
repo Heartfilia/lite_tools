@@ -423,7 +423,8 @@ class SqlString(object):
         :param where: 当然是删除条件啦 不写的话就是全部删除
         """
         base_delete = f"DELETE FROM {self.table_name}"
-        if not where: return base_delete + ";"
+        if not where:
+            return base_delete + ";"
         base_delete += " WHERE "
         if isinstance(where, dict):
             for key, value in where.items():
@@ -447,7 +448,7 @@ class SqlString(object):
 
     def select(self, condition="*", join_group="", where="", group_by="", distinct=False) -> Optional[str]:
         """
-        #TODO(^_^)这东西太复杂了 不想写
+        #(^_^)这东西太复杂了 不想写
         """
 
 
