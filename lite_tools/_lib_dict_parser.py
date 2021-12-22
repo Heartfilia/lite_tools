@@ -5,7 +5,6 @@ import re
 import json as _json
 import functools
 from typing import Any
-
 from lite_tools._utils_logs import my_logger, get_using_line_info
 
 
@@ -23,7 +22,7 @@ __ALL__ = ["match_case", 'try_get', 'try_get_by_name']
 def try_get(
         renderer, getters=None, default=None, expected_type=None, log=False,
         json=False, options: dict = None):
-    """ TODO(getters是英文数字混合有问题  需要改)
+    """
     获取字典键值  --> 只获取**一个结果** 如果碰到了列表 只获取**第一个值**或者**特定值**
     只传入一个json串 那么就是转换为字典
     如果传入一个字典 json=True 那么就是转为json字符串
@@ -49,7 +48,7 @@ def try_get(
 
     if isinstance(getters, str):
         for each_getter in getters.split("|"):       # 兼容 | 管道符号可以多个条件一起操作
-            getter = each_getter.strip('.|" "|\n|\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
+            getter = each_getter.strip('.| |\n|\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
             origin_getter = "_"
             if '.' in getter:
                 getter = getter.split('.')
@@ -65,7 +64,7 @@ def try_get(
                         # 避免本来结果就是None或者什么情况
                         if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
                             continue
-                    elif re.search(r"[\d+]", now_getter):
+                    elif re.search(r"\[\d+\]", now_getter):
                         origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
                     else:
                         origin_getter += f"['{now_getter}']"
@@ -161,7 +160,7 @@ def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log
 
 def try_get_by_name(renderer, getter, mode: str = "key", expected_type=None, log: bool = False) -> list:
     """
-    批量获取结果json、字典的键值结果 TODO(增加一个 try_key 的别名)
+    批量获取结果json、字典的键值结果
     :param renderer: 传入的json串或者字典
     :param getter  : 需要匹配的值-->配合mode
     :param mode    : 默认通过键模式匹配(key)->匹配getter相同的键返回值; value-->匹配相同结果的值的键
@@ -239,6 +238,9 @@ def __judge_json(renderer, json=False, options=None):
             return None
         else:
             return data
+
+
+try_key = try_get_by_name
 
 
 def match_case(func):
