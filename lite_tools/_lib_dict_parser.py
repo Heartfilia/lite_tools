@@ -23,7 +23,7 @@ __ALL__ = ["match_case", 'try_get', 'try_get_by_name']
 def try_get(
         renderer, getters=None, default=None, expected_type=None, log=False,
         json=False, options: dict = None):
-    """
+    """ TODO(getters是英文数字混合有问题  需要改)
     获取字典键值  --> 只获取**一个结果** 如果碰到了列表 只获取**第一个值**或者**特定值**
     只传入一个json串 那么就是转换为字典
     如果传入一个字典 json=True 那么就是转为json字符串
@@ -161,7 +161,7 @@ def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log
 
 def try_get_by_name(renderer, getter, mode: str = "key", expected_type=None, log: bool = False) -> list:
     """
-    批量获取结果json、字典的键值结果
+    批量获取结果json、字典的键值结果 TODO(增加一个 try_key 的别名)
     :param renderer: 传入的json串或者字典
     :param getter  : 需要匹配的值-->配合mode
     :param mode    : 默认通过键模式匹配(key)->匹配getter相同的键返回值; value-->匹配相同结果的值的键

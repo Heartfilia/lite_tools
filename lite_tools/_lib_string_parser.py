@@ -390,7 +390,7 @@ class SqlString(object):
 
     def update(self, keys: dict, where: Union[dict, list, tuple, str]) -> Optional[str]:
         """
-        更新数据操作, 传入需要更新的字典即可
+        更新数据操作, 传入需要更新的字典即可 TODO(需要新增多条数据插入 -- 需要修复where为字符串数字的时候会变成数字为题)
         :param keys :  传入的更新部分的键值对啦
         :param where: 当然是筛选条件 --> 如果用字典传入-> 相当于 "=" , 多个值会AND拼接 : True 会被替换为1 False会被替换为0 None 会被替换为NULL
                                     # 想实现更加精准的条件就在下面自己写 推荐==>字符串的传入方式
@@ -467,3 +467,7 @@ def math_string(string: str) -> str:
         if getter:
             new_string = new_string.replace(rule, getter)
     return new_string
+
+
+if __name__ == "__main__":
+    pass
