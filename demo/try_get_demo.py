@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from lite_tools import try_get, try_get_by_name
+from lite_tools import try_get, try_get_by_name, try_key
 
 # about try_get   // try_get_by_name
 """
@@ -116,12 +116,15 @@ print(try_get(test3, "[0].[*]d.[*]e"))    # 等同于 test3[0][自动匹配]["d"
 print(try_get(test3, "[*].[*]d.[*]e"))  # 错误  -> None
 print(try_get(test3, "[*][*]d.[*]e"))   # 错误  -> None
 
+"""
+try_get_by_name 和 try_key 是等价的 都能用 try_key 简短一点
+"""
 print(try_get(test_json, 'a.d.e'))                 # 3   ==> support the Chain operation  **推荐**这个写法 可以设置默认值 可以设置期望值类型
 print(try_get(test_json, 'x'))                     # None  ==> not found      support `expected_type` too
 print(try_get(test_json, 'x', "hello"))            # hello ==> if not found 'x', then set default result  **设置默认**返回值**
-print(try_get_by_name(test_json, 'e'))                   # [-3, 3, 'newBee', 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 可以获取列表里面的字典的下面的值 默认获取
+print(try_key(test_json, 'e'))                   # [-3, 3, 'newBee', 10, {'yy': 'test', 'e': 'good_test'}, 'good_test'] 可以获取列表里面的字典的下面的值 默认获取
 print(try_get_by_name(test_json, 100, "value"))    # 根据值找键
-print(try_get_by_name(test_json, 'e', expected_type=int))          # [-3, 3, 10]
+print(try_key(test_json, 'e', expected_type=int))          # [-3, 3, 10]
 print(try_get_by_name(test_json, 'e', expected_type=(int, str)))   # [-3, 3, 10, 'good_test']  
 
 """
