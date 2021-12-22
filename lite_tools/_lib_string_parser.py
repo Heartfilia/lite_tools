@@ -388,9 +388,15 @@ class SqlString(object):
             logger.error("传入了不支持的数据类型")
             return "", ""
 
+    def update_many(self):
+        """
+        因为单条sql的拼接不方便改 直接这里弄好了 TODO(需要新增多条数据插入）
+        """
+        pass
+
     def update(self, keys: dict, where: Union[dict, list, tuple, str]) -> Optional[str]:
         """
-        更新数据操作, 传入需要更新的字典即可 TODO(需要新增多条数据插入 -- 需要修复where为字符串数字的时候会变成数字为题)
+        更新数据操作, 传入需要更新的字典即可
         :param keys :  传入的更新部分的键值对啦
         :param where: 当然是筛选条件 --> 如果用字典传入-> 相当于 "=" , 多个值会AND拼接 : True 会被替换为1 False会被替换为0 None 会被替换为NULL
                                     # 想实现更加精准的条件就在下面自己写 推荐==>字符串的传入方式
@@ -402,11 +408,11 @@ class SqlString(object):
 
         base_update = f"UPDATE {self.table_name} SET "
         for key, value in keys.items():
-            base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)}, '
+            base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None else repr(value)}, '
         base_update = base_update.rstrip(', ') + " WHERE "
         if isinstance(where, dict):
             for key, value in where.items():
-                base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)} AND '
+                base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None else repr(value)} AND '
         elif isinstance(where, (list, tuple)):
             for value in where:
                 base_update += f"{value} AND "
@@ -428,7 +434,7 @@ class SqlString(object):
         base_delete += " WHERE "
         if isinstance(where, dict):
             for key, value in where.items():
-                base_delete += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None or value.isdigit() else repr(value)} AND '
+                base_delete += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None else repr(value)} AND '
             base_delete = base_delete.rstrip(' AND ') + ";"
         elif isinstance(where, str):
             base_delete += where + ";"
@@ -470,4 +476,6 @@ def math_string(string: str) -> str:
 
 
 if __name__ == "__main__":
-    pass
+    sqlbase = SqlString('test')
+    print(sqlbase.update({"cc": 12312312}, {"a": 1}))
+    print(sqlbase.update({"cc": "12312312"}, {"a": 1}))
