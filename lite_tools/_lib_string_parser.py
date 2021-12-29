@@ -328,7 +328,7 @@ class SqlString(object):
         """
         if not keys: return None
         whether_ignore = "IGNORE " if ignore is True else ""
-        base_insert = f"INSERT INTO {whether_ignore}{self.table_name}"
+        base_insert = f"INSERT {whether_ignore}INTO {self.table_name}"
         key_string, value_string = self.__handle_insert_data(keys, values)
         if key_string == "":
             return None
