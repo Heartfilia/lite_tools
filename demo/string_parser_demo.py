@@ -119,7 +119,7 @@ from lite_tools import SqlString
 
 sql_obj = SqlString("test")   # 这里传入表名
 print(sql_obj.insert({"name": "张三", "age": 12, "comment": "bad"}))   # INSERT INTO test (`name`, 'age', `comment`) VALUES ('张三', 12, 'bad');
-print(sql_obj.insert({"name": "张三", "age": 12}, ignore=True))   # INSERT INTO IGNORE test (`name`, 'age') VALUES ('张三', 12);
+print(sql_obj.insert({"name": "张三", "age": 12}, ignore=True))   # INSERT IGNORE INTO test (`name`, 'age') VALUES ('张三', 12);
 print(sql_obj.update({"age": 66}, {"name": "张三"}))     # UPDATE test SET age = 66 WHERE `name` = '张三';
 print(sql_obj.update({"comment": "good"}, ["age<15", "name LIKES %张%"]))  # UPDATE test SET `comment` = 'good' WHERE age<15 AND name LIKES %张%;
 print(sql_obj.delete({"age": 12}))                       # DELETE FROM test WHERE age = 12;
