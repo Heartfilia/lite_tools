@@ -16,7 +16,7 @@
 
 -------------------------------------------
 当前线上版本: 0.4.7.5.5 (好几个bug没有修复)
-正在准备修复bug和新增功能的版本: 0.4.7.6
+正在准备修复bug和新增功能的版本: 0.4.7.6b1
 ```
 ```
 python version:
@@ -43,6 +43,8 @@ extral_requirements:
 ### Interface
 
 ```bash
+cmd >> lite-tools fish   # 即可获取摸鱼日历
+
 get_time()         # 时间操作 示例见demo.py
 get_ua()           # 获取随机ua 
 timec              # 时间统计装饰器
@@ -78,7 +80,7 @@ math_string("2H_2 + O_2 = 2H_2O")  --> 2H₂ + O₂ = 2H₂O
 ```
 
 ```bash
-# 临时新增下面功能  本次git提交为数据保存 暂时还不打包 等后续处理好了在弄
+# 临时新增下面功能
 @match_case      # 这是一个装饰器 修改自 the EdgeDB open source project.
 def test(): ...  # 这里的试用我会在demo中详细介绍 大体就是实现match_case的功能
 
@@ -130,4 +132,4 @@ b ====> "你好牛逼啊（这个东西）"
 ```
 
 
-see `demo.py`
+更多见 [demo.py](https://github.com/Heartfilia/lite_tools/tree/master/demo)
