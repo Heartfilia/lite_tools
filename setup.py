@@ -31,7 +31,12 @@ setup(
     author='Lodge',
     author_email='lodgeheartfilia@163.com',
     url='https://github.com/Heartfilia/lite_tools',
-    packages=['lite_tools'],
+    packages=[
+        'lite_tools',
+        'lite_tools.commands',
+        'lite_tools.lib_jar',
+        'lite_tools.utils_jar'
+    ],
     license='MIT',
     install_requires=requires,
     entry_points={"console_scripts": [

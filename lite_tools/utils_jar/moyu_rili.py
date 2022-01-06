@@ -25,22 +25,22 @@ import calendar
 from lite_tools.lib_jar.lib_string_parser import color_string
 
 _format_string = """********************************************
-*  <red>摸鱼日历：今天是 {year} 年 {month:>2} 月 {day:>2} 日 星期{week} </red> *
-********************************************
-   {month:>2} 月 {day:>2} 日 过去了 <cyan>{past_hour:>2} 小时</cyan>，还剩余 <green>{left_hour:>2} 小时</green> 
-   [进度: {hour_progress_percentage:>3}%]  {hour_progressbar}
+<red>摸鱼日历：今天是 {year} 年 {month:>2} 月 {day:>2} 日 星期{week} </red>
+--------------------------------------------
+{month:>2} 月 {day:>2} 日 过去了 <cyan>{past_hour:>2} 小时</cyan>，还剩余 <green>{left_hour:>2} 小时</green> 
+[进度: {hour_progress_percentage:>3}%]  {hour_progressbar}
  
-   本周过去了 <cyan>{past_day_week} 天</cyan>，还剩余 <green>{left_day_week} 天</green>。
-   {extra_week_msg}
-   [进度: {week_day_progress_percentage:>3}%]  {week_day_progressbar}
+本周过去了 <cyan>{past_day_week} 天</cyan>，还剩余 <green>{left_day_week} 天</green>。
+{extra_week_msg}
+[进度: {week_day_progress_percentage:>3}%]  {week_day_progressbar}
 
-   本月过去了 <cyan>{past_day_month:>2} 天</cyan>，还剩余 <green>{left_day_month:>2} 天</green>。
-   [进度: {month_day_progress_percentage:>3}%]  {month_day_progressbar}
+本月过去了 <cyan>{past_day_month:>2} 天</cyan>，还剩余 <green>{left_day_month:>2} 天</green>。
+[进度: {month_day_progress_percentage:>3}%]  {month_day_progressbar}
  
-   {year}年过去了 <cyan>{past_day_year:>3} 天</cyan>，还剩余 <green>{left_day_year:>3} 天</green>。
-   [进度: {year_day_progress_percentage:>3}%]  {year_day_progressbar}
+{year}年过去了 <cyan>{past_day_year:>3} 天</cyan>，还剩余 <green>{left_day_year:>3} 天</green>。
+[进度: {year_day_progress_percentage:>3}%]  {year_day_progressbar}
  
-   {rand_tips}
+{rand_tips}
 """
 _tips = [
     '人生短暂，现在摸鱼学习不香吗？记得多动多喝水~',
