@@ -35,7 +35,6 @@ setup(
     license='MIT',
     install_requires=requires,
     entry_points={"console_scripts": [
-        "fish_calendar = lite_tools.commands.cmdline:fish_calendar",
         "lite-tools = lite_tools.commands.cmdline:execute",
     ]},
     python_requires=">=3.6",

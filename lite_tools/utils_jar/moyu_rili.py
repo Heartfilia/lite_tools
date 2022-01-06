@@ -20,117 +20,139 @@
 这里只是我弄的摸鱼日历哈哈哈哈
 """
 import time
+import random
+import calendar
 from lite_tools.lib_jar.lib_string_parser import color_string
 
-_format_string = """
-<red>摸鱼日历：今天是 {year} 年 {month:>2} 月 {day:>2} 日 星期{week} </red> 
-----------------------------------------
-{month:>2} 月 {day:>2} 日 过去了 <cyan>{past_hour:>2} 小时</cyan>，还剩余 <green>{left_hour:>2} 小时</green>。
-[进度: {hour_progresspercentage}%] {hour_progressbar}
+_format_string = """********************************************
+*  <red>摸鱼日历：今天是 {year} 年 {month:>2} 月 {day:>2} 日 星期{week} </red> *
+********************************************
+   {month:>2} 月 {day:>2} 日 过去了 <cyan>{past_hour:>2} 小时</cyan>，还剩余 <green>{left_hour:>2} 小时</green> 
+   [进度: {hour_progress_percentage:>3}%]  {hour_progressbar}
+ 
+   本周过去了 <cyan>{past_day_week} 天</cyan>，还剩余 <green>{left_day_week} 天</green>。
+   {extra_week_msg}
+   [进度: {week_day_progress_percentage:>3}%]  {week_day_progressbar}
 
-本周过去了 <cyan>{past_day_week} 天</cyan>，还剩余 <green>{left_day_week} 天</green>。{extra_week_msg}
-[进度: {week_day_progresspercentage}%] {week_day_progressbar}
-
-本月过去了 <cyan>{past_day_month:>2} 天</cyan>，还剩余 <green>{left_day_month:>2} 天</green>。
-[进度: {month_day_progresspercentage}%] {month_day_progressbar}
-
-{year}年过去了 <cyan>{past_day_year:>3} 天</cyan>，还剩余 <green>{left_day_year:>3} 天</green>。
-[进度: {year_day_progresspercentage}%] {year_day_progressbar}
-
-人生短暂，把握每一秒，摸鱼学习不香吗？ 记得多动多喝水~
+   本月过去了 <cyan>{past_day_month:>2} 天</cyan>，还剩余 <green>{left_day_month:>2} 天</green>。
+   [进度: {month_day_progress_percentage:>3}%]  {month_day_progressbar}
+ 
+   {year}年过去了 <cyan>{past_day_year:>3} 天</cyan>，还剩余 <green>{left_day_year:>3} 天</green>。
+   [进度: {year_day_progress_percentage:>3}%]  {year_day_progressbar}
+ 
+   {rand_tips}
 """
+_tips = [
+    '人生短暂，现在摸鱼学习不香吗？记得多动多喝水~',
+    '工作再累 一定不要忘记摸鱼哦！',
+    '有事没事起身去茶水间去厕所去廊道走走~',
+    '多加班老板今年又可以换法拉利啦～',
+    '珍惜摸鱼时光，不要难为自己～摸鱼才能让自己快乐！'
+]
 
 
-def _get_chinese_week(localtime) -> str:
+def _get_chinese_week(localtime):
+    """获取星期和提醒"""
     chinese_week = ["一", "二", "三", "四", "五", "六", "日"]
     tm_w_day = localtime.tm_wday
-    return chinese_week[tm_w_day]
+    extra_msg = "<green>当前正是周末啦～</green>" if tm_w_day in [5, 6] else "Other"
+    if extra_msg == "Other":
+        go_week = 4 - tm_w_day
+        extra_msg = f"<yellow>还有 {go_week} 天周末</yellow>" if go_week != 0 else "<blue>明天就是周末啦～坚持摸鱼～</blue>"
+    return chinese_week[tm_w_day], extra_msg
 
 
-def _get_progress_bar(spend, mode="day"):
+def _get_progress_bar(spend: int, mode: str = None, nums: int = 0):
     """
     自动获取范围
     :param spend: 度过的天数
     :param mode : 需要计算的模式 如天[24] 周[7] 月[28-31] 年[365-366]
+    :param nums : 传入总共天数 有需要再传
     :return 百分数, 进度条
     """
     if mode == "week":
         nums = 7
-    elif mode == "month":
-        nums = 0
-    elif mode == "year":
-        nums = 0
-    else:
+    elif mode == "day":
         nums = 24
 
     percent = int(spend/nums * 100)
-    black_block_nums = int(round(spend/nums, 1) * 10)  # * "■"
+    black_block_nums = int(round(spend/nums, 1) * 10)
     blank_block_nums = 10 - black_block_nums
     return percent, "■" * black_block_nums + "□" * blank_block_nums
 
 
-def count_now():
+def _get_hour_info(localtime):
+    """获取小时相关的信息"""
+    tm_hour = localtime.tm_hour
+    left_hour = 24 - tm_hour
+    hour_percent, progress_bar = _get_progress_bar(tm_hour, mode='day')
+    return tm_hour, left_hour, hour_percent, progress_bar
+
+
+def _get_week_info(localtime):
+    """获取周相关的信息"""
+    tm_w_day = localtime.tm_wday + 1
+    left_week = 7 - tm_w_day
+    week_percent, progress_bar = _get_progress_bar(tm_w_day, mode='week')
+    return tm_w_day, left_week, week_percent, progress_bar
+
+
+def _get_month_info(localtime):
+    """获取月相关的信息"""
+    now_day = localtime.tm_mday
+    now_year = localtime.tm_year
+    now_month = localtime.tm_mon
+    now_month_max_day = calendar.monthrange(now_year, now_month)[1]
+    left_day = now_month_max_day - now_day
+    month_percent, progress_bar = _get_progress_bar(now_day, nums=now_month_max_day)
+    return now_day, left_day, month_percent, progress_bar
+
+
+def _get_year_info(localtime):
+    """获取年相关信息"""
+    now_day = localtime.tm_yday
+    now_year = localtime.tm_year
+    now_year_max_day = 366 if calendar.isleap(now_year) else 365
+    left_day = now_year_max_day - now_day
+    year_percent, progress_bar = _get_progress_bar(now_day, nums=now_year_max_day)
+    return now_day, left_day, year_percent, progress_bar
+
+
+def print_date():
     """
     开始计算数据了
     """
     localtime = time.localtime()
-    print_date(
+    week_info, extra_msg = _get_chinese_week(localtime)
+    past_hour, left_hour, hour_progress_percentage, hour_progressbar = _get_hour_info(localtime)
+    past_week, left_week, week_progress_percentage, week_progressbar = _get_week_info(localtime)
+    past_month, left_month, month_progress_percentage, month_progressbar = _get_month_info(localtime)
+    past_year, left_year, year_progress_percentage, year_progressbar = _get_year_info(localtime)
+    print(color_string(_format_string.format(
         year=localtime.tm_year,
         month=localtime.tm_mon,
         day=localtime.tm_mday,
-        week=_get_chinese_week(localtime),
-
-    )
-
-
-def print_date(
-        year, month, day, week, extra_week_msg,
-        past_hour, left_hour, hour_progressbar, hour_progress_percentage,
-        past_day_week, left_day_week, week_day_progressbar, week_day_progress_percentage,
-        past_day_month, left_day_month, month_day_progressbar, month_day_progress_percentage,
-        past_day_year, left_day_year, year_day_progressbar, year_day_progress_percentage):
-    print(color_string(_format_string.format(
-        year=year, month=month, day=day, week=week, extra_week_msg=extra_week_msg,
-        past_hour=past_hour, left_hour=left_hour,
-        hour_progressbar=hour_progressbar, hour_progresspercentage=hour_progress_percentage,
-        past_day_week=past_day_week, left_day_week=left_day_week,
-        week_day_progressbar=week_day_progressbar, week_day_progresspercentage=week_day_progress_percentage,
-        past_day_month=past_day_month, left_day_month=left_day_month,
-        month_day_progressbar=month_day_progressbar, month_day_progresspercentage=month_day_progress_percentage,
-        past_day_year=past_day_year, left_day_year=left_day_year,
-        year_day_progressbar=year_day_progressbar, year_day_progresspercentage=year_day_progress_percentage
+        week=week_info,
+        past_hour=past_hour,
+        left_hour=left_hour,
+        hour_progress_percentage=hour_progress_percentage,
+        hour_progressbar=hour_progressbar,
+        past_day_week=past_week,
+        left_day_week=left_week,
+        week_day_progress_percentage=week_progress_percentage,
+        week_day_progressbar=week_progressbar,
+        extra_week_msg=extra_msg,
+        past_day_month=past_month,
+        left_day_month=left_month,
+        month_day_progress_percentage=month_progress_percentage,
+        month_day_progressbar=month_progressbar,
+        past_day_year=past_year,
+        left_day_year=left_year,
+        year_day_progress_percentage=year_progress_percentage,
+        year_day_progressbar=year_progressbar,
+        rand_tips=random.choice(_tips)
     )))
 
 
-def test():
-    year = 2022
-    month = 1
-    day = 6
-    week = "三"
-
-    past_hour = 10
-    left_hour = 24 - past_hour
-
-    hour_progressbar = "■■■■■■□□□□"
-    hour_progress_percentage = 35
-
-    past_day_week = 1
-    left_day_week = 7 - past_day_week
-    week_day_progressbar = "■■■■■■■□□□"
-    week_day_progress_percentage = 10
-
-    past_day_month = 15
-    left_day_month = 31 - past_day_month
-    month_day_progressbar = "■■□□□□□□□□"
-    month_day_progress_percentage = 11
-
-    past_day_year = 111
-    left_day_year = 365 - past_day_year
-    year_day_progressbar = "■□□□□□□□□□"
-    year_day_progress_percentage = 60
-    print_date(year, month, day)
-
-
 if __name__ == "__main__":
-    print(_get_progress_bar(19, 'day'))
-
+    print_date()
