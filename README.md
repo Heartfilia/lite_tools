@@ -29,7 +29,7 @@ extral_requirements:
     Pillow
 ```
 
-### install
+### Installation
 
 ```bash
 # 安装
