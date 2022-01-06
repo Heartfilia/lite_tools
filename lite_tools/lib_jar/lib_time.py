@@ -2,12 +2,12 @@
 # @Time   : 2021-04-06 15:27
 # @Author : Lodge
 import time
-import datetime
 import functools
 from typing import Union
 from inspect import currentframe
 
-from lite_tools._utils_logs import my_logger, get_using_line_info
+from lite_tools.utils_jar.logs import my_logger, get_using_line_info
+
 
 """
 这里可以用 但是比较臃肿 

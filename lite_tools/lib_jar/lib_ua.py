@@ -4,7 +4,7 @@
 import re
 import random
 
-from lite_tools._utils_uainfo import platform_data, browser_data, versions
+from lite_tools.utils_jar.uainfo import platform_data, browser_data, versions
 
 __ALL__ = ["get_ua"]
 

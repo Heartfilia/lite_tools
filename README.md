@@ -1,10 +1,18 @@
 # lite_tools
 
+
+![](https://img.shields.io/badge/python-3.6-brightgreen)
+![](https://img.shields.io/github/watchers/Heartfilia/lite_tools?style=social)
+![](https://img.shields.io/github/stars/Heartfilia/lite_tools?style=social)
+![](https://img.shields.io/github/forks/Heartfilia/lite_tools?style=social)
+
+
 ### 项目说明
 ```
-本项目只是封装了 - python**自带包**的功能 不过还是装了另外两个包
--- loguru(打印日志的) datetime(目前没有用到 后续会改进get_date)
+本项目基础功能只是封装了 - python**自带包**的功能 
+-- loguru(打印日志的)
 -- 1.0.0以下均为beta版本(就是为了试错 改bug的)
+补充版功能依赖第三方包
 
 -------------------------------------------
 当前线上版本: 0.4.7.5.5 (好几个bug没有修复)
@@ -15,14 +23,20 @@ python version:
     3.6+   // 因为使用了f_string
 requirements :
     loguru
+extral_requirements:
     datetime
+    reportlab
+    Pillow
 ```
 
 ### install
 
 ```bash
 # 安装
-cmd/bash >> pip install lite-tools   # 有的人的pip是pip3
+【普通版】cmd/bash >> pip install --upgrade lite-tools        # 有的人的pip是pip3 一般的功能用这些就够了
+---------------- 下面两个还没有正式启用 --------------
+【文件版】cmd/bash >> pip install --upgrade lite-tools[file]  # 只增加了文件处理模块
+【补充版】cmd/bash >> pip install --upgrade lite-tools[all]   # 包含上面所有功能
 ```
 
 

@@ -2,10 +2,10 @@
 import re
 from typing import Union, Optional
 
-from lite_tools._utils_logs import logger
-from lite_tools._utils_code_range import __u_range_list, __U_range_list
-from lite_tools._utils_sql_base_string import MysqlKeywordsList
-from lite_tools._utils_subsup_string import SUB_SUP_WORDS_HASH
+from lite_tools.utils_jar.logs import logger
+from lite_tools.utils_jar.code_range import __u_range_list, __U_range_list
+from lite_tools.utils_jar.sql_base_string import MysqlKeywordsList
+from lite_tools.utils_jar.subsup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
@@ -313,6 +313,7 @@ def color_string(string: str = "", *args, **kwargs) -> str:
 class SqlString(object):
     """
     这里只负责拼接sql语句 不负责处理sql事务 // 还没有测试好 同clean_string 一样 后面某个版本才会成为完全体
+    TODO(这里需要注意结束语句的单双引号)
     """
     def __init__(self, table_name: str) -> None:
         self.table_name = table_name
@@ -388,7 +389,7 @@ class SqlString(object):
             logger.error("传入了不支持的数据类型")
             return "", ""
 
-    def update_many(self):
+    def update_many(self, keys: Union[dict, list], where: Union[dict, list, tuple, str]) -> Optional[str]:
         """
         因为单条sql的拼接不方便改 直接这里弄好了 TODO(需要新增多条数据插入）
         """
