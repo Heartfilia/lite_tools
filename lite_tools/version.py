@@ -1,4 +1,4 @@
 # -*- coding: utf-8 -*-
 # @Author  : Lodge
 
-VERSION = '0.4.7.7-beta1'
+VERSION = '0.4.7.7'
