@@ -33,6 +33,7 @@ setup(
     url='https://github.com/Heartfilia/lite_tools',
     packages=[
         'lite_tools',
+        'lite_tools.trans',
         'lite_tools.commands',
         'lite_tools.lib_jar',
         'lite_tools.utils_jar'
