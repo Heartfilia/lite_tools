@@ -27,7 +27,7 @@ def get_date(timedelta: tuple = None):
 
 def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None, *args, **kwargs):
     """
-    TODO(my_logger 的路径有问题)
+    TODO(my_logger 在多线程中的路径有问题 -- 我也懒得修复 这个是个小问题)
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换 TODO(会自动匹配时间)

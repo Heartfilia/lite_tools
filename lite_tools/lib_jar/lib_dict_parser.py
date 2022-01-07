@@ -28,7 +28,8 @@ def try_get(
     如果传入一个字典 json=True 那么就是转为json字符串
     :param renderer: 传入的需要解析的字典或者json串
     :param getters : 链式取值 -- 不传入那么就只是单纯的格式化json传 这里支持管道符多匹配辣 如: a.b.c|a.b.d[-1]|a.c.d
-               示例:a.b.c.d   a[2].b 或者 a.[2].b  或者 a.[*]b ->*是代表不知道是哪一个列表下面出现的b 如果都有那就取第一个
+            如果键里面有管道符 --> 请把键里面的管道符用 反斜杠表示 防止转义
+            示例:a.b.c.d   a[2].b 或者 a.[2].b  或者 a.[*]b ->*是代表不知道是哪一个列表下面出现的b 如果都有那就取第一个
     :param default : 默认的返回值, 默认返回None, 可以自定义返回值
     :param expected_type: 期望获得的值类型 不是则为 default  可多传如：  expected_type=(list, str)
     :param log     :  是否打印日志
@@ -47,17 +48,19 @@ def try_get(
         return renderer
 
     if isinstance(getters, str):
-        for each_getter in getters.split("|"):       # 兼容 | 管道符号可以多个条件一起操作
+        getters = getters.replace("\|", "\\//\\//").replace('|', "||").replace("\\//\\//", "\|")  # 兼容键里面有管道符
+        for cut_getter in getters.split("||"):       # 兼容 | 管道符号可以多个条件一起操作
+            each_getter = cut_getter.replace("\|", "|")
             getter = each_getter.strip('.| |\n|\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
             origin_getter = "_"
             if '.' in getter:
                 getter = getter.split('.')
                 for now_getter in getter:
-                    if re.findall(r"\w+\[-?\d+\]", now_getter):
+                    if re.findall(r"\S+\[-?\d+\]", now_getter):
                         origin_getter += _get_w_d_rules(now_getter)
-                    elif re.findall(r"\[-?\d+\]\w+", now_getter):
+                    elif re.findall(r"\[-?\d+\]\S+", now_getter):
                         origin_getter += _get_d_w_rules(now_getter)
-                    elif re.search(r"\[\*\]\w+", now_getter):
+                    elif re.search(r"\[\*\]\S+", now_getter):
                         # 这里因为会改 render的结构 所以就不要单独处理了
                         renderer, origin_getter = handle_reg_rule(
                             renderer, origin_getter, now_getter, "try重试１ダ_get获取２メ_fail失败３よ")
@@ -69,15 +72,15 @@ def try_get(
                     else:
                         origin_getter += f"['{now_getter}']"
             else:
-                if re.search(r"\[\*\]\w+", each_getter):
+                if re.search(r"\[\*\]\S+", each_getter):
                     renderer, origin_getter = handle_reg_rule(
                         renderer, origin_getter, each_getter, "try重试１ダ_get获取２メ_fail失败３よ")
                     # 避免本来结果就是None或者什么情况
                     if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
                         continue
-                elif re.findall(r"\w+\[-?\d+\]", each_getter):  # a[2]
+                elif re.findall(r"\S+\[-?\d+\]", each_getter):  # a[2]
                     origin_getter += _get_w_d_rules(each_getter)
-                elif re.findall(r"\[-?\d+\]\w+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
+                elif re.findall(r"\[-?\d+\]\S+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
                     origin_getter += _get_d_w_rules(each_getter)
                 else:
                     origin_getter += f"['{each_getter}']"

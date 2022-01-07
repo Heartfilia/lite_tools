@@ -391,7 +391,7 @@ class SqlString(object):
 
     def update_many(self, keys: Union[dict, list], where: Union[dict, list, tuple, str]) -> Optional[str]:
         """
-        因为单条sql的拼接不方便改 直接这里弄好了 TODO(需要新增多条数据插入）
+        因为单条sql的拼接不方便改 直接这里弄好了 TODO(需要新增多条数据插入:不过现在我懒先不写）
         """
         pass
 

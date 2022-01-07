@@ -15,8 +15,8 @@
 补充版功能依赖第三方包
 
 -------------------------------------------
-当前线上版本: 0.4.7.5.5 (好几个bug没有修复)
-正在准备修复bug和新增功能的版本: 0.4.7.6b1
+当前线上版本: 0.4.7.7b1 (好几个bug没有修复)
+正在准备修复bug和新增功能的版本: 0.4.7.7b1
 ```
 ```
 python version:
@@ -39,12 +39,17 @@ extral_requirements:
 【补充版】cmd/bash >> pip install --upgrade lite-tools[all]   # 包含上面所有功能
 ```
 
+### 命令行指令
+```bash
+lite-tools [-h]   # 可以获取帮助 我这里就不展示更多了
+lite-tools fish   # 即可获取摸鱼日历
+lite-tools trans -i 输入文件 [-o 输出文件路径]  # 这里 -m pdf 省略了 默认转pdf 
+```
+
 
 ### Interface
 
 ```bash
-cmd >> lite-tools fish   # 即可获取摸鱼日历
-
 get_time()         # 时间操作 示例见demo.py
 get_ua()           # 获取随机ua 
 timec              # 时间统计装饰器

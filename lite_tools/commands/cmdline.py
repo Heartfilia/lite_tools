@@ -36,8 +36,8 @@ def _print_base():
     print(print_info)
 
 
-def execute(args):
-    # args = sys.argv
+def execute():
+    args = sys.argv
     if len(args) < 2:
         _print_base()
         return
