@@ -5,16 +5,9 @@ import re
 import json as _json
 import functools
 from typing import Any
+
 from lite_tools.utils_jar.logs import my_logger, get_using_line_info
 
-
-"""
-`try_get需要新增的功能示例如下
-a = {"a": [{"a": 1}, {"b": 2}, {"b": 10}]}
-==>  try_get(a, "a.[1].b")  -> 2
-==>  try_get(a, "a.[*]b")   -> 2
-
-"""
 
 __ALL__ = ["match_case", 'try_get', 'try_get_by_name']
 
@@ -35,7 +28,7 @@ def try_get(
     :param log     :  是否打印日志
     :param json    :  设置为True 返回值会返回默认的json串
     :param options : 这里就是json.dumps的参数 变成了字典传入 不过我默认值有修改 ensure_ascii=False json那默认的是True
-    :return         : 如果取到则为值，否则为 default 设置的值 默认None
+    :return        : 如果取到则为值，否则为 default 设置的值 默认None
     """
     renderer = __judge_json(renderer, json, options)
     if not renderer:
@@ -48,53 +41,76 @@ def try_get(
         return renderer
 
     if isinstance(getters, str):
-        getters = getters.replace("\|", "\\//\\//").replace('|', "||").replace("\\//\\//", "\|")  # 兼容键里面有管道符
+        getters = getters.replace(r"\|", "\\//\\//").replace('|', "||").replace("\\//\\//", r"\|")  # 兼容键里面有管道符
         for cut_getter in getters.split("||"):       # 兼容 | 管道符号可以多个条件一起操作
-            each_getter = cut_getter.replace("\|", "|")
-            getter = each_getter.strip('.| |\n|\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
-            origin_getter = "_"
+            each_getter = cut_getter.replace(r"\|", "|")
+            getter = each_getter.strip('. \n\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
             if '.' in getter:
-                getter = getter.split('.')
-                for now_getter in getter:
-                    if re.findall(r"\S+\[-?\d+\]", now_getter):
-                        origin_getter += _get_w_d_rules(now_getter)
-                    elif re.findall(r"\[-?\d+\]\S+", now_getter):
-                        origin_getter += _get_d_w_rules(now_getter)
-                    elif re.search(r"\[\*\]\S+", now_getter):
-                        # 这里因为会改 render的结构 所以就不要单独处理了
-                        renderer, origin_getter = handle_reg_rule(
-                            renderer, origin_getter, now_getter, "try重试１ダ_get获取２メ_fail失败３よ")
-                        # 避免本来结果就是None或者什么情况
-                        if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
-                            continue
-                    elif re.search(r"\[\d+\]", now_getter):
-                        origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
-                    else:
-                        origin_getter += f"['{now_getter}']"
+                origin_getter, renderer = handle_dot_situation(getter, renderer)
             else:
-                if re.search(r"\[\*\]\S+", each_getter):
-                    renderer, origin_getter = handle_reg_rule(
-                        renderer, origin_getter, each_getter, "try重试１ダ_get获取２メ_fail失败３よ")
-                    # 避免本来结果就是None或者什么情况
-                    if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
-                        continue
-                elif re.findall(r"\S+\[-?\d+\]", each_getter):  # a[2]
-                    origin_getter += _get_w_d_rules(each_getter)
-                elif re.findall(r"\[-?\d+\]\S+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
-                    origin_getter += _get_d_w_rules(each_getter)
-                else:
-                    origin_getter += f"['{each_getter}']"
+                origin_getter, renderer = handle_normal_situation(each_getter, renderer)
+
+            if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
+                continue
+
             try:
                 now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
-            except Exception:
+            except Exception as err:
                 # 因为有些时候lambda 那里可能会出现问题
                 if log is True:
                     line, fl = get_using_line_info()
-                    my_logger(fl, "try_get", line, f"请不要连写一堆操作符在 -- [{getters}] 这上面")
-                return default
-            if now_result != default and now_result != "try重试１ダ_get获取２メ_fail失败３よ":
+                    my_logger(fl, "try_get", line, f"请不要连写一堆操作符在 -- [{getters.replace('||', '|')}] 这上面")
+                continue
+            if now_result != default:
                 return now_result
     return default
+
+
+def handle_dot_situation(getter: str, renderer: dict):
+    """
+    处理有 . 在的情况
+    """
+    origin_getter = "_"
+    getter = getter.split('.')
+    for now_getter in getter:
+        if re.findall(r"\S+\[-?\d+\]", now_getter):
+            origin_getter += _get_w_d_rules(now_getter)
+        elif re.findall(r"\[-?\d+\]\S+", now_getter):
+            origin_getter += _get_d_w_rules(now_getter)
+        elif re.search(r"\[\*\]\S+", now_getter):
+            # 这里因为会改 render的结构 所以就不要单独处理了
+            renderer, origin_getter = handle_reg_rule(
+                renderer, origin_getter, now_getter, "try重试１ダ_get获取２メ_fail失败３よ")
+            # 避免本来结果就是None或者什么情况
+            if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
+                continue
+        elif re.search(r"\[\d+\]", now_getter):
+            origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
+        else:
+            origin_getter += f"['{now_getter}']"
+
+    return origin_getter, renderer
+
+
+def handle_normal_situation(each_getter: str, renderer: dict):
+    """
+    处理没有 . 的情况
+    """
+    origin_getter = "_"
+    if re.search(r"\[\*\]\S+", each_getter):
+        renderer, origin_getter = handle_reg_rule(
+            renderer, origin_getter, each_getter, "try重试１ダ_get获取２メ_fail失败３よ")
+        # 避免本来结果就是None或者什么情况
+        if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
+            origin_getter = "_"
+    elif re.findall(r"\S+\[-?\d+\]", each_getter):  # a[2]
+        origin_getter += _get_w_d_rules(each_getter)
+    elif re.findall(r"\[-?\d+\]\S+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
+        origin_getter += _get_d_w_rules(each_getter)
+    else:
+        origin_getter += f"['{each_getter}']"
+
+    return origin_getter, renderer
 
 
 def _get_w_d_rules(now_getter):
@@ -323,3 +339,10 @@ def match_case(func):
     wrapper.register = register
     wrapper.register_all = register_all
     return wrapper
+
+
+if __name__ == "__main__":
+    a = {"a": {"b1": {"c": [{"d": 1}, {"e": 2}]}}}
+
+    print(try_get(a, "a.b1.c[*]f[1]f|a.b1.c[0].d"))
+    # print(try_get(a, "b"))

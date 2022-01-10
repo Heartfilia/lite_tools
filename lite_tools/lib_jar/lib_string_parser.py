@@ -3,9 +3,9 @@ import re
 from typing import Union, Optional
 
 from lite_tools.utils_jar.logs import logger
-from lite_tools.utils_jar.code_range import __u_range_list, __U_range_list
-from lite_tools.utils_jar.sql_base_string import MysqlKeywordsList
-from lite_tools.utils_jar.subsup_string import SUB_SUP_WORDS_HASH
+from lite_tools.utils_jar.u_code_range import __u_range_list, __U_range_list
+from lite_tools.utils_jar.u_sql_base_string import MysqlKeywordsList
+from lite_tools.utils_jar.u_sub_sup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """

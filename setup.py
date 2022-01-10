@@ -16,10 +16,11 @@ with open("README.md", "r", encoding='utf-8') as fd:
 
 
 requires = ['loguru']
-# 这里暂时没有用到 -- 一些完整包的情况下的功能  # fire还在考虑是否要加中
+# 这里暂时没有用到 -- 一些完整包的情况下的功能
 file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter"]
+date_requires = ["datetime", "lxml", "requests", "prettytable"]
 
-all_requires = ["datetime"] + file_requires
+all_requires = date_requires + file_requires
 
 
 setup(
@@ -46,6 +47,7 @@ setup(
     python_requires=">=3.6",
     extras_require={
         "all": all_requires,
+        "date": date_requires,
         "file": file_requires
     },
     classifiers=[

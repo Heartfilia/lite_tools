@@ -36,6 +36,7 @@ extral_requirements:
 【普通版】cmd/bash >> pip install --upgrade lite-tools        # 有的人的pip是pip3 一般的功能用这些就够了
 ---------------- 下面两个还没有正式启用 --------------
 【文件版】cmd/bash >> pip install --upgrade lite-tools[file]  # 只增加了文件处理模块
+【日历版】cmd/bash >> pip install --upgrade lite-tools[date]  # 只增加了文件处理模块
 【补充版】cmd/bash >> pip install --upgrade lite-tools[all]   # 包含上面所有功能
 ```
 

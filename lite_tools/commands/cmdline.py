@@ -23,14 +23,16 @@ import sys
 
 from lite_tools.version import VERSION
 from lite_tools.utils_jar.logs import logger
-from lite_tools.utils_jar.moyu_rili import print_date
+from lite_tools.utils_jar.script_fisher_date import print_date
 
 
 def _print_base():
     """输出lite-tools基本信息的"""
     print_info = f"lite-tools {VERSION}\n\n"
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
-    print_info += "Available commands:\n  fish        获取摸鱼人日历\n"
+    print_info += "Available commands:\n"
+    print_info += "  fish        获取摸鱼人日历\n"
+    print_info += "  almanac     获取当天黄历\n"
     print_info += "  trans       文件转换相关内容[目前测试版有图片转pdf]\n\n"
     print_info += "Use \"lite-tools <command> -h\" to see more info about a command"
     print(print_info)
@@ -45,6 +47,16 @@ def execute():
     command = args.pop(1)
     if command == "fish":
         print_date()
+
+    elif command == "almanac":
+        try:
+            from lite_tools.utils_jar.script_almanac import print_almanac
+        except ImportError:
+            logger.warning("almanac为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
+            sys.exit(0)
+        else:
+            print_almanac()
+
     elif command == "trans":
         try:
             from lite_tools.trans.pdf import pdf_run
