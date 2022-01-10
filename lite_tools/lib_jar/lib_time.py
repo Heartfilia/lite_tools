@@ -14,7 +14,7 @@ from lite_tools.utils_jar.logs import my_logger, get_using_line_info
 后续将重构
 """
 
-__ALL__ = ['get_date', 'get_time']
+__ALL__ = ['get_date', 'get_time', 'time_count']
 
 
 def get_date(timedelta: tuple = None):
@@ -22,6 +22,7 @@ def get_date(timedelta: tuple = None):
     这里是为了将get_time里面关于日期操作的独立出来 可以独立调用也可以由get_time调用
     # datetime模块太复杂了 还需要考虑一下怎么合并处理 先不给用这个模块
     """
+    _ = timedelta
     pass
 
 
@@ -33,6 +34,8 @@ def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换 TODO(会自动匹配时间)
     params double: 返回小数的时间 还是整数 默认整数  如果搭配goal那么返回浮点数 因为是要把字符串转换为数字来着
     params cursor: 传入游标单位/天  可以是正可以是负 可以是整数可以是字符串 TODO(后续会增加更细的游标设置)
+    params args  : 兼容不重要参数
+    params kwargs: 兼容不重要参数
     """
     if isinstance(fmt, bool):
         fmt_str = "%Y-%m-%d %H:%M:%S"
@@ -104,7 +107,7 @@ def _get_time_block(cursor):
     return tm_before
 
 
-def timec(fn):  # time count
+def time_count(fn):
     @functools.wraps(fn)
     def inner(*args, **kwargs):
         t1 = time.time()

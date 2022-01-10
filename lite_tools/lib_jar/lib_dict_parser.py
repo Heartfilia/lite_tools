@@ -41,7 +41,7 @@ def try_get(
         return renderer
 
     if isinstance(getters, str):
-        getters = getters.replace(r"\|", "\\//\\//").replace('|', "||").replace("\\//\\//", r"\|")  # 兼容键里面有管道符
+        getters = getters.replace(r"\|", "^\\//\\//$").replace('|', "||").replace("^\\//\\//$", r"\|")  # 兼容键的管道符
         for cut_getter in getters.split("||"):       # 兼容 | 管道符号可以多个条件一起操作
             each_getter = cut_getter.replace(r"\|", "|")
             getter = each_getter.strip('. \n\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.

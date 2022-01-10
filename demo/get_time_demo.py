@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
-from lite_tools import get_time, timec
+from lite_tools import get_time, time_count
 
 # about time  ==> get_time  timer
 
@@ -16,10 +16,13 @@ print(get_time("2021-04-06 17:36", double=True, fmt="%Y-%m-%d %H:%M"))  # 161770
 print(get_time("2021-04-06 17:36:54", double=True))            # 1617701814.0
 print(get_time("1617701814"))                                  # 2021-04-06 17:36:54   support string too
 print(get_time(1617701814, fmt="%Y::%m::%d::%H~%M~%S"))    # 2021::04::06::17~36~54
-# timer 是一个装饰器 只用于统计被装饰的函数耗时 日志等级为 debug
+# time_count 是一个装饰器 只用于统计被装饰的函数耗时 日志等级为 debug
 
-@timec    # time count
+
+@time_count
 def run(name):
     time.sleep(0.2)
     print(f'hello {name} done')   # hello lite-tools done
-run('lite-tools')   # 2021-04-27 09:20:01.949 | DEBUG    | lite_tools.time_info:inner:84 - >>> [run] -- cost time:0.20811
+
+
+run('lite-tools')   # 2021-04-27 09:20:01.949 | DEBUG    | xxx:84 - >>> [run] -- cost time:0.20811

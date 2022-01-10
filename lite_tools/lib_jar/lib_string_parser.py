@@ -41,9 +41,9 @@ def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
 
     for kill in kill_jar:
         if ("x" in mode and __judge_x(kill, ignore)) or ("s" in mode and __judge_s(kill, ignore)) or (
-                "p" in mode and __judge_p(kill, ignore)) or ("P" in mode and __judge_P(kill, ignore)) or (
+                "p" in mode and __judge_p(kill, ignore)) or ("P" in mode and __judge_big_p(kill, ignore)) or (
                 "f" in mode and __judge_f(kill, ignore)) or ("e" in mode and __judge_e(kill, ignore)) or (
-                "u" in mode and __judge_u(kill, ignore)) or ("U" in mode and __judge_U(kill, ignore)) or (
+                "u" in mode and __judge_u(kill, ignore)) or ("U" in mode and __judge_big_u(kill, ignore)) or (
                 "r" in mode and __judge_r(kill, ignore)):
             string = string.replace(kill, "")
     return string
@@ -65,7 +65,7 @@ def __judge_p(char, ignore=""):
         return True
 
 
-def __judge_P(char, ignore=""):
+def __judge_big_p(char, ignore=""):
     if char not in ignore and (
             8208 <= ord(char) < 8232 or 8240 <= ord(char) < 8287 or 12289 <= ord(char) < 12310 or
             65072 <= ord(char) < 65107 or 65108 <= ord(char) < 65127 or 65128 <= ord(char) < 65132 or
@@ -83,7 +83,7 @@ def __judge_u(char, ignore=""):
         return True
 
 
-def __judge_U(char, ignore=""):
+def __judge_big_u(char, ignore=""):
     if char not in ignore and ord(char) in __U_range_list:
         return True
 
@@ -98,18 +98,18 @@ def __judge_r(char, ignore=""):
     这里是从888断断续续的有占位符号 所以下面判断范围中小于888的都不用写了
     """
     if char not in ignore and \
-    888 <= ord(char) < 65535 and \
-    ord(char) not in __u_range_list and \
-    ord(char) not in __U_range_list and \
-    not __judge_P(char) and \
-    not __judge_f(char):
+        888 <= ord(char) < 65535 and \
+        ord(char) not in __u_range_list and \
+        ord(char) not in __U_range_list and \
+            not __judge_big_p(char) and not __judge_f(char):
         return True
 
 
 def _scanner(string: str):
     jar = set()
     for ch in string: 
-        if ch.isalpha() or ch.isdigit(): continue
+        if ch.isalpha() or ch.isdigit():
+            continue
         jar.add(ch)
     return jar
 
@@ -252,12 +252,12 @@ def color_string(string: str = "", *args, **kwargs) -> str:
     :param string: 传入的字符串
     :param args  : 参数注解如下面所示  传入非字典类型的时候 只有第一个参数起作用在字体颜色上面  -->传入字典同下操作
     :param kwargs: 这里传入需要用 **{}   
-    :param f     : 字体颜色 -> (30, 黑色/black)(31, 红色/r/red)(32, 绿色/g/green)(33, 黄色/y/yellow)(34, 蓝色/b/blue)
+    :params f    : 字体颜色 -> (30, 黑色/black)(31, 红色/r/red)(32, 绿色/g/green)(33, 黄色/y/yellow)(34, 蓝色/b/blue)
                                 (35, 紫色/p/purple)(36, 青蓝色/c/cyan)(37, 白色/w/white)(90, darkgrey)(91, lightred)
                                 (92, lightgreen)(93, lightyellow)(94, lightblue)(95, pink)(96, lightcyan)
-    :param b     : 背景颜色 -> (40, 黑色/black)(41, 红色/r/red)(42, 绿色/g/green)(43, 黄色/y/yellow)(44, 蓝色/b/blue)
+    :params b    : 背景颜色 -> (40, 黑色/black)(41, 红色/r/red)(42, 绿色/g/green)(43, 黄色/y/yellow)(44, 蓝色/b/blue)
                                 (45, 紫色/p/purple)(46, 青蓝色/c/cyan)(47, 白色/w/white)
-    :param v     : 显示方式 -> (0, 重置/reset)(1, 加粗/b/bold)(2, 禁止/disable)(4, 使用下划线/u/underline)(5, 闪烁/f/flash)
+    :params v    : 显示方式 -> (0, 重置/reset)(1, 加粗/b/bold)(2, 禁止/disable)(4, 使用下划线/u/underline)(5, 闪烁/f/flash)
                                 (7, 反相/r/reverse)(8, 不可见/i/invisible)(9, 删除线/s/strikethrough)
     """
     if not args and not kwargs and not string:
@@ -327,7 +327,8 @@ class SqlString(object):
         :param values
         :param ignore   : 是否忽略插入中的重复值之类的
         """
-        if not keys: return None
+        if not keys:
+            return None
         whether_ignore = "IGNORE " if ignore is True else ""
         base_insert = f"INSERT {whether_ignore}INTO {self.table_name}"
         key_string, value_string = self.__handle_insert_data(keys, values)
@@ -474,9 +475,3 @@ def math_string(string: str) -> str:
         if getter:
             new_string = new_string.replace(rule, getter)
     return new_string
-
-
-if __name__ == "__main__":
-    sqlbase = SqlString('test')
-    print(sqlbase.update({"cc": 12312312}, {"a": 1}))
-    print(sqlbase.update({"cc": "12312312"}, {"a": 1}))

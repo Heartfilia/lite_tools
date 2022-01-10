@@ -53,7 +53,7 @@ lite-tools trans -i 输入文件 [-o 输出文件路径]  # 这里 -m pdf 省略
 ```bash
 get_time()         # 时间操作 示例见demo.py
 get_ua()           # 获取随机ua 
-timec              # 时间统计装饰器
+time_count         # 时间统计装饰器
 
 # ==============下面是推荐使用的功能===================
 try_get()          # 字典或者json串操作

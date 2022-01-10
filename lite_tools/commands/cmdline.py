@@ -32,7 +32,7 @@ def _print_base():
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
     print_info += "  fish        获取摸鱼人日历\n"
-    print_info += "  almanac     获取当天黄历\n"
+    print_info += "  today       获取当天黄历\n"
     print_info += "  trans       文件转换相关内容[目前测试版有图片转pdf]\n\n"
     print_info += "Use \"lite-tools <command> -h\" to see more info about a command"
     print(print_info)
@@ -48,14 +48,14 @@ def execute():
     if command == "fish":
         print_date()
 
-    elif command == "almanac":
+    elif command == "today":
         try:
-            from lite_tools.utils_jar.script_almanac import print_almanac
+            from lite_tools.utils_jar.script_almanac import print_today
         except ImportError:
             logger.warning("almanac为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
             sys.exit(0)
         else:
-            print_almanac()
+            print_today()
 
     elif command == "trans":
         try:

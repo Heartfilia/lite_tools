@@ -15,7 +15,7 @@ with open("README.md", "r", encoding='utf-8') as fd:
     long_description = fd.read()
 
 
-requires = ['loguru']
+base_requires = ['loguru']
 # 这里暂时没有用到 -- 一些完整包的情况下的功能
 file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter"]
 date_requires = ["datetime", "lxml", "requests", "prettytable"]
@@ -26,7 +26,7 @@ all_requires = date_requires + file_requires
 setup(
     name='lite-tools',
     version=VERSION.strip(),
-    description='一些基于内建函数的小工具集合[更多功能基于第三方包]',
+    description='一些基于内建函数的小工具集合[更多拓展功能基于第三方包,安装参考github页面]',
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='Lodge',
@@ -40,9 +40,9 @@ setup(
         'lite_tools.utils_jar'
     ],
     license='MIT',
-    install_requires=requires,
+    install_requires=base_requires,
     entry_points={"console_scripts": [
-        "lite-tools = lite_tools.commands.cmdline:execute",
+        "lite-tools=lite_tools.commands.cmdline:execute",
     ]},
     python_requires=">=3.6",
     extras_require={
