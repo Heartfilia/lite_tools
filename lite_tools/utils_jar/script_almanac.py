@@ -34,35 +34,31 @@ from lite_tools.lib_jar.lib_try import try_catch
 from lite_tools.lib_jar.lib_string_parser import color_string
 
 
-# @try_catch(log="请不要频繁请求<或者>网页数据版式有改动[如果这样的话那就不要用这个功能啦]")
+@try_catch(log="本功能为在线功能,需要网络。如有网络不要频繁请求，[如果网页数据版式有改动,这样的话这个功能暂时就废了需要修复]")
 def print_today():
     """
     关于假期:如果假期是未发生的,那么将会是<黄色>标注,假如是正在假期间,将会是<绿色>标注,其次无颜色标注
     """
-    print(color_string("【假期】还不到的假期显示<<yellow>黄色</yellow>>，正在假期中显示<<green>绿色</green>>，已经过了的假期<无色>"))
-    print('- - ' * 20)
     html_text = get_date_web()
     html_obj = etree.HTML(html_text)
-    # parse_html_holiday(html_obj)   # 解析假期
-    print('- - ' * 20)
+    print(color_string("【假期】还不到的假期显示<<yellow>黄色</yellow>>，正在假期中显示<<green>绿色</green>>，已经过了的假期<无色>"))
+    parse_html_holiday(html_obj)   # 解析假期
+    print(color_string("【今日】数据来源互联网,<red>仅供参考</red>,请不要随意迷信~"))
     parse_html_today(html_obj)     # 解析今天的运势
 
 
 def get_date_web() -> str:
-    # resp = requests.get('https://www.wannianli.cn/', headers={'user-agent': get_ua()})
-    # return resp.text
-    with open(r"E:\my_github\lite_tools\lib_jar\date_test.html", 'r', encoding='utf-8') as fp:
-        html = fp.read()
-    return html
+    resp = requests.get('https://www.wannianli.cn/', headers={'user-agent': get_ua()})
+    return resp.text
 
 
 def parse_html_today(html: etree.HTML):
-    tables = html.xpath(
-        '//div[@class="widget-box"]//table[0]/tbody/tr')
-    print(tables)
-    table_head = "".join(tables[0].xpath('./td[3]/text()'))
-    pt_today = PrettyTable(["今日运势", table_head])
-    pt_today.set_style(pt.PLAIN_COLUMNS)
+    tables = html.xpath('//table/tr')
+    pt_today = PrettyTable(
+        [color_string("今日运势", {"v": "b", "f": "b"}),
+         color_string(tables[0].xpath('./td/text()')[-1], {"v": "b", "f": "b"})])
+    pt_today.junction_char = "-"
+    pt_today.vertical_char = " "
     for tr in tables[1:]:
         th = "".join(tr.xpath('./th[1]/text()'))
         td = "".join(tr.xpath('./td')[-1].xpath('./text()'))
@@ -72,7 +68,7 @@ def parse_html_today(html: etree.HTML):
         elif th == "【忌】":
             th = color_string(f"<red>{th}</red>")
             td = color_string(f"<red>{td}</red>")
-        elif "友情提示" in th:
+        elif "友情提示" in th or "彭祖百忌" in th:
             continue
         pt_today.add_row([th, td])
     print(pt_today)
@@ -80,15 +76,22 @@ def parse_html_today(html: etree.HTML):
 
 def parse_html_holiday(html: etree.HTML):
     year = time.localtime().tm_year
-    pt_holiday = PrettyTable([f"{year}年节日", "放假时间", "调休日期", "放假天数"])
-    pt_holiday.set_style(pt.PLAIN_COLUMNS)
-    tables = html.xpath('//div[contains(@class, "theme-showcase")]/div/div[2]/div[1]/table/tbody/tr[position()>1]')
+    pt_holiday = PrettyTable([
+        color_string(f"{year}年节日", {"v": "b", "f": "b"}),
+        color_string("放假时间", {"v": "b", "f": "b"}),
+        color_string("调休日期", {"v": "b", "f": "b"}),
+        color_string("放假天数", {"v": "b", "f": "b"})]
+    )
+    # pt_holiday.set_style(pt.PLAIN_COLUMNS)
+    pt_holiday.junction_char = "-"
+    pt_holiday.vertical_char = " "
+    tables = html.xpath('//table/tbody/tr[@class="c-table-hihead firstRow"]/following-sibling::tr')
     for tr in tables:
-        name = "".join(tr.xpath('./td[1]/text()')).replace(' ', '').replace("\n", "")
-        holiday_range = "".join(tr.xpath('./td[2]/text()')).replace(' ', '').replace("\n", "")
+        name = "".join(tr.xpath('./td[1]/text()')).replace(' ', '').replace("\n", "").replace('\r', "")
+        holiday_range = "".join(tr.xpath('./td[2]/text()')).replace(' ', '').replace("\n", "").replace('\r', "")
         _need_color = _holiday_judge_range(holiday_range)
-        make_up_days = "".join(tr.xpath('./td[3]/text()')).replace(' ', '').replace("\n", "")
-        holiday_days = "".join(tr.xpath('./td[4]/text()')).replace(' ', '').replace("\n", "")
+        make_up_days = "".join(tr.xpath('./td[3]/text()')).replace(' ', '').replace("\n", "").replace('\r', "")
+        holiday_days = "".join(tr.xpath('./td[4]/text()')).replace(' ', '').replace("\n", "").replace('\r', "")
         if _need_color:
             name = color_string(f"<{_need_color}>{name}</{_need_color}>")
             holiday_range = color_string(f"<{_need_color}>{holiday_range}</{_need_color}>")

@@ -52,7 +52,7 @@ def execute():
         try:
             from lite_tools.utils_jar.script_almanac import print_today
         except ImportError:
-            logger.warning("almanac为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
+            logger.warning("today 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
             sys.exit(0)
         else:
             print_today()

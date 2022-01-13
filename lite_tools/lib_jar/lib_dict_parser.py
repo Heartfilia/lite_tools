@@ -4,20 +4,22 @@
 import re
 import json as _json
 import functools
-from typing import Any
+from typing import Any, Optional
 
-from lite_tools.utils_jar.logs import my_logger, get_using_line_info
+from lite_tools.utils_jar.logs import my_logger, get_using_line_info, logger
 
 
-__ALL__ = ["match_case", 'try_get', 'try_get_by_name']
+__ALL__ = ["match_case", 'try_get', 'try_key']
 
 
 def try_get(
         renderer, getters=None, default=None, expected_type=None, log=False,
-        json=False, options: dict = None):
-    """
+        json=False, options: dict = None) -> Any:
+    r"""
     获取字典键值  --> 只获取**一个结果** 如果碰到了列表 只获取**第一个值**或者**特定值**
-    只传入一个json串 那么就是转换为字典
+    只传入一个json串 那么就是转换为字典:
+    注意：如果是 点(\.) 或者 竖(\|) 或者数字(\-35/) 或者左中括号(\["a"])--> 如果要匹配 a = {"\0/": 1} 这种类型键 try_get(a, "\\0/")
+         在键里面需要加转义符号（不支持小数因为使用率比较低，弄起来又麻烦浪费时间）--> **如果键是花里胡哨的别用这个方法,可能会错**
     如果传入一个字典 json=True 那么就是转为json字符串
     :param renderer: 传入的需要解析的字典或者json串
     :param getters : 链式取值 -- 不传入那么就只是单纯的格式化json传 这里支持管道符多匹配辣 如: a.b.c|a.b.d[-1]|a.c.d
@@ -27,10 +29,14 @@ def try_get(
     :param expected_type: 期望获得的值类型 不是则为 default  可多传如：  expected_type=(list, str)
     :param log     :  是否打印日志
     :param json    :  设置为True 返回值会返回默认的json串
-    :param options : 这里就是json.dumps的参数 变成了字典传入 不过我默认值有修改 ensure_ascii=False json那默认的是True
+    :param options : 这里就是json.dumps的参数 变成了字典传入 不过我默认值有修改 ensure_ascii=False json那默认的是True 如果读取js文件设置见demo
+                   : 如果处理文件：需要加参数 "mode": "file"  (可以额外指定的参数:encoding-默认utf-8) 具体见demo
     :return        : 如果取到则为值，否则为 default 设置的值 默认None
     """
     renderer = __judge_json(renderer, json, options)
+    if not renderer and options.get('mode') == "file":
+        # 这里是把json文件输出到本地文件的时候的情况
+        return None
     if not renderer:
         if log is True:
             line, fl = get_using_line_info()
@@ -41,14 +47,17 @@ def try_get(
         return renderer
 
     if isinstance(getters, str):
-        getters = getters.replace(r"\|", "^\\//\\//$").replace('|', "||").replace("^\\//\\//$", r"\|")  # 兼容键的管道符
-        for cut_getter in getters.split("||"):       # 兼容 | 管道符号可以多个条件一起操作
-            each_getter = cut_getter.replace(r"\|", "|")
-            getter = each_getter.strip('. \n\r')  # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
-            if '.' in getter:
-                origin_getter, renderer = handle_dot_situation(getter, renderer)
+        getters, split_string = _split_by_high_core(getters, r"\|")
+        for each_getter in getters.split(split_string):    # 兼容 | 管道符号可以多个条件一起操作
+            if r"\|" in each_getter:
+                each_getter = each_getter.replace(r"\|", "|")  # 防止转义的键里面的管道符恢复原样
+            getter = each_getter.strip('. \n\r')          # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
+            getter, split_string = _split_by_high_core(getter, r"\.")
+            # 把转义过的键里面的.排除 然后再把没有转义符的.做分割处理
+            if "." in getter:
+                origin_getter, renderer = handle_dot_situation(getter, renderer, split_string)
             else:
-                origin_getter, renderer = handle_normal_situation(each_getter, renderer)
+                origin_getter, renderer = handle_normal_situation(getter, renderer)
 
             if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
                 continue
@@ -57,6 +66,7 @@ def try_get(
                 now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
             except Exception as err:
                 # 因为有些时候lambda 那里可能会出现问题
+                _ = err
                 if log is True:
                     line, fl = get_using_line_info()
                     my_logger(fl, "try_get", line, f"请不要连写一堆操作符在 -- [{getters.replace('||', '|')}] 这上面")
@@ -66,16 +76,43 @@ def try_get(
     return default
 
 
-def handle_dot_situation(getter: str, renderer: dict):
+def _split_by_high_core(getters: str, handle: str):
+    """
+    切割核心字符串 避免切割错误
+    :param getters: 需要切割的字符串
+    :param handle : 需要处理的转义后符号如: \\|  \\.
+    :return: 替换后的字符串, 可用于切割的标记符
+    """
+    if handle not in getters:
+        return getters, handle[1:]
+    only_string = "^\\*^/&/\\#/@/)&@$%^!{%}{]]@#$+-^#$"
+    cut_string = "^*-{#$(_{*}}\\@#*@/$^*){%}_+$"
+    getter = getters.replace(
+        handle, only_string
+    ).replace(
+        handle[1], cut_string
+    ).replace(
+        only_string, handle
+    )
+    return getter, cut_string
+
+
+def handle_dot_situation(getter: str, renderer: dict, split_string: str):
     """
     处理有 . 在的情况
     """
     origin_getter = "_"
-    getter = getter.split('.')
+    getter = getter.split(split_string)
     for now_getter in getter:
-        if re.findall(r"\S+\[-?\d+\]", now_getter):
+        # 把转义过后的键里面的点恢复原样
+        if r"\." in now_getter:
+            now_getter = now_getter.replace(r"\.", ".")
+        if re.search(r"\S*\\\[\S+\]\S*", now_getter):
+            new_getter = now_getter.replace(r"\[", '[')
+            origin_getter += f"['{new_getter}']"
+        elif re.search(r"\S+\[-?\d+\]", now_getter):
             origin_getter += _get_w_d_rules(now_getter)
-        elif re.findall(r"\[-?\d+\]\S+", now_getter):
+        elif re.search(r"\[-?\d+\]\S+", now_getter):
             origin_getter += _get_d_w_rules(now_getter)
         elif re.search(r"\[\*\]\S+", now_getter):
             # 这里因为会改 render的结构 所以就不要单独处理了
@@ -87,7 +124,10 @@ def handle_dot_situation(getter: str, renderer: dict):
         elif re.search(r"\[\d+\]", now_getter):
             origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
         else:
-            origin_getter += f"['{now_getter}']"
+            if re.search(r"^\\-?\d+/$", now_getter):
+                origin_getter += f"[{now_getter[1:-1]}]"
+            else:
+                origin_getter += f"['{now_getter}']"
 
     return origin_getter, renderer
 
@@ -103,12 +143,19 @@ def handle_normal_situation(each_getter: str, renderer: dict):
         # 避免本来结果就是None或者什么情况
         if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
             origin_getter = "_"
-    elif re.findall(r"\S+\[-?\d+\]", each_getter):  # a[2]
+    elif re.search(r"\\\[\S+\]", each_getter):
+        origin_getter += f"['{each_getter[1:]}']"
+    elif re.search(r"\S+\[-?\d+\]", each_getter):  # a[2]
         origin_getter += _get_w_d_rules(each_getter)
-    elif re.findall(r"\[-?\d+\]\S+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
+    elif re.search(r"\[-?\d+\]\S+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
         origin_getter += _get_d_w_rules(each_getter)
     else:
-        origin_getter += f"['{each_getter}']"
+        if re.search(r"^\\-?\d+/$", each_getter):
+            origin_getter += f"[{each_getter[1:-1]}]"
+        elif re.search(r"\\\\-?\d+/", each_getter):
+            origin_getter += f"['{each_getter[1:]}']"
+        else:
+            origin_getter += f"['{each_getter}']"
 
     return origin_getter, renderer
 
@@ -177,7 +224,7 @@ def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log
 """
 
 
-def try_get_by_name(renderer, getter, mode: str = "key", expected_type=None, log: bool = False) -> list:
+def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool = False, options: dict = None) -> Optional[list]:
     """
     批量获取结果json、字典的键值结果
     :param renderer: 传入的json串或者字典
@@ -185,20 +232,28 @@ def try_get_by_name(renderer, getter, mode: str = "key", expected_type=None, log
     :param mode    : 默认通过键模式匹配(key)->匹配getter相同的键返回值; value-->匹配相同结果的值的键
     :param expected_type : 期望获取到的结果的类型(就是一个简单的类型过滤器)
     :param log           : 报错的时候是否打印日志
+    :param options       : 文件处理
     """
-    renderer = __judge_json(renderer)
+    renderer = __judge_json(renderer, options=options)
+    if not renderer and options.get('mode') == "file":
+        # 这里是把json文件输出到本地文件的时候的情况
+        return None
     if not renderer:
         if log is True:
             line, fl = get_using_line_info()
-            my_logger(fl, "try_get_by_name", line, f"请传入标准的json串或者python字典数据")
+            my_logger(fl, "try_key", line, f"请传入标准的json串或者python字典数据")
         return []
     results_list = []
-    for result in _try_get_results_iter(renderer, getter, mode, expected_type):
-        results_list.append(result)
+    for result in _try_get_results_iter(renderer, getter, mode):
+        if expected_type is None:
+            results_list.append(result)
+        elif expected_type and isinstance(result, expected_type):
+            results_list.append(result)
+
     return results_list
 
 
-def _try_get_results_iter(renderer, getter, mode: str = "key", expected_type=None):
+def _try_get_results_iter(renderer, getter, mode: str = "key"):
     if isinstance(renderer, dict):
         key_value_iter = (iter_obj for iter_obj in renderer.items())
     elif isinstance(renderer, list):
@@ -208,17 +263,9 @@ def _try_get_results_iter(renderer, getter, mode: str = "key", expected_type=Non
 
     for key, value in key_value_iter:
         if mode == 'key' and key == getter:
-            if expected_type is None:
-                yield value
-            else:
-                if isinstance(value, expected_type):
-                    yield value
+            yield value
         elif mode == 'value' and value == getter:
-            if expected_type is None:
-                yield key
-            else:
-                if isinstance(value, expected_type):
-                    yield key
+            yield key
         if isinstance(value, (dict, list)):
             yield from _try_get_results_iter(value, getter, mode)
 
@@ -230,6 +277,9 @@ def __judge_json(renderer, json=False, options=None):
     """
     if options is None:
         options = {}
+    if options.get('mode') == "file":
+        # 如果要直接操作文件的js 那么走这里
+        return _js_file_local(renderer, options)
     if isinstance(renderer, (dict, list)):
         if json is True:
             try:
@@ -259,13 +309,49 @@ def __judge_json(renderer, json=False, options=None):
             return data
 
 
-try_key = try_get_by_name
+def _js_file_local(renderer, options):
+    if isinstance(renderer, str):
+        # 如果传入的是字符串,那么就是想要从本地js里面获取json
+        try:
+            with open(renderer, 'r', encoding=options.get('encoding', 'utf-8')) as fr:  # file read
+                return _json.load(fr)
+        except FileNotFoundError:
+            logger.error(f"{renderer} -- 路径错误没有找到js文件")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            logger.error(f"{renderer} -- 尝试更换正确的 options={{\"encoding\": \"需求的编码\"}}")
+        except Exception as err:
+            logger.error(f"读取 {renderer}错误: {err}")
+    elif isinstance(renderer, (list, dict)):
+        # 默认输出utf-8 修改添加进 options里面的encoding
+        outfile_dir = options.get("output")
+        if not outfile_dir:
+            logger.error(f"需要输出的路径地址 options={{\"output\": \"输出的路径\"}}")
+            return None
+        try:
+            with open(options.get("output"), 'w', encoding=options.get('encoding', 'utf-8')) as fw:  # file write
+                return _json.dump(renderer, fw,
+                                  skipkeys=options.get("skipkeys", False),
+                                  ensure_ascii=options.get("ensure_ascii", False),    # 这里默认是True 我不想他转我换了
+                                  check_circular=options.get("check_circular", True),
+                                  allow_nan=options.get("allow_nan", True),
+                                  indent=options.get("indent"),
+                                  separators=options.get("separators"),
+                                  sort_keys=options.get("sort_keys", False),
+                                  default=options.get("default"),
+                                  cls=options.get("cls"))
+        except (FileNotFoundError, FileExistsError):
+            logger.error(f"路径错误: {options.get('output')}")
+        except Exception as err:
+            logger.error(f"读取 {renderer}错误: {err}")
+    return None
+
+
+try_get_by_name = try_key  # 兼容老版本
 
 
 def match_case(func):
     """
     也是一个装饰器来着
-    I have changed the name. (original name -> value_dispatch)
     修改了原来的命名 使其更加好记 采用了如下源的代码
     新增优化,支持了类 内部函数的调用->同原方案一样 主要是 dispatches by value of the first arg""
     """
@@ -339,10 +425,3 @@ def match_case(func):
     wrapper.register = register
     wrapper.register_all = register_all
     return wrapper
-
-
-if __name__ == "__main__":
-    a = {"a": {"b1": {"c": [{"d": 1}, {"e": 2}]}}}
-
-    print(try_get(a, "a.b1.c[*]f[1]f|a.b1.c[0].d"))
-    # print(try_get(a, "b"))

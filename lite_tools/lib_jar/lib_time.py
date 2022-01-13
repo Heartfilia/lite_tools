@@ -11,7 +11,7 @@ from lite_tools.utils_jar.logs import my_logger, get_using_line_info
 
 """
 这里可以用 但是比较臃肿 
-后续将重构
+TODO(my_logger 在多线程中的路径有问题 -- 我也懒得修复 这个是个小问题)
 """
 
 __ALL__ = ['get_date', 'get_time', 'time_count']
@@ -28,67 +28,117 @@ def get_date(timedelta: tuple = None):
 
 def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None, *args, **kwargs):
     """
-    TODO(my_logger 在多线程中的路径有问题 -- 我也懒得修复 这个是个小问题)
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
-    params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换 TODO(会自动匹配时间)
+    params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
     params double: 返回小数的时间 还是整数 默认整数  如果搭配goal那么返回浮点数 因为是要把字符串转换为数字来着
-    params cursor: 传入游标单位/天  可以是正可以是负 可以是整数可以是字符串 TODO(后续会增加更细的游标设置)
+    params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串
+                   更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）TODO(还没有弄好明天在弄叭)
     params args  : 兼容不重要参数
     params kwargs: 兼容不重要参数
     """
     if isinstance(fmt, bool):
-        fmt_str = "%Y-%m-%d %H:%M:%S"
+        fmt_str = _guess_fmt(goal)
+        if not fmt_str:
+            fmt_str = "%Y-%m-%d %H:%M:%S"
     else:
         fmt_str = fmt
 
     if goal and double:
-        try:
-            sure_time = time.mktime(time.strptime(goal, fmt_str))
-            return sure_time
-        except Exception as e:
-            _, fl = get_using_line_info()
-            line = str(currentframe().f_back.f_lineno)
-            my_logger(fl, "get_time", line, f"请输入正确的[ fmt ]格式: {e}")
-            return -1
+        return _fmt_to_timestamp(goal, fmt_str)
     elif goal and not double:
-        if isinstance(goal, int):
-            str_time = str(goal)
-            limit_len_time = str_time[:10]
-            int_time = int(f"{limit_len_time:<010}")
-        else:
-            if goal.isdigit():
-                limit_len_time = goal[:10]
-                int_time = int(f"{limit_len_time:<010}")
-            else:
-                _, fl = get_using_line_info()
-                line = str(currentframe().f_back.f_lineno)
-                my_logger(fl, "get_time", line, f"请输入正确的[ goal ]:传入的是非数字类型的则会默认当前时间的格式化样式")
-                int_time = int(time.time())
-        return time.strftime(fmt_str, time.localtime(int_time))
+        return _timestamp_to_f_time(goal, fmt_str)
     else:
         if fmt and not cursor:
             return time.strftime(fmt_str)
         elif fmt and cursor:
-            result = _get_time_block(cursor)
-            if isinstance(result, int) or isinstance(result, float):
-                return time.strftime(fmt_str, time.localtime(result))
-            else:
-                return result
+            return _cursor_to_f_time(cursor, fmt_str)
         elif not fmt and cursor:
-            result = _get_time_block(cursor)
-            if double:
-                return result
-            else:
-                return int(result)
-        time_now = time.time()
-        if double:
-            return time_now
+            return _cursor_to_timestamp(double, cursor)
         else:
-            return int(time_now)
+            return _default_now_time(double)
+
+
+def _default_now_time(double):
+    """
+    默认输出--当前时间，是否要浮点数
+    """
+    time_now = time.time()
+    if double:
+        return time_now
+    else:
+        return int(time_now)
+
+
+def _cursor_to_timestamp(double, cursor):
+    """
+    通过游标时间输出时间戳
+    """
+    result = _get_time_block(cursor)
+    if double:
+        return result
+    else:
+        return int(result)
+
+
+def _cursor_to_f_time(cursor, fmt_str):
+    """
+    通过游标时间输出格式化字符串
+    """
+    result = _get_time_block(cursor)
+    if isinstance(result, int) or isinstance(result, float):
+        return time.strftime(fmt_str, time.localtime(result))
+    else:
+        return result
+
+
+def _timestamp_to_f_time(goal, fmt_str):
+    """
+    时间戳转换为格式化时间: 支持数字或者字符串时间戳 支持10或者13位数
+    """
+    if isinstance(goal, int):
+        str_time = str(goal)
+        limit_len_time = str_time[:10]
+        int_time = int(f"{limit_len_time:<010}")
+    else:
+        if goal.isdigit():
+            limit_len_time = goal[:10]
+            int_time = int(f"{limit_len_time:<010}")
+        else:
+            _, fl = get_using_line_info()
+            line = str(currentframe().f_back.f_lineno)
+            my_logger(fl, "get_time", line, f"请输入正确的[ goal ]:传入的是非数字类型的则会默认当前时间的格式化样式")
+            int_time = int(time.time())
+    return time.strftime(fmt_str, time.localtime(int_time))
+
+
+def _fmt_to_timestamp(goal, fmt_str):
+    """
+    时间串转换为时间戳
+    """
+    try:
+        sure_time = time.mktime(time.strptime(goal, fmt_str))
+        return sure_time
+    except Exception as e:
+        _, fl = get_using_line_info()
+        line = str(currentframe().f_back.f_lineno)
+        my_logger(fl, "get_time", line, f"请输入正确的[ fmt ]格式: {e}")
+        return -1
+
+
+def _guess_fmt(string):
+    """
+    当默认传入的fmt为True或者False的时候，这里预测fmt的格式
+    TODO(会自动匹配时间)
+    """
+    return ""
 
 
 def _get_time_block(cursor):
+    """
+    处理游标时间：默认的不带任何标记的数据传入进来是 天
+    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒  TODO(明天再改,同时间那边的参数格式)
+    """
     if isinstance(cursor, int) or isinstance(cursor, float):
         tm_before = time.time() + cursor * 86400
     elif isinstance(cursor, str):

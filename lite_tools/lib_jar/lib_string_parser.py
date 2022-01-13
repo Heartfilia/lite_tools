@@ -390,12 +390,6 @@ class SqlString(object):
             logger.error("传入了不支持的数据类型")
             return "", ""
 
-    def update_many(self, keys: Union[dict, list], where: Union[dict, list, tuple, str]) -> Optional[str]:
-        """
-        因为单条sql的拼接不方便改 直接这里弄好了 TODO(需要新增多条数据插入:不过现在我懒先不写）
-        """
-        pass
-
     def update(self, keys: dict, where: Union[dict, list, tuple, str]) -> Optional[str]:
         """
         更新数据操作, 传入需要更新的字典即可
@@ -424,6 +418,11 @@ class SqlString(object):
             return None
         base_update = base_update.rstrip(' AND ') + ";"
         return self.__clear_string(base_update)
+
+    def replace(self):
+        """
+        放着 有空再更新啦
+        """
 
     def delete(self, where: Union[dict, str] = None) -> Optional[str]:
         """
@@ -475,3 +474,8 @@ def math_string(string: str) -> str:
         if getter:
             new_string = new_string.replace(rule, getter)
     return new_string
+
+
+if __name__ == "__main__":
+    bs = SqlString('testSql')
+    print(bs.insert([{"a": 1, "b": 2, "c": "xxx"}, {"b": 1, "a": 2, "c": "xxx"}, {"c": 1, "b": 2, "a": "xxx"}]))
