@@ -15,7 +15,7 @@ with open("README.md", "r", encoding='utf-8') as fd:
     long_description = fd.read()
 
 
-base_requires = ['loguru']
+base_requires = ['loguru', 'urllib3']
 # 这里暂时没有用到 -- 一些完整包的情况下的功能
 file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter"]
 date_requires = ["datetime", "lxml", "requests", "prettytable"]

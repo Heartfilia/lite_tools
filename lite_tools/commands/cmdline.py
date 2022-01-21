@@ -23,6 +23,7 @@ import sys
 
 from lite_tools.version import VERSION
 from lite_tools.utils_jar.logs import logger
+from lite_tools.lib_jar.lib_dict_parser import match_case
 from lite_tools.utils_jar.script_fisher_date import print_date
 
 
@@ -32,10 +33,78 @@ def _print_base():
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
     print_info += "  fish        获取摸鱼人日历\n"
-    print_info += "  today       获取当天黄历\n"
+    print_info += "  news        获取近日热闻,新闻列表\n"
+    print_info += "  today       获取当天黄历 后接`history`可以获取今日往事\n"
     print_info += "  trans       文件转换相关内容[目前测试版有图片转pdf]\n\n"
     print_info += "Use \"lite-tools <command> -h\" to see more info about a command"
     print(print_info)
+
+
+@match_case
+def chose_option(option, *args):
+    _print_base()
+
+
+@chose_option.register("fish")
+def get_fish_date(option, *args):
+    print_date()
+
+
+@chose_option.register("today")
+def get_today_info(option, *args):
+    if len(args) > 0:
+        args = args[0]
+    try:
+        from lite_tools.utils_jar.script_almanac import print_today, print_today_history
+    except ImportError:
+        logger.warning("today 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
+        sys.exit(0)
+    else:
+        if len(args) < 2:
+            print_today()
+        elif "history" in args:
+            print_today_history()
+        else:
+            print_today()
+
+
+@chose_option.register("trans")
+def trans_files(option, *args):
+    if len(args) > 0:
+        args = args[0]
+    try:
+        from lite_tools.trans.pdf import pdf_run
+        from lite_tools.trans.excel import excel_run
+        from lite_tools.trans.pic import pic_run
+        from lite_tools.trans.word import word_run
+    except ImportError:
+        logger.warning("trans 为进阶版功能 请安装>> 文件版: lite-tools[file] 或者补充版: lite-tools[all]")
+        sys.exit(0)
+    else:
+        mode_args = re.search(r"-m\s+(pdf)", " ".join(args)) or re.search(r"--mode\s+(pdf)", " ".join(args))
+        if mode_args:
+            mode = mode_args.group(1)
+            if mode == "pdf":
+                pdf_run(args)
+            elif mode == "excel":
+                excel_run(args)
+            elif mode == "pic":
+                pic_run(args)
+            elif mode == "word":
+                word_run(args)
+        else:
+            pdf_run(args)
+
+
+@chose_option.register("news")
+def get_hot_news(option, *args):
+    try:
+        from lite_tools.utils_jar.script_hot_news import print_hot_news
+    except ImportError:
+        logger.warning("news 需要网络请求模块,如果没有需要安装日历版: lite-tools[date] 或补充版: lite-tools[all]")
+        sys.exit(0)
+    else:
+        print_hot_news()
 
 
 def execute():
@@ -45,40 +114,4 @@ def execute():
         return
 
     command = args.pop(1)
-    if command == "fish":
-        print_date()
-
-    elif command == "today":
-        try:
-            from lite_tools.utils_jar.script_almanac import print_today
-        except ImportError:
-            logger.warning("today 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
-            sys.exit(0)
-        else:
-            print_today()
-
-    elif command == "trans":
-        try:
-            from lite_tools.trans.pdf import pdf_run
-            from lite_tools.trans.excel import excel_run
-            from lite_tools.trans.pic import pic_run
-            from lite_tools.trans.word import word_run
-        except ImportError:
-            logger.warning("trans 为进阶版功能 请安装>> 文件版: lite-tools[file] 或者补充版: lite-tools[all]")
-            sys.exit(0)
-        else:
-            mode_args = re.search(r"-m\s+(pdf)", " ".join(args)) or re.search(r"--mode\s+(pdf)", " ".join(args))
-            if mode_args:
-                mode = mode_args.group(1)
-                if mode == "pdf":
-                    pdf_run(args)
-                elif mode == "excel":
-                    excel_run(args)
-                elif mode == "pic":
-                    pic_run(args)
-                elif mode == "word":
-                    word_run(args)
-            else:
-                pdf_run(args)
-    else:
-        _print_base()
+    chose_option(command, args)

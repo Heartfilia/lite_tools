@@ -26,7 +26,8 @@ def get_date(timedelta: tuple = None):
     pass
 
 
-def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None, *args, **kwargs):
+def get_time(goal: [str, int, float] = None, fmt: Union[bool, str] = False,
+             double: bool = False, cursor: Union[str, int, float] = None, *args, **kwargs):
     """
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
@@ -34,6 +35,7 @@ def get_time(goal=None, fmt: Union[bool, str] = False, double=False, cursor=None
     params double: 返回小数的时间 还是整数 默认整数  如果搭配goal那么返回浮点数 因为是要把字符串转换为数字来着
     params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串
                    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）TODO(还没有弄好明天在弄叭)
+                   不要写一堆时间符号说 一年三个月5天前这种:只推荐 单命令 如前面就只会提取最大的一年前进行处理
     params args  : 兼容不重要参数
     params kwargs: 兼容不重要参数
     """
@@ -134,12 +136,21 @@ def _guess_fmt(string):
     return ""
 
 
+def _get_offset(cursor: Union[int, float], flag: str = None) -> int:
+    if not flag:
+        return cursor * 86400
+    elif flag == "Y":
+        goal_year = time.localtime().tm_year + cursor
+        return 86400 * 365
+
+
 def _get_time_block(cursor):
     """
     处理游标时间：默认的不带任何标记的数据传入进来是 天
     更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒  TODO(明天再改,同时间那边的参数格式)
     """
-    if isinstance(cursor, int) or isinstance(cursor, float):
+
+    if isinstance(cursor, (int, float)):
         tm_before = time.time() + cursor * 86400
     elif isinstance(cursor, str):
         if "-" in cursor:

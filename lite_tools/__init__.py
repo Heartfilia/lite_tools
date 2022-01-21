@@ -12,7 +12,7 @@ __ALL__ = [
     "get_sha3",
     "get_ua",
     "try_get",
-    "try_get_by_name",
+    "try_key",
     "match_case",
     "clean_string",
     "color_string",

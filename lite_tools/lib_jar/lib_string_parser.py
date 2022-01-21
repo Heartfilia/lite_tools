@@ -60,6 +60,7 @@ def __judge_s(char, ignore=""):
 
 
 def __judge_p(char, ignore=""):
+    print(char, ignore)
     if char not in ignore and (
             32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127):
         return True
@@ -106,11 +107,7 @@ def __judge_r(char, ignore=""):
 
 
 def _scanner(string: str):
-    jar = set()
-    for ch in string: 
-        if ch.isalpha() or ch.isdigit():
-            continue
-        jar.add(ch)
+    jar = set(filter(lambda x: not x.isalpha() or not x.isdigit(), string))
     return jar
 
 
@@ -341,7 +338,8 @@ class SqlString(object):
     def __clear_string(string):
         return string.replace("'`", "`").replace("`'", "`").replace('"`', '`').replace('`"', "`").replace(
             '= True', '= 1').replace('= False', '= 0').replace('= None', "IS NULL").replace(
-            '=True', '= 1').replace('=False', '= 0').replace('=None', "IS NULL")
+            '=True', '= 1').replace('=False', '= 0').replace('=None', "IS NULL").replace(
+            ",) VALUES", ") VALUES").replace(',);', ');')
 
     @staticmethod
     def __handle_insert_data(key, value):
@@ -394,21 +392,25 @@ class SqlString(object):
         """
         更新数据操作, 传入需要更新的字典即可
         :param keys :  传入的更新部分的键值对啦
-        :param where: 当然是筛选条件 --> 如果用字典传入-> 相当于 "=" , 多个值会AND拼接 : True 会被替换为1 False会被替换为0 None 会被替换为NULL
-                                    # 想实现更加精准的条件就在下面自己写 推荐==>字符串的传入方式
-                                    --> 如果是列表传入按照 ['test<5', 'hello=1', 'tt LIKES "%VV%"'] 这样传入
-                                    --> 如果是字符串: 'test < 5 AND hello = 1'   这样传入
+        :param where: 当然是筛选条件 -->
+            如果用字典传入-> 相当于 "=" , 多个值会AND拼接 : True 会被替换为1 False会被替换为0 None 会被替换为NULL
+            # 想实现更加精准的条件就在下面自己写 推荐==>字符串的传入方式
+            --> 如果是列表传入按照 ['test<5', 'hello=1', 'tt LIKES "%VV%"'] 这样传入
+            --> 如果是字符串: 'test < 5 AND hello = 1'   这样传入
         """
         if not keys or not isinstance(keys, dict) or not where:
             return None
 
         base_update = f"UPDATE {self.table_name} SET "
         for key, value in keys.items():
-            base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None else repr(value)}, '
+            base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
+                           f'{value if isinstance(value, (int, float, bool)) or value is None else repr(value)}, '
         base_update = base_update.rstrip(', ') + " WHERE "
         if isinstance(where, dict):
             for key, value in where.items():
-                base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None else repr(value)} AND '
+                base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
+                               f'{value if isinstance(value, (int, float, bool)) or value is None else repr(value)} ' \
+                               f'AND '
         elif isinstance(where, (list, tuple)):
             for value in where:
                 base_update += f"{value} AND "
@@ -435,7 +437,9 @@ class SqlString(object):
         base_delete += " WHERE "
         if isinstance(where, dict):
             for key, value in where.items():
-                base_delete += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = {value if isinstance(value, (int, float, bool)) or value is None else repr(value)} AND '
+                base_delete += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
+                               f'{value if isinstance(value, (int, float, bool)) or value is None else repr(value)} ' \
+                               f'AND '
             base_delete = base_delete.rstrip(' AND ') + ";"
         elif isinstance(where, str):
             base_delete += where + ";"
@@ -477,5 +481,9 @@ def math_string(string: str) -> str:
 
 
 if __name__ == "__main__":
-    bs = SqlString('testSql')
-    print(bs.insert([{"a": 1, "b": 2, "c": "xxx"}, {"b": 1, "a": 2, "c": "xxx"}, {"c": 1, "b": 2, "a": "xxx"}]))
+    base_sql = SqlString('testtable')
+    a = [{"a": 10}, {"a": 20}]
+    b = [{"a": 10, "b": 11}, {"a": 20, "b": 21}]
+
+    print(base_sql.insert(a))
+    print(base_sql.insert(b))

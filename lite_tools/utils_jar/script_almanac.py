@@ -22,16 +22,19 @@ import re
 import time
 
 try:
+    import urllib3
     import requests
     from lxml import etree
-    import prettytable as pt
     from prettytable import PrettyTable
 except ImportError:
     raise ImportError
 
 from lite_tools.lib_jar.lib_ua import get_ua
+from lite_tools.lib_jar.lib_time import get_time
 from lite_tools.lib_jar.lib_try import try_catch
-from lite_tools.lib_jar.lib_string_parser import color_string
+from lite_tools.lib_jar.lib_dict_parser import try_get
+from lite_tools.lib_jar.lib_string_parser import color_string, clean_string
+urllib3.disable_warnings()
 
 
 @try_catch(log="本功能为在线功能,需要网络。如有网络不要频繁请求，[如果网页数据版式有改动,这样的话这个功能暂时就废了需要修复]")
@@ -47,16 +50,55 @@ def print_today():
     parse_html_today(html_obj)     # 解析今天的运势
 
 
+@try_catch(log="本功能为在线功能,需要网络。如有网络不要频繁请求，[如果网页数据版式有改动,这样的话这个功能暂时就废了需要修复]")
+def print_today_history():
+    """
+    https://baike.baidu.com/cms/home/eventsOnHistory/01.json  只需要改月份
+    """
+    print("数据获取中...", end="")
+    time_fmt = get_time(fmt="%Y-%m-%d")
+    html_json = get_wiki_info(time_fmt)
+    parse_history_json(html_json, time_fmt)
+
+
+def parse_history_json(html_json: dict, time_fmt: str):
+    base_string = color_string("【历史今日】数据来源--百度百科")
+    today_date = time_fmt.split('-')
+    month = today_date[1]
+    month_day = "".join(today_date[1:])
+    today_list = try_get(html_json, f'{month}.{month_day}', [])
+    history_table = PrettyTable(["年份", f"今日是:{time_fmt},历史今日事件有"])
+    history_table.align[f"今日是:{time_fmt},历史今日事件有"] = "l"    # 内容左对齐
+    for each_year in today_list:
+        history_table.add_row([clean_string(each_year.get('year'), 's'), clean_html_tag(each_year.get('title'))])
+    print(f"\r{base_string}   ")
+    print(history_table)
+
+
+def clean_html_tag(html):
+    obj = etree.HTML(html)
+    return clean_string("".join(obj.xpath('//text()')), 's')
+
+
+def get_wiki_info(time_fmt: str) -> dict:
+    month = time_fmt.split('-')[1]
+    resp = requests.get(
+        f'https://baike.baidu.com/cms/home/eventsOnHistory/{month}.json',
+        headers={'user-agent': get_ua()},
+        verify=False)
+    return resp.json()
+
+
 def get_date_web() -> str:
-    resp = requests.get('https://www.wannianli.cn/', headers={'user-agent': get_ua()})
+    resp = requests.get('https://www.wannianli.cn/', headers={'user-agent': get_ua()}, verify=False)
     return resp.text
 
 
 def parse_html_today(html: etree.HTML):
     tables = html.xpath('//table/tr')
     pt_today = PrettyTable(
-        [color_string("今日运势", {"v": "b", "f": "b"}),
-         color_string(tables[0].xpath('./td/text()')[-1], {"v": "b", "f": "b"})])
+        [color_string("今日运势", **{"v": "b", "f": "b"}),
+         color_string(tables[0].xpath('./td/text()')[-1], **{"v": "b", "f": "b"})])
     pt_today.junction_char = "-"
     pt_today.vertical_char = " "
     for tr in tables[1:]:
@@ -77,10 +119,10 @@ def parse_html_today(html: etree.HTML):
 def parse_html_holiday(html: etree.HTML):
     year = time.localtime().tm_year
     pt_holiday = PrettyTable([
-        color_string(f"{year}年节日", {"v": "b", "f": "b"}),
-        color_string("放假时间", {"v": "b", "f": "b"}),
-        color_string("调休日期", {"v": "b", "f": "b"}),
-        color_string("放假天数", {"v": "b", "f": "b"})]
+        color_string(f"{year}年节日", **{"v": "b", "f": "b"}),
+        color_string("放假时间", **{"v": "b", "f": "b"}),
+        color_string("调休日期", **{"v": "b", "f": "b"}),
+        color_string("放假天数", **{"v": "b", "f": "b"})]
     )
     # pt_holiday.set_style(pt.PLAIN_COLUMNS)
     pt_holiday.junction_char = "-"
