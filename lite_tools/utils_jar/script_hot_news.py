@@ -40,7 +40,7 @@ def print_hot_news():
     print("数据采集中...", end="")
     log_info = crawl_detail_from_bjh() or crawl_detail_from_qq() or crawl_detail_from_paper()
     if not log_info:
-        print("没有网络或者网页变更")
+        print("\r没有网络或者网页变更")
 
 
 # -------------------------- 下面是企鹅号流程 -------------------------------
@@ -74,12 +74,13 @@ def parse_qq_article_list(data) -> bool:
     news_list = data.get('newslist', [])
     if not news_list:
         return False
-    recent_news = news_list[0]   # 只需要判断第一条是不是今天的就行
-    _time = recent_news.get('time')   # 获取发布时间
-    if get_time(fmt='%Y-%m-%d') not in _time:
-        return False
-    url = recent_news.get('url')
-    return get_today_news_qq(url)
+    for recent_news in news_list:
+        _time = recent_news.get('time')   # 获取发布时间
+        if get_time(fmt='%Y-%m-%d') not in _time:
+            continue
+        url = recent_news.get('url')
+        return get_today_news_qq(url)
+    return False
 
 
 def get_today_news_qq(url):
@@ -215,7 +216,3 @@ def parse_html_paper(html):
     pt_news.align["近日热闻"] = "l"  # 内容左对齐
     print(pt_news)
     return True
-
-
-if __name__ == "__main__":
-    crawl_detail_from_bjh()

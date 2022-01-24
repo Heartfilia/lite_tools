@@ -44,7 +44,8 @@ extral_requirements:
 ```bash
 lite-tools [-h]   # 可以获取帮助 我这里就不展示更多了
 lite-tools fish   # 即可获取摸鱼日历
-lite-tools today  # 即可获取当天黄历
+lite-tools news   # 获取当日新闻
+lite-tools today  # 即可获取当天黄历 后面加 history 可以获取往年今日
 lite-tools trans -i 输入文件 [-o 输出文件路径]  # 这里 -m pdf 省略了 默认转pdf 
 ```
 

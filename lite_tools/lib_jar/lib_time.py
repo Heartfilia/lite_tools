@@ -26,8 +26,8 @@ def get_date(timedelta: tuple = None):
     pass
 
 
-def get_time(goal: [str, int, float] = None, fmt: Union[bool, str] = False,
-             double: bool = False, cursor: Union[str, int, float] = None, *args, **kwargs):
+def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = False,
+             double: bool = False, cursor: Union[str, int, float, None] = None):
     """
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
