@@ -47,3 +47,14 @@ def get_b64d(s: str, mode: int = 64, encoding='utf-8') -> str:
     else:
         print('SUPPORT: b16decode b32decode b64decode b85decode // only need inputting: 16 32 64 85')
         return ""
+
+
+_ = b16decode
+_ = b16encode
+_ = b32encode
+_ = b64encode
+_ = b85encode
+_ = b32decode
+_ = b64decode
+_ = b85decode
+del _
