@@ -5,6 +5,7 @@ from lite_tools import get_time, time_count
 # about time  ==> get_time  timer
 
 print(get_time())                                              # 1617702062
+# cursor 支持年月日时分秒的设置方式 但是同时设置多个只会最大范围的那个起效过 如 cursor="-2Y3m" 只会-2Y 有效果 两年前的意思
 print(get_time(cursor=-10))                                    # 1616838062
 print(get_time(cursor=7, double=True))                         # 1618306862.682278
 print(get_time(cursor=7, fmt=True))                            # 2021-04-13 17:41:02

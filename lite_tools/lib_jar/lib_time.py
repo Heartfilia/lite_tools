@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 # @Time   : 2021-04-06 15:27
 # @Author : Lodge
+import re
 import time
 import functools
 from typing import Union
 from inspect import currentframe
 
 from lite_tools.utils_jar.logs import my_logger, get_using_line_info
+from lite_tools.lib_jar.lib_dict_parser import match_case
 
 
 """
@@ -34,7 +36,7 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
     params double: 返回小数的时间 还是整数 默认整数  如果搭配goal那么返回浮点数 因为是要把字符串转换为数字来着
     params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串
-                   更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）TODO(还没有弄好明天在弄叭)
+                   更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）如 cursor="-2Y"  如果写一堆 取最大的
                    不要写一堆时间符号说 一年三个月5天前这种:只推荐 单命令 如前面就只会提取最大的一年前进行处理
     params args  : 兼容不重要参数
     params kwargs: 兼容不重要参数
@@ -133,39 +135,86 @@ def _guess_fmt(string):
     当默认传入的fmt为True或者False的时候，这里预测fmt的格式
     TODO(会自动匹配时间)
     """
+    _ = string
     return ""
 
 
-def _get_offset(cursor: Union[int, float], flag: str = None) -> int:
-    if not flag:
-        return cursor * 86400
-    elif flag == "Y":
-        goal_year = time.localtime().tm_year + cursor
-        return 86400 * 365
+@match_case
+def different_mode(_, *args):
+    return 86400
+
+
+@different_mode.register("Y")
+def handle_year(_, *args):
+    """
+    一年按照 365 天算
+    """
+    cursor = args[0]
+    return int(cursor) * 86400 * 365
+
+
+@different_mode.register("m")
+def handle_month(_, *args):
+    """
+    一月按照 30 天算
+    """
+    cursor = args[0]
+    return int(cursor) * 86400 * 30
+
+
+@different_mode.register("d")
+def handle_day(_, *args):
+    cursor = args[0]
+    return int(cursor) * 86400
+
+
+@different_mode.register("H")
+def handle_hour(_, *args):
+    cursor = args[0]
+    return int(cursor) * 3600
+
+
+@different_mode.register("M")
+def handle_minutes(_, *args):
+    cursor = args[0]
+    return int(cursor) * 60
+
+
+@different_mode.register("S")
+def handle_second(_, *args):
+    cursor = args[0]
+    return int(cursor)
+
+
+def _get_offset(cursor: Union[str, int, float]) -> Union[int, float]:
+    """
+    通过传入的游标标志位 来判断时间
+    从年月日到时分秒 优先级从上到下 也就是 如果一句话中出现多种状态 那么只取最大
+    """
+    offset = 0
+    if isinstance(cursor, (int, float)):
+        # 如果直接传数字 就按照天处理
+        offset = cursor * 86400
+    elif isinstance(cursor, str):
+        level_year = re.search(r"(-?\d+)(Y)", cursor)
+        level_month = re.search(r"(-?\d+)(m)", cursor)
+        level_day = re.search(r"(-?\d+)(d)", cursor)
+        level_hour = re.search(r"(-?\d+)(H)", cursor)
+        level_minute = re.search(r"(-?\d+)(M)", cursor)
+        level_second = re.search(r"(-?\d+)(S)", cursor)
+        item = level_year or level_month or level_day or level_hour or level_minute or level_second
+        if item:
+            offset = different_mode(item.group(2), item.group(1))
+    return offset
 
 
 def _get_time_block(cursor):
     """
     处理游标时间：默认的不带任何标记的数据传入进来是 天
-    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒  TODO(明天再改,同时间那边的参数格式)
+    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒
     """
-
-    if isinstance(cursor, (int, float)):
-        tm_before = time.time() + cursor * 86400
-    elif isinstance(cursor, str):
-        if "-" in cursor:
-            cursor_now = cursor.replace('-', '')
-            if cursor_now.isdigit():
-                tm_before = time.time() - int(cursor_now) * 86400
-            else:
-                return "请输入正确的时间"
-        elif cursor.isdigit():
-            tm_before = time.time() + int(cursor) * 86400
-        else:
-            return "请输入正确的时间"
-    else:
-        return "请输入正确的时间"
-    return tm_before
+    offset = _get_offset(cursor)
+    return time.time() + offset
 
 
 def time_count(fn):

@@ -41,17 +41,17 @@ def _print_base():
 
 
 @match_case
-def chose_option(option, *args):
+def chose_option(_, *args):
     _print_base()
 
 
 @chose_option.register("fish")
-def get_fish_date(option, *args):
+def get_fish_date(_, *args):
     print_date()
 
 
 @chose_option.register("today")
-def get_today_info(option, *args):
+def get_today_info(_, *args):
     if len(args) > 0:
         args = args[0]
     try:
@@ -69,7 +69,7 @@ def get_today_info(option, *args):
 
 
 @chose_option.register("trans")
-def trans_files(option, *args):
+def trans_files(_, *args):
     if len(args) > 0:
         args = args[0]
     try:
@@ -97,7 +97,7 @@ def trans_files(option, *args):
 
 
 @chose_option.register("news")
-def get_hot_news(option, *args):
+def get_hot_news(_, *args):
     try:
         from lite_tools.utils_jar.script_hot_news import print_hot_news
     except ImportError:
