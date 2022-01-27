@@ -30,11 +30,12 @@ try:
 except ImportError:
     raise ImportError
 
-from lite_tools.lib_jar.lib_ua import get_ua
+from lite_tools.lib_jar.lib_ua import get_ua, lite_ua
 from lite_tools.lib_jar.lib_time import get_time
 from lite_tools.lib_jar.lib_try import try_catch
 from lite_tools.lib_jar.lib_dict_parser import try_get
 from lite_tools.lib_jar.ja3 import sync_ja3
+from lite_tools.utils_jar.z_sfg import my_temp_host as mh
 urllib3.disable_warnings()
 
 
@@ -46,13 +47,14 @@ def print_hot_news():
 # -------------------------- 下面是自己服务器流程 --- 以后会换 -------------------------------
 @try_catch(log=False)
 def crawl_from_my_service():
-    data = requests.get('http://114.132.224.147:8888/news')
+    data = requests.get(f'http://{mh}/news',
+                        headers={"user-agent": lite_ua("-news")})
     news_list = try_get(data.json(), 'newslist', [])
     pt_news = PrettyTable(["序号", f"{get_time(fmt=True)} 新闻如下"])
     pt_news.align[f"{get_time(fmt=True)} 新闻如下"] = "l"
     for ind, news in enumerate(news_list):
         pt_news.add_row([ind+1, news.get('title')])
-    print("\r数据来源互联网   ")
+    print("\r数据来源互联网 -- 2小时会更新一轮资源 ")
     print(pt_news)
     return True
 
@@ -248,9 +250,3 @@ def parse_html_paper(html):
     print("\r【热闻】来源于澎湃新闻网近一日数据 ")
     print(pt_news)
     return True
-
-
-if __name__ == "__main__":
-    crawl_from_my_service()
-    # crawl_detail_from_qq()
-    # crawl_detail_from_paper()

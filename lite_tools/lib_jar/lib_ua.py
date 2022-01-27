@@ -4,7 +4,9 @@
 import re
 import random
 
+from lite_tools.version import VERSION
 from lite_tools.utils_jar.u_ua_info import platform_data, browser_data, versions
+
 
 __ALL__ = ["get_ua"]
 
@@ -68,3 +70,10 @@ def judge_ua(browser, template) -> str:
     elif p_nums == 2:
         return template.format(version, version)
     return template
+
+
+def lite_ua(name=None) -> str:
+    base_ua = f"python-lite-tools/{VERSION} Based On Script Engine"
+    if name is not None:
+        base_ua = f"{base_ua} {name}"
+    return base_ua
