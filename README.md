@@ -14,9 +14,6 @@
 -- 1.0.0以下均为beta版本(就是为了试错 改bug的)
 补充版功能依赖第三方包
 
--------------------------------------------
-当前线上版本: 0.4.7.7b1 (好几个bug没有修复)
-正在准备修复bug和新增功能的版本: 0.4.7.7b1
 ```
 ```
 python version:
@@ -44,7 +41,7 @@ extral_requirements:
 ```bash
 lite-tools [-h]   # 可以获取帮助 我这里就不展示更多了
 lite-tools fish   # 即可获取摸鱼日历
-lite-tools news   # 获取当日新闻
+lite-tools news   # 获取当日新闻 可以跟 -h 查看更多操作
 lite-tools today  # 即可获取当天黄历 后面加 history 可以获取往年今日
 lite-tools trans -i 输入文件 [-o 输出文件路径]  # 这里 -m pdf 省略了 默认转pdf 
 ```
