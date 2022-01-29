@@ -45,31 +45,32 @@ def print_hot_news():
 @try_catch(log=False)
 def crawl_from_my_service():
     data = requests.get(f'http://{mh}/news',
-                        headers={"user-agent": lite_ua("-news")})
+                        headers={"user-agent": lite_ua("-news")}, timeout=5)
     news_list = try_get(data.json(), 'newslist', [])
     pt_news = PrettyTable(["序号", f"{get_time(fmt=True)} 新闻如下"])
     pt_news.align[f"{get_time(fmt=True)} 新闻如下"] = "l"
     for ind, news in enumerate(news_list):
         pt_news.add_row([ind+1, news.get('title')])
-    print("\r数据来源互联网 -- 每小时会更新一轮资源 ")
+    print("\r数据来源互联网 -- 半小时更新一轮资源 ")
     print(pt_news)
     return True
+
 
 # -------------------------- 下面是澎湃新闻流程 -------------------------------
 
 
-@try_catch(log=False, default=False)
+@try_catch(log=False)
 def crawl_detail_from_paper():
     """
     这里是一直有数据的 但是数据量较少 作为最后方案
     """
     html = get_html_from_paper()
     if not html:
-        return False
+        return
     parse_html_paper(html)
 
 
-@try_catch(log=False, default=False)
+@try_catch(log=False)
 def get_html_from_paper():
     """
     这里是一直有数据的 但是数据量较少 作为最后方案
@@ -78,18 +79,13 @@ def get_html_from_paper():
     return resp.text
 
 
-@try_catch(log=False, default=False)
+@try_catch(log=False)
 def parse_html_paper(html):
     obj = etree.HTML(html)
     item_list = obj.xpath('//ul[@id="listhot0"]/li/a/text()')
     pt_news = PrettyTable(["序号", "近日热闻"])
-    has_item = False
     for ind, text in enumerate(item_list):
         pt_news.add_row([ind+1, text.strip("\n ")])
-        has_item = True
-    if not has_item:
-        return False
     pt_news.align["近日热闻"] = "l"  # 内容左对齐
     print("\r【热闻】来源于澎湃新闻网近一日数据 ")
     print(pt_news)
-    return True

@@ -100,6 +100,8 @@ def trans_files(_, *args):
 def get_hot_news(_, *args):
     if len(args) > 0:
         args = args[0]
+    else:
+        args = []
     try:
         from lite_tools.news.news_cmd import news_cmdline
     except ImportError:

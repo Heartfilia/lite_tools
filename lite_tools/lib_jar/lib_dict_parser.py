@@ -34,7 +34,7 @@ def try_get(
     :return        : 如果取到则为值，否则为 default 设置的值 默认None
     """
     renderer = __judge_json(renderer, json, options)
-    if not renderer and options.get('mode') == "file":
+    if not renderer and isinstance(options, dict) and options.get('mode') == "file":
         # 这里是把json文件输出到本地文件的时候的情况
         return None
     if not renderer:
@@ -235,7 +235,7 @@ def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool =
     :param options       : 文件处理
     """
     renderer = __judge_json(renderer, options=options)
-    if not renderer and options.get('mode') == "file":
+    if not renderer and isinstance(options, dict) and options.get('mode') == "file":
         # 这里是把json文件输出到本地文件的时候的情况
         return None
     if not renderer:
