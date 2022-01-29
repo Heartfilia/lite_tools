@@ -33,7 +33,7 @@ def _print_base():
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
     print_info += "  fish        获取摸鱼人日历\n"
-    print_info += "  news        获取近日热闻,新闻列表\n"
+    print_info += "  news        获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"
     print_info += "  today       获取当天黄历 后接`history`可以获取今日往事\n"
     print_info += "  trans       文件转换相关内容[目前测试版有图片转pdf]\n\n"
     print_info += "Use \"lite-tools <command> -h\" to see more info about a command"
@@ -98,13 +98,15 @@ def trans_files(_, *args):
 
 @chose_option.register("news")
 def get_hot_news(_, *args):
+    if len(args) > 0:
+        args = args[0]
     try:
-        from lite_tools.utils_jar.script_hot_news import print_hot_news
+        from lite_tools.news.news_cmd import news_cmdline
     except ImportError:
         logger.warning("news 需要网络请求模块,如果没有需要安装日历版: lite-tools[date] 或补充版: lite-tools[all]")
         sys.exit(0)
     else:
-        print_hot_news()
+        news_cmdline(args)
 
 
 def execute():

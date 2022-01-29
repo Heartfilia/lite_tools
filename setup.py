@@ -18,7 +18,7 @@ with open("README.md", "r", encoding='utf-8') as fd:
 base_requires = ['loguru', 'urllib3']
 # 这里暂时没有用到 -- 一些完整包的情况下的功能
 file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter"]
-date_requires = ["datetime", "lxml", "requests", "prettytable"]
+date_requires = ["datetime", "lxml", "requests", "prettytable", "rich"]   # rich 目前没有用到 以后会用 先给大家装着
 
 all_requires = date_requires + file_requires
 
@@ -35,6 +35,7 @@ setup(
     packages=[
         'lite_tools',
         'lite_tools.trans',
+        'lite_tools.news',      # 新闻模块功能比较多 单独抽出来一个包搞
         'lite_tools.commands',
         'lite_tools.lib_jar',
         'lite_tools.utils_jar'
