@@ -131,7 +131,7 @@ def news_cmdline(args: list):
 
 
 def _clear_screen():
-    if "win" in sys.platform:
+    if sys.platform in ["win32", "win64"]:
         _ = os.system("cls")
     else:
         _ = os.system("clear")

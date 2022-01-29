@@ -25,9 +25,10 @@ from lite_tools.lib_jar.lib_time import get_time
 from lite_tools.lib_jar.lib_try import try_catch
 from lite_tools.lib_jar.lib_dict_parser import try_get
 from lite_tools.lib_jar.lib_string_parser import color_string
+from lite_tools.utils_jar.lite_table import get_terminal_long, print_head
 
 
-_base_template = """-------------------------------------------
+_base_template = """{split_line}
 <yellow>时间: {publish_time}</yellow>
 <cyan>标题: {title}</cyan>
 链接: {link}
@@ -76,7 +77,8 @@ def _get_global_requests(url, params=None) -> dict:
 
 def _parse_news(data, location):
     items = data.get('list')
-    base_string = f"【每日资讯】<red>{location}</red> 最新消息\n"
+    title_line = "\n".join(print_head(f"【每日资讯】<red>{location}</red> 最新消息", 11).split("\n")[:2])
+    base_string = f"{title_line}\n"
     for item in items:
         publish_time = get_time(item.get('ctime'))
         title = item.get('title')
@@ -86,6 +88,7 @@ def _parse_news(data, location):
         summary = try_get(item, 'summary')
         source = try_get(item, 'source.name')
         base_string += _base_template.format(
+            split_line=get_terminal_long() * "-",
             publish_time=publish_time,
             title=title,
             link=link,
