@@ -248,10 +248,10 @@ def color_string(string: str = "", *args, **kwargs) -> str:
                                                 # 这里限定了20个字符宽度(实际会大于20个只不过我这里做了处理) length 键弄l也可以
     :param string: 传入的字符串
     :param args  : 参数注解如下面所示  传入非字典类型的时候 只有第一个参数起作用在字体颜色上面  -->传入字典同下操作
-    :param kwargs: 这里传入需要用 **{}   
+    :param kwargs: 这里传入需要用 **{}
     :params f    : 字体颜色 -> (30, 黑色/black)(31, 红色/r/red)(32, 绿色/g/green)(33, 黄色/y/yellow)(34, 蓝色/b/blue)
-                                (35, 紫色/p/purple)(36, 青蓝色/c/cyan)(37, 白色/w/white)(90, darkgrey)(91, lightred)
-                                (92, lightgreen)(93, lightyellow)(94, lightblue)(95, pink)(96, lightcyan)
+     【注意这里的颜色,90以上的      (35, 紫色/p/purple)(36, 青蓝色/c/cyan)(37, 白色/w/white)(90, darkgrey)(91, lightred)
+     可能只在windows起作用】       (92, lightgreen)(93, lightyellow)(94, lightblue)(95, pink)(96, lightcyan)
     :params b    : 背景颜色 -> (40, 黑色/black)(41, 红色/r/red)(42, 绿色/g/green)(43, 黄色/y/yellow)(44, 蓝色/b/blue)
                                 (45, 紫色/p/purple)(46, 青蓝色/c/cyan)(47, 白色/w/white)
     :params v    : 显示方式 -> (0, 重置/reset)(1, 加粗/b/bold)(2, 禁止/disable)(4, 使用下划线/u/underline)(5, 闪烁/f/flash)

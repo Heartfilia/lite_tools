@@ -33,19 +33,20 @@ from lite_tools.lib_jar.lib_time import get_time
 from lite_tools.lib_jar.lib_try import try_catch
 from lite_tools.lib_jar.lib_dict_parser import try_get
 from lite_tools.news.z_sfg import my_temp_host as mh
+from lite_tools.news.get_global_news import get_china_news
 urllib3.disable_warnings()
 
 
 def print_hot_news():
     print("数据采集中...", end="")
-    crawl_from_my_service() or crawl_detail_from_paper()
+    crawl_from_my_service() or crawl_from_china or crawl_detail_from_paper()
 
 
 # -------------------------- 下面是自己服务器流程 --- 以后会换 -------------------------------
 @try_catch(log=False)
 def crawl_from_my_service():
     data = requests.get(f'http://{mh}/news',
-                        headers={"user-agent": lite_ua("-news")}, timeout=5)
+                        headers={"user-agent": lite_ua("-news")}, timeout=2)
     news_list = try_get(data.json(), 'newslist', [])
     pt_news = PrettyTable(["序号", f"{get_time(fmt=True)} 新闻如下"])
     pt_news.align[f"{get_time(fmt=True)} 新闻如下"] = "l"
@@ -56,9 +57,26 @@ def crawl_from_my_service():
     return True
 
 
+# -------------------------- 下面是环球时报流程 -------------------------------
+@try_catch(log=False)
+def crawl_from_china():
+    data = get_china_news(True)
+    if not data:
+        return False
+    gb_news = PrettyTable(["序号", "最新新闻"])
+    gb_news.align["最新新闻"] = "l"  # 内容左对齐
+    items = data.get('list')
+    for ind, item in enumerate(items):
+        title = item.get('title')
+        if not title:
+            continue
+        gb_news.add_row([ind+1, title])
+    print(f"\r【热闻】 {get_time(fmt=True)} 数据来源于环球网最新新闻资讯")
+    print(gb_news)
+    return True
+
+
 # -------------------------- 下面是澎湃新闻流程 -------------------------------
-
-
 @try_catch(log=False)
 def crawl_detail_from_paper():
     """

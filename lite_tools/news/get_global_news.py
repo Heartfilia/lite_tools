@@ -37,7 +37,7 @@ _base_template = """-------------------------------------------
 
 
 @try_catch(log="本功需要网络或者网页样式变更或者你开了抓包工具才拿不到")
-def get_china_news():
+def get_china_news(callback=False):
     """
     获取国内新闻
     """
@@ -49,7 +49,10 @@ def get_china_news():
         "limit": 20
     }
     data = _get_global_requests(url, params)
-    _parse_news(data, "国内")
+    if callback is True:
+        return data
+    else:
+        _parse_news(data, "国内")
 
 
 def get_world_news():

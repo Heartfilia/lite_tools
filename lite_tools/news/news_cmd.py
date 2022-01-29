@@ -22,6 +22,7 @@ import os
 import sys
 from lite_tools.lib_jar.lib_try import try_catch
 from lite_tools.lib_jar.lib_dict_parser import match_case
+from lite_tools.lib_jar.lib_string_parser import color_string
 
 try:
     from prettytable import PrettyTable
@@ -40,9 +41,9 @@ all_tabs = {
     "0": "*退出*"
 }
 
-menu_tab = PrettyTable(["序号", "主菜单"])
+menu_tab = PrettyTable([color_string("序号", **{"v": "b", "f": "b"}), color_string("主菜单", **{"v": "b", "f": "b"})])
 for ind, tab in all_tabs.items():
-    menu_tab.add_row([ind, tab])
+    menu_tab.add_row([color_string(ind, **{"v": "b", "f": "g"}), tab])
 
 
 def _print_news_option():

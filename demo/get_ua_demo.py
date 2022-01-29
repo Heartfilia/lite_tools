@@ -1,4 +1,4 @@
-from lite_tools import get_ua, update_ua
+from lite_tools import get_ua
 
 
 print(get_ua())              # Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2705.69 Safari/537.36
@@ -8,6 +8,3 @@ print(get_ua('linux', 'android', 'win', 'macos', 'ios'))   # 之前用的库比�
 # 还有两个参数  pc  / mobile  对应了linux.macos.win / ios.android
 print(get_ua('pc'))      # Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_0) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11
 print(get_ua('mobile'))  # Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL Build/OPD1.170816.004) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Mobile Safari/537.36
-
-
-update_ua()   # 建议独立执行这里 这个操作会刷新数据库里面的ua相关数据 不过目前没有布置到线上服务器 这里的功能先预留
