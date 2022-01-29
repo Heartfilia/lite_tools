@@ -50,6 +50,7 @@ def try_catch(func=None, *,
         try:
             return func(*args, **kwargs)
         except KeyboardInterrupt:
+            print()
             exit(0)
         except Exception as err:
             _ = err
@@ -62,6 +63,7 @@ def try_catch(func=None, *,
         try:
             return await func(*args, **kwargs)
         except KeyboardInterrupt:
+            print()
             exit(0)
         except Exception as err:
             _ = err
