@@ -84,7 +84,8 @@ def _parse_news(data, location):
         title = item.get('title')
         if not title:
             continue
-        link = try_get(item, "source.url")
+        link = try_get(item, "source.url") or \
+            "https://world.huanqiu.com/" if location == "国际" else "https://china.huanqiu.com"
         summary = try_get(item, 'summary')
         source = try_get(item, 'source.name')
         base_string += _base_template.format(
