@@ -24,7 +24,7 @@ import sys
 from lite_tools.version import VERSION
 from lite_tools.utils_jar.logs import logger
 from lite_tools.lib_jar.lib_dict_parser import match_case
-from lite_tools.utils_jar.script_fisher_date import print_date
+from lite_tools.today.script_fisher_date import print_date
 
 
 def _print_base():
@@ -35,7 +35,7 @@ def _print_base():
     print_info += "  fish        获取摸鱼人日历\n"
     print_info += "  balls        获取彩票详情\n"
     print_info += "  news        获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"
-    print_info += "  today       获取当天黄历 后接`history`可以获取今日往事\n"
+    print_info += "  today       获取当天黄历 后接`history`可以获取今日往事 接`oil`获取今日油价\n"
     print_info += "  trans       文件转换相关内容[目前测试版有图片转pdf]\n\n"
     print_info += "Use \"lite-tools <command> -h\" to see more info about a command"
     print(print_info)
@@ -61,7 +61,8 @@ def get_today_info(_, *args):
     if len(args) > 0:
         args = args[0]
     try:
-        from lite_tools.utils_jar.script_almanac import print_today, print_today_history
+        from lite_tools.today.oil_price import print_oil
+        from lite_tools.today.script_almanac import print_today, print_today_history
     except ImportError:
         logger.warning("today 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
         sys.exit(0)
@@ -70,6 +71,8 @@ def get_today_info(_, *args):
             print_today()
         elif "history" in args:
             print_today_history()
+        elif "oil" in args:
+            print_oil()
         else:
             print_today()
 

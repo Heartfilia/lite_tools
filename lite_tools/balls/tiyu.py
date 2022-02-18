@@ -74,7 +74,3 @@ def parse_tiyu(data):
         base_string, title_dlt, dlt_date, dlt_blue, dlt_yellow, title_pls, pls_date, pls_purple,
         title_plw, plw_date, plw_purple, title_qxc, qxc_date, qxc_blue, qxc_yellow
     ])))
-
-
-if __name__ == "__main__":
-    get_tiyu()
