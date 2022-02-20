@@ -107,21 +107,21 @@ def handle_dot_situation(getter: str, renderer: dict, split_string: str):
         # 把转义过后的键里面的点恢复原样
         if r"\." in now_getter:
             now_getter = now_getter.replace(r"\.", ".")
-        if re.search(r"\S*\\\[\S+\]\S*", now_getter):
+        if re.search(r"\S*\\\[\S+]\S*", now_getter):
             new_getter = now_getter.replace(r"\[", '[')
             origin_getter += f"['{new_getter}']"
-        elif re.search(r"\S+\[-?\d+\]", now_getter):
+        elif re.search(r"\S+\[-?\d+]", now_getter):
             origin_getter += _get_w_d_rules(now_getter)
-        elif re.search(r"\[-?\d+\]\S+", now_getter):
+        elif re.search(r"\[-?\d+]\S+", now_getter):
             origin_getter += _get_d_w_rules(now_getter)
-        elif re.search(r"\[\*\]\S+", now_getter):
+        elif re.search(r"\[\*]\S+", now_getter):
             # 这里因为会改 render的结构 所以就不要单独处理了
             renderer, origin_getter = handle_reg_rule(
                 renderer, origin_getter, now_getter, "try重试１ダ_get获取２メ_fail失败３よ")
             # 避免本来结果就是None或者什么情况
             if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
                 continue
-        elif re.search(r"\[\d+\]", now_getter):
+        elif re.search(r"\[\d+]", now_getter):
             origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
         else:
             if re.search(r"^\\-?\d+/$", now_getter):
@@ -137,17 +137,17 @@ def handle_normal_situation(each_getter: str, renderer: dict):
     处理没有 . 的情况
     """
     origin_getter = "_"
-    if re.search(r"\[\*\]\S+", each_getter):
+    if re.search(r"\[\*]\S+", each_getter):
         renderer, origin_getter = handle_reg_rule(
             renderer, origin_getter, each_getter, "try重试１ダ_get获取２メ_fail失败３よ")
         # 避免本来结果就是None或者什么情况
         if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
             origin_getter = "_"
-    elif re.search(r"\\\[\S+\]", each_getter):
+    elif re.search(r"\\\[\S+]", each_getter):
         origin_getter += f"['{each_getter[1:]}']"
-    elif re.search(r"\S+\[-?\d+\]", each_getter):  # a[2]
+    elif re.search(r"\S+\[-?\d+]", each_getter):  # a[2]
         origin_getter += _get_w_d_rules(each_getter)
-    elif re.search(r"\[-?\d+\]\S+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
+    elif re.search(r"\[-?\d+]\S+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
         origin_getter += _get_d_w_rules(each_getter)
     else:
         if re.search(r"^\\-?\d+/$", each_getter):
@@ -224,7 +224,8 @@ def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log
 """
 
 
-def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool = False, options: dict = None) -> Optional[list]:
+def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool = False,
+            options: dict = None) -> Optional[list]:
     """
     批量获取结果json、字典的键值结果
     :param renderer: 传入的json串或者字典
@@ -232,7 +233,9 @@ def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool =
     :param mode    : 默认通过键模式匹配(key)->匹配getter相同的键返回值; value-->匹配相同结果的值的键
     :param expected_type : 期望获取到的结果的类型(就是一个简单的类型过滤器)
     :param log           : 报错的时候是否打印日志
-    :param options       : 文件处理
+    :param options       : 文件处理 或者
+        过滤器(只处理兄弟等值--如一个字典里面某个键="x"时候y的值
+        {"filter": "equal": {"key1": "value1", "key2": "value2"}})   --> 只处理等值 当然其他的也能弄 后面再添加规则
     """
     renderer = __judge_json(renderer, options=options)
     if not renderer and isinstance(options, dict) and options.get('mode') == "file":
@@ -244,7 +247,7 @@ def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool =
             my_logger(fl, "try_key", line, f"请传入标准的json串或者python字典数据")
         return []
     results_list = []
-    for result in _try_get_results_iter(renderer, getter, mode):
+    for result in _try_get_results_iter(renderer, getter, mode, options):
         if expected_type is None:
             results_list.append(result)
         elif expected_type and isinstance(result, expected_type):
@@ -253,7 +256,7 @@ def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool =
     return results_list
 
 
-def _try_get_results_iter(renderer, getter, mode: str = "key"):
+def _try_get_results_iter(renderer, getter, mode: str = "key", options: dict = None):
     if isinstance(renderer, dict):
         key_value_iter = (iter_obj for iter_obj in renderer.items())
     elif isinstance(renderer, list):
@@ -263,11 +266,71 @@ def _try_get_results_iter(renderer, getter, mode: str = "key"):
 
     for key, value in key_value_iter:
         if mode == 'key' and key == getter:
-            yield value
+            if options and options.get('filter') and isinstance(options.get('filter'), dict):
+                flag = _filter_rules(renderer, options.get('filter'))
+                if flag:
+                    yield value
+            else:
+                yield value
         elif mode == 'value' and value == getter:
             yield key
         if isinstance(value, (dict, list)):
-            yield from _try_get_results_iter(value, getter, mode)
+            yield from _try_get_results_iter(value, getter, mode, options)
+
+
+def _filter_rules(renderer, filter_option: dict):
+    """
+    这里是为了后续能多条件筛选留着的 这里下面目前只有等值判断
+    """
+    flag = False
+    # 等于情况
+    equal_option = filter_option.get('equal')
+    if equal_option and isinstance(equal_option, dict):
+        flag = _judge_filter_rules_equal(renderer, equal_option)
+        if not flag:
+            return False
+
+    # 不等于
+    unequal_option = filter_option.get('unequal')
+    if unequal_option and isinstance(unequal_option, dict):
+        flag = _judge_filter_rules_unequal(renderer, unequal_option)
+        if not flag:
+            return False
+
+    # 更多规则后面在这里如上添加就好了
+    return flag
+
+
+def _judge_filter_rules_equal(renderer, equal_options: dict):
+    """
+    判断是否是兄弟规则: 这里是只处理等值  后续可以按照这个模版处理其他规则的 新建一个函数处理就好了
+    """
+    if not isinstance(renderer, dict):
+        return False
+    right = False
+    for f_key, f_value in equal_options.items():
+        if renderer.get(f_key) == f_value:
+            right = True
+        else:
+            return False
+    else:
+        return right
+
+
+def _judge_filter_rules_unequal(renderer, unequal_options: dict):
+    """
+    判断是否是兄弟规则: 这里是只处理不等值  后续可以按照这个模版处理其他规则的 新建一个函数处理就好了
+    """
+    if not isinstance(renderer, dict):
+        return False
+    right = False
+    for f_key, f_value in unequal_options.items():
+        if renderer.get(f_key) != f_value:
+            right = True
+        else:
+            return False
+    else:
+        return right
 
 
 def __judge_json(renderer, json=False, options=None):

@@ -18,17 +18,16 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-import os
-import sys
-from lite_tools.lib_jar.lib_try import try_catch
-from lite_tools.lib_jar.lib_dict_parser import match_case
-from lite_tools.lib_jar.lib_string_parser import color_string
-
 try:
     import requests
     from prettytable import PrettyTable
+    from lite_tools.balls.fuli import get_fuli
+    from lite_tools.balls.tiyu import get_tiyu
 except ImportError:
     raise ImportError
+
+from lite_tools.lib_jar.lib_dict_parser import match_case
+from lite_tools.lib_jar.lib_string_parser import color_string
 
 
 ball_items = {
@@ -61,35 +60,20 @@ def chose_now(_):
     pass
 
 
-@chose_now.register_all(["1", "fuli"])
-def get_blog_rank(option):
+@chose_now.register_all(["1", "fuli", "fl"])
+def get_fl_info(option):
     """
     获取福利彩票
     """
-    blog_rank()
-    if option.isdigit():
-        _input_option()
+    get_fuli()
 
 
-@chose_now.register_all(["2", "tiyu"])
-def from_global_china(option):
+@chose_now.register_all(["2", "tiyu", "ty"])
+def get_gym_info(option):
     """
     体育彩票
     """
-    get_china_news()
-    if option.isdigit():
-        _input_option()
-
-
-@try_catch(log=False)
-def circle_cmd():
-    while True:
-        _clear_screen()
-        print(ball_menu)
-        option = _input_option("选择序号")
-        if option.lower() in ["0", "q", "o", "exit", "quit", ".exit", "quit()", "exit()"]:
-            break
-        chose_now(option)
+    get_tiyu()
 
 
 def news_cmdline(args: list):
@@ -102,14 +86,3 @@ def news_cmdline(args: list):
     else:
         _print_ball_option()
 
-
-def _clear_screen():
-    if sys.platform in ["win32", "win64"]:
-        _ = os.system("cls")
-    else:
-        _ = os.system("clear")
-
-
-def _input_option(option="任意键返回上一级菜单") -> str:
-    result = input(f"news: {option} >>> ")
-    return result

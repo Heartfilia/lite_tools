@@ -18,12 +18,6 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-import os
-import sys
-from lite_tools.lib_jar.lib_try import try_catch
-from lite_tools.lib_jar.lib_dict_parser import match_case
-from lite_tools.lib_jar.lib_string_parser import color_string
-
 try:
     from prettytable import PrettyTable
     from lite_tools.news.script_hot_news import print_hot_news
@@ -31,6 +25,10 @@ try:
     from lite_tools.news.get_global_news import get_china_news, get_world_news
 except ImportError:
     raise ImportError
+
+from lite_tools.lib_jar.lib_dict_parser import match_case
+from lite_tools.lib_jar.lib_string_parser import color_string
+from lite_tools.utils_jar.base_cmd import circle_cmd, input_option
 
 
 all_tabs = {
@@ -73,7 +71,7 @@ def get_daily_briefing(_):
     获取每日简报
     """
     print_hot_news()
-    _input_option()
+    input_option(mode="news")
 
 
 @chose_now.register_all(["2", "weibo"])
@@ -83,7 +81,7 @@ def get_blog_rank(option):
     """
     blog_rank()
     if option.isdigit():
-        _input_option()
+        input_option(mode="news")
 
 
 @chose_now.register_all(["3", "china"])
@@ -93,7 +91,7 @@ def from_global_china(option):
     """
     get_china_news()
     if option.isdigit():
-        _input_option()
+        input_option(mode="news")
 
 
 @chose_now.register_all(["4", "world"])
@@ -103,18 +101,7 @@ def from_global_world(option):
     """
     get_world_news()
     if option.isdigit():
-        _input_option()
-
-
-@try_catch(log=False)
-def circle_cmd():
-    while True:
-        _clear_screen()
-        print(menu_tab)
-        option = _input_option("选择序号")
-        if option.lower() in ["0", "q", "o", "exit", "quit", ".exit", "quit()", "exit()"]:
-            break
-        chose_now(option)
+        input_option(mode="news")
 
 
 def news_cmdline(args: list):
@@ -129,14 +116,3 @@ def news_cmdline(args: list):
     else:
         _print_news_option()
 
-
-def _clear_screen():
-    if sys.platform in ["win32", "win64"]:
-        _ = os.system("cls")
-    else:
-        _ = os.system("clear")
-
-
-def _input_option(option="任意键返回上一级菜单") -> str:
-    result = input(f"news: {option} >>> ")
-    return result

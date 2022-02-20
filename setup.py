@@ -36,6 +36,9 @@ setup(
         'lite_tools',
         'lite_tools.trans',
         'lite_tools.news',      # 新闻模块功能比较多 单独抽出来一个包搞
+        'lite_tools.today',
+        # 'lite_tools.balls',    # 还没有调整好 先不放出来
+        'lite_tools.weather',
         'lite_tools.commands',
         'lite_tools.lib_jar',
         'lite_tools.utils_jar'
