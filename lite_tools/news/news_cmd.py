@@ -112,7 +112,7 @@ def news_cmdline(args: list):
     elif args[1] in ["weibo", "china", "world"]:
         chose_now(args[1])
     elif args[1] == "shell":
-        circle_cmd()
+        circle_cmd(all_tabs, chose_now)
     else:
         _print_news_option()
 

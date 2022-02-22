@@ -4,12 +4,12 @@
 import re
 import json as _json
 import functools
-from typing import Any, Optional
+from typing import Any, Optional, Iterator
 
 from lite_tools.utils_jar.logs import my_logger, get_using_line_info, logger
 
 
-__ALL__ = ["match_case", 'try_get', 'try_key']
+__ALL__ = ["match_case", 'try_get', 'try_key', 'FlattenJson']
 
 
 def try_get(
@@ -33,7 +33,7 @@ def try_get(
                    : 如果处理文件：需要加参数 "mode": "file"  (可以额外指定的参数:encoding-默认utf-8) 具体见demo
     :return        : 如果取到则为值，否则为 default 设置的值 默认None
     """
-    renderer = __judge_json(renderer, json, options)
+    renderer = _judge_json(renderer, json, options)
     if not renderer and isinstance(options, dict) and options.get('mode') == "file":
         # 这里是把json文件输出到本地文件的时候的情况
         return None
@@ -85,8 +85,8 @@ def _split_by_high_core(getters: str, handle: str):
     """
     if handle not in getters:
         return getters, handle[1:]
-    only_string = "^\\*^/&/\\#/@/)&@$%^!{%}{]]@#$+-^#$"
-    cut_string = "^*-{#$(_{*}}\\@#*@/$^*){%}_+$"
+    only_string = "开始^解_耦$结束"
+    cut_string = "开始^切_割$结束"
     getter = getters.replace(
         handle, only_string
     ).replace(
@@ -235,9 +235,12 @@ def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool =
     :param log           : 报错的时候是否打印日志
     :param options       : 文件处理 或者
         过滤器(只处理兄弟等值--如一个字典里面某个键="x"时候y的值
-        {"filter": "equal": {"key1": "value1", "key2": "value2"}})   --> 只处理等值 当然其他的也能弄 后面再添加规则
+        {
+            "filter": {"equal": {"key1": "value1", "key2": "value2"}, "unequal": {"key1": "value1"}}
+        }
+        )   --> 只处理等值和不等值 当然其他的也能弄 后面再添加规则
     """
-    renderer = __judge_json(renderer, options=options)
+    renderer = _judge_json(renderer, options=options)
     if not renderer and isinstance(options, dict) and options.get('mode') == "file":
         # 这里是把json文件输出到本地文件的时候的情况
         return None
@@ -333,7 +336,7 @@ def _judge_filter_rules_unequal(renderer, unequal_options: dict):
         return right
 
 
-def __judge_json(renderer, json=False, options=None):
+def _judge_json(renderer, json=False, options=None):
     """
     判断传入进来的是json串还是字典 自动处理成字典
     如果传入了options那么就可以转成json
@@ -409,7 +412,123 @@ def _js_file_local(renderer, options):
     return None
 
 
-try_get_by_name = try_key  # 兼容老版本
+class FlattenJson(object):
+    def __init__(self, array):
+        self.dict_data = _judge_json(array)
+        self.result_data = {}    # 只定义最小单位 平铺前面全部单位
+        self._start()
+
+    def __str__(self):
+        return _json.dumps(self.result_data)
+
+    def _start(self):
+        _ = [_ for _ in self._flat_now(self.dict_data)]
+        del _
+
+    def __dict__(self):
+        return self.result_data
+
+    def _flat_now(self, dict_data, base_node="") -> dict:
+        if isinstance(dict_data, dict):
+            key_value_iter = (iter_obj for iter_obj in dict_data.items())
+            flag = "dict"
+        elif isinstance(dict_data, list):
+            key_value_iter = (iter_obj for iter_obj in enumerate(dict_data))
+            flag = "list"
+        else:
+            self.result_data[base_node.rstrip(".")] = dict_data
+            return
+
+        for key, value in key_value_iter:
+            e_key = self._encode_key(key, flag)
+            if flag == "list":
+                temp_node = base_node.rstrip(".") + e_key
+            else:
+                temp_node = base_node + e_key
+            yield from self._flat_now(value, temp_node)
+
+    @staticmethod
+    def _encode_key(key, flag) -> str:
+        if flag == "list":
+            return f"[{key}]."
+        if "." in key:
+            key = key.replace('.', r'\.')
+        elif "[" in key:
+            key = key.replace('[', r'\[')
+        return key + "."
+
+    def show(self) -> None:
+        """就是打印一下扁平化的结果"""
+        print(self.result_data)
+
+    def get_all(self) -> Iterator:
+        yield from self.result_data.items()
+
+    def path(self, value) -> Iterator:
+        """通过值取键的路径"""
+        for key, result in self.result_data.items():
+            if result == value:
+                yield key
+
+    def get(self, getter: str, default=None):
+        """按照键值方式取值"""
+        return self.result_data.get(getter, default)
+
+
+class JsJson(object):
+    """
+    TODO(2022.2.22周二 阴历正月二十二)这里后面再做各种兼容模式 现在只兼容了 天气模块那个格式处理
+    """
+    def __init__(self, javascript):
+        self._h = javascript
+        self.result = {}
+        self._parse_now()
+
+    def __str__(self):
+        return try_get(self.result, json=True)
+
+    def __repr__(self):
+        return try_get(self.result, json=True)
+
+    def get(self, key, default=None):
+        return self.result.get(key, default)    # 直接实例化对象也能获取result
+
+    def get_all(self) -> Iterator:
+        yield from self.result.items()
+
+    def _parse_now(self):
+        items = re.findall(r"(?<=var)? *(\S+) *= *({.*?\});", self._h if self._h.endswith(';') else f"{self._h};")
+
+        for key, value in items:
+            flag = self._check_valid_symbol(value)
+            if flag:
+                self._check_json(key, value)
+        del items
+
+    def _check_json(self, key, value):
+        """
+        判断是不是json文件
+        """
+        result = _judge_json(value)
+        if result is not None:
+            self.result[key] = result
+
+    @staticmethod
+    def _check_valid_symbol(need_check_js: str) -> bool:
+        """
+        判断这个js文件是不是有效的成对出现的符号
+        """
+        temp_stack = []
+        for char in re.findall(r"[(\[{)\]\}]", need_check_js):
+            if char in ["(", "[", "{"]:     # 40  91  123
+                temp_stack.append(char)
+            elif char in [")", "]", "}"]:   # 41  93  125
+                if not temp_stack:
+                    return False
+                last_char = temp_stack.pop()
+                if abs(ord(char) - ord(last_char)) > 2:
+                    return False
+        return not temp_stack
 
 
 def match_case(func):
