@@ -24,7 +24,7 @@ import sys
 from lite_tools.version import VERSION
 from lite_tools.utils_jar.logs import logger
 from lite_tools.lib_jar.lib_dict_parser import match_case
-from lite_tools.today.script_fisher_date import print_date
+from lite_tools.today.fisher_date import print_date
 
 
 def _print_base():

@@ -9,7 +9,10 @@ from typing import Any, Optional, Iterator
 from lite_tools.utils_jar.logs import my_logger, get_using_line_info, logger
 
 
-__ALL__ = ["match_case", 'try_get', 'try_key', 'FlattenJson']
+__ALL__ = ["match_case", 'try_get', 'try_key', 'FlattenJson', 'JsJson']
+"""
+try_get 取值和 FlattenJson 取值规则不一样 两者的时间复杂度也不一样 
+"""
 
 
 def try_get(
@@ -479,16 +482,14 @@ class JsJson(object):
     """
     TODO(2022.2.22周二 阴历正月二十二)这里后面再做各种兼容模式 现在只兼容了 天气模块那个格式处理
     """
-    def __init__(self, javascript):
+    def __init__(self, javascript=None, reg_rule=None):
+        """
+        :param javascript: 就是传入的需要解析的文本串
+        :param reg_rule  : 是可以自定义的 避免识别不到 但是得有两个分组 键-值
+        """
         self._h = javascript
         self.result = {}
-        self._parse_now()
-
-    def __str__(self):
-        return try_get(self.result, json=True)
-
-    def __repr__(self):
-        return try_get(self.result, json=True)
+        self._parse_now(reg_rule)
 
     def get(self, key, default=None):
         return self.result.get(key, default)    # 直接实例化对象也能获取result
@@ -496,13 +497,17 @@ class JsJson(object):
     def get_all(self) -> Iterator:
         yield from self.result.items()
 
-    def _parse_now(self):
-        items = re.findall(r"(?<=var)? *(\S+) *= *({.*?\});", self._h if self._h.endswith(';') else f"{self._h};")
+    def _parse_now(self, reg_rule):
+        if reg_rule is None:
+            reg_rule = r"(?<=var )?.*?(\S+) *= *({.*?\});"   # 解析天气模块用的
+        items = re.findall(reg_rule, self._h if self._h.endswith(';') else f"{self._h};")
+        if not items:
+            list_data = [(str(ind), value) for ind, value in re.finditer("", self._h)]
 
         for key, value in items:
-            flag = self._check_valid_symbol(value)
-            if flag:
-                self._check_json(key, value)
+            # flag = self._check_valid_symbol(value)
+            # if flag:
+            self._check_json(key, value)
         del items
 
     def _check_json(self, key, value):
@@ -516,7 +521,7 @@ class JsJson(object):
     @staticmethod
     def _check_valid_symbol(need_check_js: str) -> bool:
         """
-        判断这个js文件是不是有效的成对出现的符号
+        判断这个js文件是不是有效的成对出现的符号 -- 貌似也用不到这里 先留着叭
         """
         temp_stack = []
         for char in re.findall(r"[(\[{)\]\}]", need_check_js):
@@ -529,6 +534,12 @@ class JsJson(object):
                 if abs(ord(char) - ord(last_char)) > 2:
                     return False
         return not temp_stack
+
+    def __str__(self):
+        return try_get(self.result, json=True)
+
+    def __repr__(self):
+        return try_get(self.result, json=True)
 
 
 def match_case(func):
