@@ -57,6 +57,16 @@ def get_ball(_, *args):
     pass
 
 
+@chose_option.register("weather")
+def get_weather(_, *args):
+    try:
+        from lite_tools.weather.weather_cmd import weather_cmdline
+    except ImportError:
+        logger.warning("today 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
+        sys.exit(0)
+    weather_cmdline(args[0])
+
+
 @chose_option.register("today")
 def get_today_info(_, *args):
     if len(args) > 0:

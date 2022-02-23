@@ -501,8 +501,8 @@ class JsJson(object):
         if reg_rule is None:
             reg_rule = r"(?<=var )?.*?(\S+) *= *({.*?\});"   # 解析天气模块用的
         items = re.findall(reg_rule, self._h if self._h.endswith(';') else f"{self._h};")
-        if not items:
-            list_data = [(str(ind), value) for ind, value in re.finditer("", self._h)]
+        # if not items:
+        #     list_data = [(str(ind), value) for ind, value in re.finditer("", self._h)]
 
         for key, value in items:
             # flag = self._check_valid_symbol(value)

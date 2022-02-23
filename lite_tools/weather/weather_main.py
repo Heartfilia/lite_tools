@@ -28,12 +28,17 @@ from lite_tools.lib_jar.lib_ua import get_ua
 from lite_tools.lib_jar.lib_time import get_time
 from lite_tools.lib_jar.lib_try import try_catch
 from lite_tools.lib_jar.lib_string_parser import color_string
-from lite_tools.lib_jar.lib_dict_parser import try_key, JsJson
+from lite_tools.lib_jar.lib_dict_parser import try_key, JsJson, try_get
 
 from lite_tools.weather.citys import city_data
 
-print_template = """【中国天气】 <red>{city}</red> -- {date} -- {}
+print_template = """<yellow>【今日天气】</yellow> {date} {city}
+当前: <red>{temp}℃</red> {weather}
 {today_information}
+<yellow>【近日情况】</yellow>
+{recent_days}
+<yellow>【今日指数】</yellow>
+{index_information}
 """
 
 
@@ -51,14 +56,68 @@ def get_weather(city: str = None, geo_id: str = None):
 
     if not city_id:
         raise KeyError
-    infos = request_weather(city_id, city)
-    if infos:
-        parse_weather_info(infos)
+    information = request_weather(city_id, city)
+    if information:
+        parse_weather_info(information)
+
+
+def parse_head_info(data):
+    city = data.get('cityname', '')
+    date = data.get('date', '')
+    temp_now = data.get('temp')
+    weather_now = data.get('weather')
+    return city, date, temp_now, weather_now
+
+
+def parse_today_info(data):
+    temp_high = try_get(data, 'weatherinfo.temp')
+    temp_low = try_get(data, 'weatherinfo.tempn')
+    weather_today = try_get(data, 'weatherinfo.weather')
+    wd = try_get(data, 'weatherinfo.wd')
+    ws = try_get(data, 'weatherinfo.ws')
+    base_info = f"气候: <red>{temp_high}℃ / {temp_low}℃</red> {weather_today}\n"
+    base_info += f"风况: <green>{wd} </green> [{ws}]"
+    return base_info
+
+
+def parse_recent_days(data):
+    heads = []
+    temps = []
+    winds = []
+    for each in data.get('f'):
+        heads.append(each.get('fj'))
+        temp_high = each.get('fc')
+        temp_low = each.get('fd')
+        temps.append(f"{temp_high}℃ / {temp_low}℃")
+        winds.append(each.get('fe'))
+    tb_recent = PrettyTable(heads)
+    tb_recent.add_row(temps)
+    tb_recent.add_row(winds)
+    return tb_recent
+
+
+def parse_index_info(data):
+    zs = data.get('zs')
+    tb_zs = PrettyTable(["穿衣", "路况", "钓鱼", "晨练", "夜生活", "感冒", "逛街", "空气", "旅游", "运动"])
+    tb_zs.add_row([
+        zs.get("ct_hint"), zs.get("lk_hint"), zs.get("dy_hint"), zs.get("cl_hint"), zs.get("nl_hint"),
+        zs.get("gm_hint"), zs.get('gj_hint'), zs.get('pl_hint'), zs.get('tr_hint'), zs.get("yd_hint")
+    ])
+    return tb_zs
 
 
 def parse_weather_info(js):
     items = JsJson(js)
-    items.get('')
+    city, date, temp_now, weather_now = parse_head_info(items.get('dataSK'))
+    today_info_all = parse_today_info(items.get('cityDZ'))
+    tb_recent = parse_recent_days(items.get('fc'))
+    index_information = parse_index_info(items.get('dataZS'))
+
+    string = print_template.format(
+        city=city, date=date, temp=temp_now, weather=weather_now,
+        today_information=today_info_all, recent_days=tb_recent, index_information=index_information
+    )
+    print(color_string(string))
 
 
 def clean_city_name(city):
@@ -101,7 +160,7 @@ def geo_weather_id():
         headers={
             "user-agent": get_ua(),
             'Referer': "http://www.weather.com.cn/",
-        }).text
+        }).content.decode('utf-8')
     geo_id = re.search(r'id="(\d+)"', resp).group(1)
     if not geo_id:
         raise KeyError
@@ -110,4 +169,5 @@ def geo_weather_id():
 
 if __name__ == "__main__":
     # geo_weather_id()
-    request_weather("101280101")
+    # request_weather("101280101")
+    get_weather()
