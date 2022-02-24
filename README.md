@@ -9,6 +9,7 @@
 
 ### 项目说明
 ```
+等彩票 天气 的展示和采集问题弄完了后 就要停一段时间了 要学习下其它语言了 这工具先停止更新 预计规划的时间模块没有搞完的有空随缘更新一下
 本项目基础功能只是封装了 - python**自带包**的功能 
 -- loguru(打印日志的)
 -- 1.0.0以下均为beta版本(就是为了试错 改bug的)
@@ -41,9 +42,11 @@ extral_requirements:
 ```bash
 lite-tools [-h]   # 可以获取帮助 我这里就不展示更多了
 lite-tools fish   # 即可获取摸鱼日历
+lite-tools ball   # 彩票数据 - 暂时没有弄好
 lite-tools news   # 获取当日新闻 可以跟 -h 查看更多操作
 lite-tools today  # 即可获取当天黄历 后面加 history 可以获取往年今日
 lite-tools trans -i 输入文件 [-o 输出文件路径]  # 这里 -m pdf 省略了 默认转pdf 
+lite-tools weather # 默认本地 后面直接跟地点获取指定地点
 ```
 
 

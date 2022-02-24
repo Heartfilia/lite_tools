@@ -15,10 +15,10 @@ with open("README.md", "r", encoding='utf-8') as fd:
     long_description = fd.read()
 
 
-base_requires = ['loguru', 'urllib3']
+base_requires = ['loguru', 'urllib3', 'colorama']  # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
 # 这里暂时没有用到 -- 一些完整包的情况下的功能
-file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter"]
-date_requires = ["datetime", "lxml", "requests", "prettytable", "rich"]   # rich 目前没有用到 以后会用 先给大家装着
+file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter", "numpy"]
+date_requires = ["datetime", "lxml", "requests", "prettytable", "rich"]   # rich/datetime 目前没有用到 以后会用 先给大家装着
 
 all_requires = date_requires + file_requires
 

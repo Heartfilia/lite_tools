@@ -33,7 +33,7 @@ def _print_base():
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
     print_info += "  fish        获取摸鱼人日历\n"
-    print_info += "  balls        获取彩票详情\n"
+    # print_info += "  ball        获取彩票详情\n"   # 这里先不提供了 目前要学习其他的 不搞这个地方了
     print_info += "  news        获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"
     print_info += "  today       获取当天黄历 后接`history`可以获取今日往事 接`oil`获取今日油价\n"
     print_info += "  weather     默认获取本地天气信息 跟 -h 获取更多操作\n"
@@ -52,9 +52,14 @@ def get_fish_date(_, *args):
     print_date()
 
 
-@chose_option.register("balls")
+@chose_option.register("ball")
 def get_ball(_, *args):
-    pass
+    try:
+        from lite_tools.balls.ball_cmd import ball_cmdline
+    except ImportError:
+        logger.warning("ball 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
+        sys.exit(0)
+    ball_cmdline(args[0])
 
 
 @chose_option.register("weather")
@@ -62,7 +67,7 @@ def get_weather(_, *args):
     try:
         from lite_tools.weather.weather_cmd import weather_cmdline
     except ImportError:
-        logger.warning("today 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
+        logger.warning("weather 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
         sys.exit(0)
     weather_cmdline(args[0])
 
@@ -125,7 +130,7 @@ def get_hot_news(_, *args):
     try:
         from lite_tools.news.news_cmd import news_cmdline
     except ImportError:
-        logger.warning("news 需要网络请求模块,如果没有需要安装日历版: lite-tools[date] 或补充版: lite-tools[all]")
+        logger.warning("news 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
         sys.exit(0)
     else:
         news_cmdline(args)

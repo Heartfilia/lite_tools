@@ -32,7 +32,7 @@ from lite_tools.lib_jar.lib_dict_parser import try_key, JsJson, try_get
 
 from lite_tools.weather.citys import city_data
 
-print_template = """<yellow>【今日天气】</yellow> 更新时间: {fresh_time}
+print_template = """<yellow>【今日天气】</yellow>[更新时间 {fresh_time}]
 <cyan>{city}</cyan>当前: <red>{temp} ℃</red> {weather} {date}
 {today_information}
 <yellow>【近日情况】</yellow>
@@ -48,6 +48,9 @@ def get_weather(city: str = None, geo_id: str = None):
         pure_city = clean_city_name(city)
         geo_id_list = try_key(city_data, "AREAID", options={"filter": {"equal": {"NAMECN": pure_city}}})
         city_id = geo_id_list[0] if geo_id_list else None
+        if not city_id:
+            logger.warning("请输入国内有的准确的地点，只需要写入最小单位的数据即可[仅支持 - 市、区、县]")
+            return
     if not city_id and geo_id is not None:
         city_id = geo_id if geo_id.isdigit() else None
     elif not city_id and not geo_id:
@@ -69,14 +72,14 @@ def parse_head_info(data):
     return city, date, temp_now, weather_now, fresh_time
 
 
-def parse_today_info(data):
+def parse_today_info(data, temp_info):
     """今日天气"""
-    temp_high = try_get(data, 'weatherinfo.temp')
-    temp_low = try_get(data, 'weatherinfo.tempn')
+    temp_high = try_get(temp_info, 'f[0].fc')
+    temp_low = try_get(temp_info, 'f[0].fd')
     weather_today = try_get(data, 'weatherinfo.weather')
     wd = try_get(data, 'weatherinfo.wd')
     ws = try_get(data, 'weatherinfo.ws')
-    return f"今日总览: <red>{temp_high}/{temp_low} ℃</red> {weather_today} | <green>{wd} </green> {ws}"
+    return f"今日总览: <red>{temp_low}/{temp_high} ℃</red> {weather_today} | <green>{wd}</green> {ws}"
 
 
 def parse_recent_days(data):
@@ -89,7 +92,7 @@ def parse_recent_days(data):
         heads.append(each.get('fj'))
         temp_high = each.get('fc')
         temp_low = each.get('fd')
-        temps.append(f"{temp_high}/{temp_low} ℃")
+        temps.append(f"{temp_low}/{temp_high} ℃")
         winds.append(each.get('fe'))
         wind_level.append(each.get('fg'))
     tb_recent = PrettyTable(heads)
@@ -113,7 +116,7 @@ def parse_index_info(data):
 def parse_weather_info(js):
     items = JsJson(js)
     city, date, temp_now, weather_now, fresh_time = parse_head_info(items.get('dataSK'))
-    today_info_all = parse_today_info(items.get('cityDZ'))
+    today_info_all = parse_today_info(items.get('cityDZ'), items.get('fc'))
     tb_recent = parse_recent_days(items.get('fc'))
     index_information = parse_index_info(items.get('dataZS'))
 
@@ -169,9 +172,3 @@ def geo_weather_id():
     if not geo_id:
         raise KeyError
     return geo_id
-
-
-if __name__ == "__main__":
-    # geo_weather_id()
-    # request_weather("101280101")
-    get_weather()

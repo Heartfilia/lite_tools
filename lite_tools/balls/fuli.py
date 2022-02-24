@@ -39,6 +39,7 @@ from lite_tools.lib_jar.lib_string_parser import color_string
 
 # @try_catch(log="需要网络,可以重试,也可能网站数据源变更--短时间内重复请求会没有数据的哦 请求了要等好一会才能重新请求")
 def get_fuli():
+    return
     resp_base = requests.get(
         'http://www.cwl.gov.cn/cwl_admin/front/stat/dealer?Event=Unload&SiteID=21&StickTime=25150',
         headers={

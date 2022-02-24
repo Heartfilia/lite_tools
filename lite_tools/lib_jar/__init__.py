@@ -17,4 +17,12 @@
         ┗━┓ ┓ ┏━━━┳ ┓ ┏━┛
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
+如果装了那么就启动 没有装就不管它了
 """
+
+try:
+    from colorama import init
+
+    init(autoreset=True)
+except Exception as err:
+    _ = err
