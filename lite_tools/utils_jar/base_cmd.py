@@ -20,6 +20,7 @@
 """
 import os
 import sys
+from typing import Any
 
 from lite_tools.lib_jar.lib_try import try_catch
 
@@ -37,10 +38,10 @@ def input_option(option="无效选项返回上一级菜单", mode="news") -> str
 
 
 @try_catch(log=False)
-def circle_cmd(menu_tab: dict, chose_now):
+def circle_cmd(menu_tab: Any, chose_now):
     """
     循环输入cmd
-    :param menu_tab: 菜单界面 字典来的{"序号": "描述"}
+    :param menu_tab: 菜单界面 字典来的{"序号": "描述"}也可以 pretty 格式化对象也可以
     :param chose_now: 选择函数 -- 每个脚本自己处理
     """
     while True:

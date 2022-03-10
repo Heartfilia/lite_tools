@@ -44,7 +44,7 @@ lite-tools [-h]   # 可以获取帮助 我这里就不展示更多了
 lite-tools fish   # 即可获取摸鱼日历
 lite-tools ball   # 彩票数据 - 暂时没有弄好
 lite-tools news   # 获取当日新闻 可以跟 -h 查看更多操作
-lite-tools today  # 即可获取当天黄历 后面加 history 可以获取往年今日
+lite-tools today  # 即可获取当天黄历 后面加 history 可以获取往年今日 加oil获取油价
 lite-tools trans -i 输入文件 [-o 输出文件路径]  # 这里 -m pdf 省略了 默认转pdf 
 lite-tools weather # 默认本地 后面直接跟地点获取指定地点
 ```

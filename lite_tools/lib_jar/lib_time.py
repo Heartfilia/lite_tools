@@ -28,14 +28,15 @@ def get_date(timedelta: tuple = None):
     pass
 
 
-def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = False,
+def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = False, unit: str = "s",
              double: bool = False, cursor: Union[str, int, float, None] = None):
     """
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
+    params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整
     params double: 返回小数的时间 还是整数 默认整数  如果搭配goal那么返回浮点数 因为是要把字符串转换为数字来着
-    params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串
+    params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串 注意是有大小写区别的
                    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）如 cursor="-2Y"  如果写一堆 取最大的
                    不要写一堆时间符号说 一年三个月5天前这种:只推荐 单命令 如前面就只会提取最大的一年前进行处理
     params args  : 兼容不重要参数
@@ -47,9 +48,10 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
             fmt_str = "%Y-%m-%d %H:%M:%S"
     else:
         fmt_str = fmt
+    times = _get_unit_times(unit)
 
     if goal and double:
-        return _fmt_to_timestamp(goal, fmt_str)
+        return _fmt_to_timestamp(goal, fmt_str, times)
     elif goal and not double:
         return _timestamp_to_f_time(goal, fmt_str)
     else:
@@ -58,31 +60,44 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
         elif fmt and cursor:
             return _cursor_to_f_time(cursor, fmt_str)
         elif not fmt and cursor:
-            return _cursor_to_timestamp(double, cursor)
+            return _cursor_to_timestamp(double, cursor, times)
         else:
-            return _default_now_time(double)
+            return _default_now_time(double, times)
 
 
-def _default_now_time(double):
+def _get_unit_times(unit):
+    """
+    获取需要补充的倍数
+    :param unit:
+    :return:
+    """
+    if unit == "ms":
+        times = 1000
+    else:
+        times = 1
+    return times
+
+
+def _default_now_time(double, times):
     """
     默认输出--当前时间，是否要浮点数
     """
     time_now = time.time()
     if double:
-        return time_now
+        return time_now * times
     else:
-        return int(time_now)
+        return int(time_now * times)
 
 
-def _cursor_to_timestamp(double, cursor):
+def _cursor_to_timestamp(double, cursor, times):
     """
     通过游标时间输出时间戳
     """
     result = _get_time_block(cursor)
     if double:
-        return result
+        return result * times
     else:
-        return int(result)
+        return int(result * times)
 
 
 def _cursor_to_f_time(cursor, fmt_str):
@@ -116,12 +131,12 @@ def _timestamp_to_f_time(goal, fmt_str):
     return time.strftime(fmt_str, time.localtime(int_time))
 
 
-def _fmt_to_timestamp(goal, fmt_str):
+def _fmt_to_timestamp(goal, fmt_str, times):
     """
     时间串转换为时间戳
     """
     try:
-        sure_time = time.mktime(time.strptime(goal, fmt_str))
+        sure_time = time.mktime(time.strptime(goal, fmt_str)) * times
         return sure_time
     except Exception as e:
         _, fl = get_using_line_info()
