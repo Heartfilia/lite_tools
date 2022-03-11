@@ -232,6 +232,15 @@ def _get_time_block(cursor):
     return time.time() + offset
 
 
+class TimeMaker(object):
+    def __init__(self, fmt_time: str):
+        """
+        将会在这里处理时间的模式 第一版先提供给`get_time`使用 后续做成通用模块  当前主要是转换成时间戳
+        :param fmt_time: 传入的字符串的日期时间样式
+        """
+        self.base_time = fmt_time
+
+
 def time_count(fn):
     @functools.wraps(fn)
     def inner(*args, **kwargs):
