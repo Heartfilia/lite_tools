@@ -7,7 +7,7 @@ import functools
 from typing import Union
 from inspect import currentframe
 
-from lite_tools.utils_jar.logs import my_logger, get_using_line_info
+from lite_tools.utils_jar.logs import my_logger, get_using_line_info, logger
 from lite_tools.lib_jar.lib_dict_parser import match_case
 
 
@@ -115,7 +115,7 @@ def _timestamp_to_f_time(goal, fmt_str):
     """
     时间戳转换为格式化时间: 支持数字或者字符串时间戳 支持10或者13位数
     """
-    if isinstance(goal, int):
+    if isinstance(goal, (int, float)):
         str_time = str(goal)
         limit_len_time = str_time[:10]
         int_time = int(f"{limit_len_time:<010}")
@@ -151,6 +151,8 @@ def _guess_fmt(string):
     TODO(会自动匹配时间)
     """
     _ = string
+    from dateutil.parser import parse
+    from dateparser import parse
     return ""
 
 
@@ -211,12 +213,12 @@ def _get_offset(cursor: Union[str, int, float]) -> Union[int, float]:
         # 如果直接传数字 就按照天处理
         offset = cursor * 86400
     elif isinstance(cursor, str):
-        level_year = re.search(r"(-?\d+)(Y)", cursor)
-        level_month = re.search(r"(-?\d+)(m)", cursor)
-        level_day = re.search(r"(-?\d+)(d)", cursor)
-        level_hour = re.search(r"(-?\d+)(H)", cursor)
-        level_minute = re.search(r"(-?\d+)(M)", cursor)
-        level_second = re.search(r"(-?\d+)(S)", cursor)
+        level_year = re.search(r"(-?\d+\.?\d*)(Y)", cursor)
+        level_month = re.search(r"(-?\d+\.?\d*)(m)", cursor)
+        level_day = re.search(r"(-?\d+\.?\d*)(d)", cursor)
+        level_hour = re.search(r"(-?\d+\.?\d*)(H)", cursor)
+        level_minute = re.search(r"(-?\d+\.?\d*)(M)", cursor)
+        level_second = re.search(r"(-?\d+\.?\d*)(S)", cursor)
         item = level_year or level_month or level_day or level_hour or level_minute or level_second
         if item:
             offset = different_mode(item.group(2), item.group(1))
@@ -235,10 +237,69 @@ def _get_time_block(cursor):
 class TimeMaker(object):
     def __init__(self, fmt_time: str):
         """
-        将会在这里处理时间的模式 第一版先提供给`get_time`使用 后续做成通用模块  当前主要是转换成时间戳
+        TODO 将会在这里处理时间的模式 第一版先提供给`get_time`使用 后续做成通用模块  当前主要是转换成时间戳
         :param fmt_time: 传入的字符串的日期时间样式
         """
         self.base_time = fmt_time
+        self.base_template = "YYYY-mm-dd HH:MM:SS"
+        self.little_day_info = [("一", 1), ("二", 2), ("三", 3), ("四", 4), ("五", 5),
+                                ("六", 6), ("七", 7), ("八", 8), ("九", 9), ("十", 10)]
+        # 下面这个主要是记录月份的特殊情况 只弄了 中英法德俄 语言
+        self.month_info = {
+            "01": ("Jan", "January", "一月", "janvier", "Januar", "январь"),
+            "02": ("Feb", "February", "二月", "février", "Februar", "февраль"),
+            "03": ("Mar", "March", "三月", "mars", "Marsch", "Март"),
+            "04": ("Apr", "April", "四月", "avril", "April", "апреля"),
+            "05": ("May", "May", "五月", "Mai", "Dürfen", "май"),
+            "06": ("Jun", "June", "六月", "juin", "Juni", "июнь"),
+            "07": ("Jul", "July", "七月", "juillet", "Juli", "июль"),
+            "08": ("Aug", "August", "八月", "août", "August", "август"),
+            "09": ("Sep", "September", "九月", "septembre", "September", "сентябрь"),
+            "10": ("Oct", "October", "十月", "octobre", "Oktober", "Октябрь"),
+            "11": ("Nov", "November", "十一月", "novembre", "November", "ноябрь"),
+            "12": ("Dec", "December", "十二月", "décembre", "Dezember", "Декабрь"),
+        }
+
+    def make(self):
+        cursor = self._handle_chinese_cursor_time()
+        if cursor is False:
+            return
+        print(get_time(fmt=True))
+        print(get_time(time.time() - cursor, fmt=True))
+
+    def _handle_chinese_cursor_time(self):
+        # 处理中文的位移量的时间形式 不搞英文的 因为英文的太难写了
+        if "前" in self.base_time:
+            if "秒" in self.base_time:
+                wait = re.search(r"(\d+)\s*秒", self.base_time)
+                cursor = 1
+            elif "分" in self.base_time:
+                wait = re.search(r"(\d+)\s*分", self.base_time)
+                cursor = 60
+            elif "时" in self.base_time:
+                wait = re.search(r"(\d+)\s*个?小时", self.base_time)
+                cursor = 3600
+            elif "周" in self.base_time or "星期" in self.base_time:
+                wait = re.search(r"(\d+)\s*周", self.base_time) or re.search(r"(\d+)\s*个?星期", self.base_time)
+                cursor = 3600 * 7
+            elif "天" in self.base_time:
+                # 处理十天内的中文字符问题
+
+                wait = re.search(r"(\d+)\s*天", self.base_time)
+                cursor = 86400
+            elif "月" in self.base_time:
+                wait = re.search(r"(\d+)\s*个?月", self.base_time)
+                cursor = 86400 * 30
+            elif "年" in self.base_time:
+                wait = re.search(r"(\d+)\s*年", self.base_time)
+                cursor = 86400 * 365
+            else:
+                return False
+
+            if wait:
+                return int(wait.group(1)) * cursor
+
+        return False
 
 
 def time_count(fn):
@@ -248,6 +309,11 @@ def time_count(fn):
         bk = fn(*args, **kwargs)
         _, fl = get_using_line_info(limit=8)
         line = str(currentframe().f_back.f_lineno)
-        my_logger(fl, fn.__name__, line, f' Time consuming: {time.time()-t1:.5f}', log_level='debug')
+        logger.debug(f'[{fn.__name__}.({line})] Time consuming: {time.time()-t1:.5f}')
         return bk
     return inner
+
+
+if __name__ == "__main__":
+    a = TimeMaker("一天前")
+    a.make()

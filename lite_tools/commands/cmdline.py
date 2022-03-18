@@ -29,7 +29,7 @@ from lite_tools.today.fisher_date import print_date
 
 def _print_base():
     """输出lite-tools基本信息的"""
-    print_info = f"lite-tools {VERSION}\n\n"
+    print_info = f"lite-tools {VERSION}  当前版本均为测试(试玩)版,等1.0修复稳定了才是正式的\n\n"
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
     print_info += "  fish        获取摸鱼人日历\n"
