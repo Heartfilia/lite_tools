@@ -9,6 +9,7 @@ from inspect import currentframe
 
 from lite_tools.utils_jar.logs import my_logger, get_using_line_info, logger
 from lite_tools.lib_jar.lib_dict_parser import match_case
+from lite_tools.utils_jar.u_re_time import DATETIME_PATTERN
 
 
 """
@@ -235,12 +236,11 @@ def _get_time_block(cursor):
 
 
 class TimeMaker(object):
-    def __init__(self, fmt_time: str):
+    def __init__(self):
         """
         TODO 将会在这里处理时间的模式 第一版先提供给`get_time`使用 后续做成通用模块  当前主要是转换成时间戳
-        :param fmt_time: 传入的字符串的日期时间样式
         """
-        self.base_time = fmt_time
+        self.base_time = ""
         self.base_template = "1970-01-01 00:00:00"
         self.little_day_info = [("一", 1), ("二", 2), ("三", 3), ("四", 4), ("五", 5),
                                 ("六", 6), ("七", 7), ("八", 8), ("九", 9), ("十", 10)]
@@ -260,12 +260,32 @@ class TimeMaker(object):
             "12": ("Dec", "December", "十二月", "décembre", "Dezember", "Декабрь"),
         }
 
-    def make(self):
-        cursor = self._handle_chinese_cursor_time()
-        if cursor is False:
-            return
-        print(get_time(fmt=True))
-        print(get_time(time.time() - cursor, fmt=True))
+    def make(self, fmt_time: str = None) -> Union[int, float]:
+        """
+        传入需要转换的时间格式
+        :param fmt_time:
+        :return:
+        """
+        if fmt_time is None or not fmt_time or not isinstance(fmt_time, str):
+            logger.warning("因为没有传入规定格式化时间,现在返回的结果是 --> 0")
+            return 0
+        self.base_time = fmt_time
+
+        cursor_time = self._handle_chinese_cursor_time()
+        if cursor_time is False:
+            info = self._handle_chinese_format_time()
+            return info
+
+    def _handle_chinese_format_time(self):
+        for pattern, result_rules in DATETIME_PATTERN.items():
+            aim_at = re.search(pattern, self.base_time)
+            if aim_at:
+                rule_len = len(result_rules)
+                print(rule_len)
+                print(aim_at)
+                result = aim_at.group(1)
+                return result
+        return False
 
     def _handle_chinese_cursor_time(self):
         # 处理中文的位移量的时间形式 不搞英文的 因为英文的太难写了
@@ -297,7 +317,7 @@ class TimeMaker(object):
                 return False
 
             if wait:
-                return int(wait.group(1)) * cursor
+                return time.time() - int(wait.group(1)) * cursor
 
         return False
 
@@ -315,5 +335,7 @@ def time_count(fn):
 
 
 if __name__ == "__main__":
-    a = TimeMaker("一天前")
-    a.make()
+    t = time.time()
+    a = TimeMaker()
+    print(a.make("2012.2.15 3时20分"))
+    print(time.time() - t)
