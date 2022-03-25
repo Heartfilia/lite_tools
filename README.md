@@ -6,6 +6,8 @@
 ![](https://img.shields.io/github/stars/Heartfilia/lite_tools?style=social)
 ![](https://img.shields.io/github/forks/Heartfilia/lite_tools?style=social)
 
+## 特别声明: 目前均为测试版本,主要是探索新功能的，不保证稳定性和性能，会在正式版(1.0.0)的时候修复成稳定版本.
+
 
 ### 项目说明
 ```

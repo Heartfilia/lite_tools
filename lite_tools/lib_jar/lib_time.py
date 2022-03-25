@@ -241,7 +241,7 @@ class TimeMaker(object):
         :param fmt_time: 传入的字符串的日期时间样式
         """
         self.base_time = fmt_time
-        self.base_template = "YYYY-mm-dd HH:MM:SS"
+        self.base_template = "1970-01-01 00:00:00"
         self.little_day_info = [("一", 1), ("二", 2), ("三", 3), ("四", 4), ("五", 5),
                                 ("六", 6), ("七", 7), ("八", 8), ("九", 9), ("十", 10)]
         # 下面这个主要是记录月份的特殊情况 只弄了 中英法德俄 语言
