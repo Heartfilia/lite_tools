@@ -20,6 +20,7 @@ __ALL__ = [
     "color_string",
     "SqlString",
     "math_string"
+    "x_timeout"
 ]
 
 from lite_tools.lib_jar.lib_base64 import get_b64d, get_b64e
@@ -29,3 +30,4 @@ from lite_tools.lib_jar.lib_string_parser import clean_string, color_string, Sql
 from lite_tools.lib_jar.lib_time import get_time, time_count  # get_date 后续放出
 from lite_tools.lib_jar.lib_try import try_catch
 from lite_tools.lib_jar.lib_ua import get_ua
+from lite_tools.lib_jar.httpx_timeout import x_timeout
