@@ -1,0 +1,6 @@
+.vs/
+__pycache__
+*/__pycache__/*
+build/
+lite_tools.egg-info
+dist

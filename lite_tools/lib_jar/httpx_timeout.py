@@ -21,6 +21,7 @@
 import sys
 import time
 import signal
+import asyncio
 import threading
 from functools import wraps
 from asyncio import iscoroutinefunction
@@ -44,7 +45,7 @@ def x_timeout(seconds, error_message='HttpX Timed Out'):
         lock.acquire()
         if not log:
             log = True
-            logger.warning(f"注意: [x_timeout] 仅在linux/unix环境起作用")
+            logger.warning(f"注意: [x_timeout] 目前同步模式--仅在linux/unix环境起作用  异步模式全平台可以用")
         lock.release()
 
     def decorated(func):
@@ -62,14 +63,13 @@ def x_timeout(seconds, error_message='HttpX Timed Out'):
 
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
             try:
-                return await func(*args, **kwargs)
+                return await asyncio.wait_for(func(*args, **kwargs), timeout=seconds)
             except KeyboardInterrupt:
                 exit(0)
-            finally:
-                signal.alarm(0)
+            except Exception as err:
+                _ = err
+                raise HttpXTimeOutError(error_message)
 
         return async_wrapper if iscoroutinefunction(func) else wrapper
 
