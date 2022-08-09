@@ -327,9 +327,7 @@ def time_count(fn):
     def inner(*args, **kwargs):
         t1 = time.time()
         bk = fn(*args, **kwargs)
-        _, fl = get_using_line_info(limit=8)
-        line = str(currentframe().f_back.f_lineno)
-        logger.debug(f'[{fn.__name__}.({line})] Time consuming: {time.time()-t1:.5f}')
+        logger.debug(f'[{fn.__name__}] Time consuming: {time.time()-t1:.3f}')
         return bk
     return inner
 

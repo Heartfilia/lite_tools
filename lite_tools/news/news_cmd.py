@@ -32,7 +32,7 @@ from lite_tools.utils_jar.base_cmd import circle_cmd, input_option
 
 
 all_tabs = {
-    "1": "每日简报",
+    "1": "-------",
     "2": "微博热榜",
     "3": "国内新闻",
     "4": "国际新闻",
@@ -70,7 +70,8 @@ def get_daily_briefing(_):
     """
     获取每日简报
     """
-    print_hot_news()
+    # print_hot_news()
+    get_china_news()          # 先不用服务器流程
     input_option(mode="news")
 
 

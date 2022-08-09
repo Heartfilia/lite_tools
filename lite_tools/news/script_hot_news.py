@@ -39,7 +39,7 @@ urllib3.disable_warnings()
 
 def print_hot_news():
     print("数据采集中...", end="")
-    crawl_from_my_service() or crawl_from_china() or crawl_detail_from_paper()
+    crawl_from_china() or crawl_detail_from_paper()
 
 
 # -------------------------- 下面是自己服务器流程 --- 以后会换 -------------------------------

@@ -6,13 +6,15 @@ from hashlib import (
     sha3_224, sha3_256, sha3_384, sha3_512
 )
 
+from typing import Union
+
 __ALL__ = ["get_md5", "get_sha", "get_sha3"]
 
 
-def get_md5(s: str, up: bool = False, encoding='utf-8', to_bin: bool = False) -> str:
+def get_md5(s: Union[str, bytes, int, float], up: bool = False, encoding='utf-8', to_bin: bool = False) -> str:
     """
     利用md5加密内容
-    :param s: 加密前字符串
+    :param s: 加密前字符串(兼容直接操作数字和浮点数转成字符串再获取md5)
     :param up: 是否返回大写的字符串 默认 False --> 返回小写
     :param encoding: 字符串的编码方式 默认 utf-8
     :param to_bin: 是否返回二进制串   默认 False --> 返回十六进制
@@ -20,7 +22,11 @@ def get_md5(s: str, up: bool = False, encoding='utf-8', to_bin: bool = False) ->
     """
     md5_obj = md5()
     try:
-        md5_obj.update(str(s).encode(encoding))
+        if isinstance(s, (str, int, float)):
+            md5_obj.update(str(s).encode(encoding))
+        elif isinstance(s, bytes):
+            md5_obj.update(s)
+
         if to_bin is True:
             result = md5_obj.digest()
         else:
@@ -28,11 +34,11 @@ def get_md5(s: str, up: bool = False, encoding='utf-8', to_bin: bool = False) ->
         if up is True:
             result = result.upper()
         return result
-    except Exception as e:
-        return f"数据异常: {e}"
+    except Exception:
+        raise TypeError
 
 
-def get_sha(s: str, mode: int = 256, encoding='utf-8', to_bin: bool = False) -> str:
+def get_sha(s: Union[str, bytes, int, float], mode: int = 256, encoding='utf-8', to_bin: bool = False) -> str:
     """
     获取shaX的加密内容
     :param s: 加密前字符串
@@ -44,9 +50,12 @@ def get_sha(s: str, mode: int = 256, encoding='utf-8', to_bin: bool = False) -> 
     if mode in [1, 224, 256, 384, 512]:
         sha_obj = eval(f"sha{mode}()")
         try:
-            sha_obj.update(str(s).encode(encoding))
-        except Exception as e:
-            return f"数据异常: {e}"
+            if isinstance(s, (str, int, float)):
+                sha_obj.update(str(s).encode(encoding))
+            elif isinstance(s, bytes):
+                sha_obj.update(s)
+        except Exception:
+            raise TypeError
         if to_bin is True:
             result = sha_obj.digest()
         else:
@@ -57,7 +66,7 @@ def get_sha(s: str, mode: int = 256, encoding='utf-8', to_bin: bool = False) -> 
     return result
 
 
-def get_sha3(s: str = "", mode=256, encoding='utf-8', to_bin: bool = False) -> str:
+def get_sha3(s: Union[str, bytes, int, float], mode=256, encoding='utf-8', to_bin: bool = False) -> str:
     """
     获取sha3_X的加密内容
     :param s: 加密前字符串
@@ -67,15 +76,18 @@ def get_sha3(s: str = "", mode=256, encoding='utf-8', to_bin: bool = False) -> s
     :return:
     """
     if mode in [224, 256, 384, 512]:
-        sha_obj = eval(f"sha3_{mode}()")
+        sha3_obj = eval(f"sha3_{mode}()")
         try:
-            sha_obj.update(str(s).encode(encoding))
-        except Exception as e:
-            return f"数据异常: {e}"
+            if isinstance(s, (str, int, float)):
+                sha3_obj.update(str(s).encode(encoding))
+            elif isinstance(s, bytes):
+                sha3_obj.update(s)
+        except Exception:
+            raise TypeError
         if to_bin is True:
-            result = sha_obj.digest()
+            result = sha3_obj.digest()
         else:
-            result = sha_obj.hexdigest()
+            result = sha3_obj.hexdigest()
     else:
         print('SUPPORT: sha3_224 sha3_256 sha3_384 sha3_512// only need inputting: 224 256 384 512')
         result = ""

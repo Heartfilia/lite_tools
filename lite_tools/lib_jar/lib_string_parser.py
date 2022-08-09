@@ -3,111 +3,109 @@ import re
 from typing import Union, Optional
 
 from lite_tools.utils_jar.logs import logger
-from lite_tools.utils_jar.u_code_range import __u_range_list, __U_range_list
+from lite_tools.utils_jar.u_code_range import u_range_list, U_range_list
 from lite_tools.utils_jar.u_sql_base_string import MysqlKeywordsList
 from lite_tools.utils_jar.u_sub_sup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
-__ALL__ = ["clean_string", "color_string", "SqlString", "math_string"]
+__ALL__ = ["CleanString", "color_string", "SqlString", "math_string"]
 
 
-def clean_string(string: str, mode: str = "xuf", ignore: str = "") -> str:
-    """
-    清除字符串**特殊符号**(并不是清除常用字符)的 -- 通过比对unicode码处理  如果u清理不干净 可以加上e
-    x里面==不包含==s  常用的转义字符如:\\a \\b \\n \\v \\t \\r \\f   ==> 目前大部分可以清理干净 还有清理不干净的或者会报错的还在研究样本
-    :param string  : 传入的字符串
-    :param mode    :
-        - 清理模式 可以任意排序组合使用 (下面前面括号内为速记单词(有的话)) -> -
-        "a": 直接清理下面全部所有操作
-        "x"：\\x开头的符号 -
-        "u": \\u转义报错的符号 还有空白字符 -
-        "U": 在win上有字符linux上是空的字符 -
-        "p": (punctuation 小写)英文标点(含空格) -
-        "P": (Punctuation 大写)中文标点 -
-        "e": (emoji) -
-        "s": (special)常用特殊符号 如'\\t' '\\n' 不包含空格 -
-        "f": (full-width characters)全角字符  --
-        "r": (reserve)预留字符显示为 ֌这样的 -
-    :param ignore  : 清理的时候需要忽略的字符--组合使用少量排除 如 ignore="(,}"   不去掉字符串中的那三个字符
-    """
-    if not isinstance(string, str):
-        return ""
+class CleanString(object):
+    def __init__(self, mode: str = "xuf", ignore: str = ""):
+        self.mode = mode
+        self.ignore = ignore
 
-    kill_jar = _scanner(string)
+    def get(self, string: str, mode: str = None, ignore: str = ""):
+        """
+        清除字符串**特殊符号**(并不是清除常用字符)的 -- 通过比对unicode码处理  如果u清理不干净 可以加上e
+        x里面==不包含==s  常用的转义字符如:\\a \\b \\n \\v \\t \\r \\f   ==> 目前大部分可以清理干净 还有清理不干净的或者会报错的还在研究样本
+        :param string  : 传入的字符串
+        :param mode    :
+            - 清理模式 可以任意排序组合使用 (下面前面括号内为速记单词(有的话)) -> -
+            "a": 直接清理下面全部所有操作
+            "x"：\\x开头的符号 -
+            "u": \\u转义报错的符号 还有空白字符 -
+            "U": 在win上有字符linux上是空的字符 -
+            "p": (punctuation 小写)英文标点(含空格) -
+            "P": (Punctuation 大写)中文标点 -
+            "e": (emoji) -
+            "s": (special)常用特殊符号 如'\\t' '\\n' 不包含空格 -
+            "f": (full-width characters)全角字符  --
+            "r": (reserve)预留字符显示为 ֌这样的 -
+        :param ignore  : 清理的时候需要忽略的字符--组合使用少量排除 如 ignore="(,}"   不去掉字符串中的那三个字符
+        """
+        if mode is not None and isinstance(mode, str):
+            self.mode = mode
+        if ignore is not None and isinstance(ignore, str):
+            self.ignore = ignore
 
-    if "a" in mode or "A" in mode:  # 如果设置了 -a- 那么就是全清理模式
-        mode = "xuUpPesfr"
+        if not isinstance(string, str):
+            return ""
 
-    for kill in kill_jar:
-        if ("x" in mode and __judge_x(kill, ignore)) or ("s" in mode and __judge_s(kill, ignore)) or (
-                "p" in mode and __judge_p(kill, ignore)) or ("P" in mode and __judge_big_p(kill, ignore)) or (
-                "f" in mode and __judge_f(kill, ignore)) or ("e" in mode and __judge_e(kill, ignore)) or (
-                "u" in mode and __judge_u(kill, ignore)) or ("U" in mode and __judge_big_u(kill, ignore)) or (
-                "r" in mode and __judge_r(kill, ignore)):
-            string = string.replace(kill, "")
-    return string
+        kill_jar = self._scanner(string)
 
+        for kill in kill_jar:
+            if ("x" in self.mode and self.__judge_x(kill)) or ("s" in self.mode and self.__judge_s(kill)) or (
+                "p" in self.mode and self.__judge_p(kill)) or ("P" in self.mode and self.__judge_big_p(kill)) or (
+                "f" in self.mode and self.__judge_f(kill)) or ("e" in self.mode and self.__judge_e(kill)) or (
+                "u" in self.mode and self.__judge_u(kill)) or ("U" in self.mode and self.__judge_big_u(kill)) or (
+                    "r" in self.mode and self.__judge_r(kill)):
+                string = string.replace(kill, "")
+        return string
 
-def __judge_x(char, ignore=""):
-    if char not in ignore and (0 <= ord(char) < 7 or 14 <= ord(char) < 32 or 127 <= ord(char) < 161):
-        return True
+    @staticmethod
+    def _scanner(string):
+        jar = set(filter(lambda x: not x.isalpha() or not x.isdigit(), string))
+        return jar
 
+    def __judge_x(self, kill):
+        if kill not in self.ignore and (0 <= ord(kill) < 7 or 14 <= ord(kill) < 32 or 127 <= ord(kill) < 161):
+            return True
 
-def __judge_s(char, ignore=""):
-    if char not in ignore and 7 <= ord(char) < 14:
-        return True
+    def __judge_s(self, kill):
+        if kill not in self.ignore and 7 <= ord(kill) < 14:
+            return True
 
+    def __judge_p(self, kill):
+        if kill not in self.ignore and (
+                32 <= ord(kill) < 48 or 58 <= ord(kill) < 65 or 91 <= ord(kill) < 97 or 123 <= ord(kill) < 127):
+            return True
 
-def __judge_p(char, ignore=""):
-    if char not in ignore and (
-            32 <= ord(char) < 48 or 58 <= ord(char) < 65 or 91 <= ord(char) < 97 or 123 <= ord(char) < 127):
-        return True
+    def __judge_big_p(self, kill):
+        if kill not in self.ignore and (
+            8208 <= ord(kill) < 8232 or 8240 <= ord(kill) < 8287 or 12289 <= ord(kill) < 12310 or
+            65072 <= ord(kill) < 65107 or 65108 <= ord(kill) < 65127 or 65128 <= ord(kill) < 65132 or
+                65281 <= ord(kill) < 65313):
+            return True
 
+    def __judge_f(self, kill):
+        if kill not in self.ignore and 65314 <= ord(kill) < 65377:
+            return True
 
-def __judge_big_p(char, ignore=""):
-    if char not in ignore and (
-            8208 <= ord(char) < 8232 or 8240 <= ord(char) < 8287 or 12289 <= ord(char) < 12310 or
-            65072 <= ord(char) < 65107 or 65108 <= ord(char) < 65127 or 65128 <= ord(char) < 65132 or
-            65281 <= ord(char) < 65313):
-        return True
+    def __judge_u(self, kill):
+        if kill not in self.ignore and ord(kill) in u_range_list:
+            return True
 
-
-def __judge_f(char, ignore=""):
-    if char not in ignore and 65314 <= ord(char) < 65377:
-        return True
-
-
-def __judge_u(char, ignore=""):
-    if char not in ignore and ord(char) in __u_range_list:
-        return True
-
-
-def __judge_big_u(char, ignore=""):
-    if char not in ignore and ord(char) in __U_range_list:
-        return True
-
+    def __judge_big_u(self, kill):
+        if kill not in self.ignore and ord(kill) in U_range_list:
+            return True
     
-def __judge_e(char, ignore=""):
-    if char not in ignore and ord(char) > 65535:
-        return True
+    def __judge_e(self, kill):
+        if kill not in self.ignore and ord(kill) > 65535:
+            return True
 
-
-def __judge_r(char, ignore=""):
-    """
-    这里是从888断断续续的有占位符号 所以下面判断范围中小于888的都不用写了
-    """
-    if char not in ignore and \
-        888 <= ord(char) < 65535 and \
-        ord(char) not in __u_range_list and \
-        ord(char) not in __U_range_list and \
-            not __judge_big_p(char) and not __judge_f(char):
-        return True
-
-
-def _scanner(string: str):
-    jar = set(filter(lambda x: not x.isalpha() or not x.isdigit(), string))
-    return jar
+    def __judge_r(self, kill):
+        """
+        这里是从888断断续续的有占位符号 所以下面判断范围中小于888的都不用写了
+        """
+        if kill not in self.ignore and \
+            888 <= ord(kill) < 65535 and \
+            ord(kill) not in u_range_list and \
+            ord(kill) not in U_range_list and \
+                not self.__judge_big_p(kill) and not self.__judge_f(kill):
+            return True
 
 
 def __get_color_front(string: str):
@@ -308,8 +306,8 @@ def color_string(string: str = "", *args, **kwargs) -> str:
 
 class SqlString(object):
     """
-    这里只负责拼接sql语句 不负责处理sql事务 // 还没有测试好 同clean_string 一样 后面某个版本才会成为完全体
-    TODO(这里需要注意结束语句的单双引号)
+    这里只负责拼接sql语句 不负责处理sql事务 // 还没有测试好
+    这个功能主要是配合Mysql使用，当然单独使用也可以，后续拿到sql语句自己操作也可以
     """
     def __init__(self, table_name: str) -> None:
         self.table_name = table_name
@@ -335,8 +333,7 @@ class SqlString(object):
     
     @staticmethod
     def __clear_string(string):
-        return string.replace("'`", "`").replace("`'", "`").replace('"`', '`').replace('`"', "`").replace(
-            '= True', '= 1').replace('= False', '= 0').replace('= None', "IS NULL").replace(
+        return string.replace('= True', '= 1').replace('= False', '= 0').replace('= None', "IS NULL").replace(
             '=True', '= 1').replace('=False', '= 0').replace('=None', "IS NULL").replace(
             ",) VALUES", ") VALUES").replace(',);', ');')
 
@@ -348,7 +345,7 @@ class SqlString(object):
             for key, name in key.items():
                 keys.append(key if key.upper() not in MysqlKeywordsList else f"`{key}`")
                 values.append(name)
-            return f"{tuple(keys)}".replace("'", ""), f"{tuple(values)}"
+            return f"{tuple(keys)}".replace("'", "\\'").replace('\\"', '\\"'), f"{tuple(values)}"
         elif isinstance(key, (list, tuple)) and not value and isinstance(key[0], dict):
             result_dict = {}
             # 第一步构造键值对
@@ -364,7 +361,8 @@ class SqlString(object):
                 return "", ""
             keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in result_dict.keys()]
             # 开始拼接
-            return f"{tuple(keys)}".replace("'", ""), f"{list(zip(*result_dict.values()))}"[1:-1]
+            return f"{tuple(keys)}".replace("'", "\\'").replace('\\"', '\\"'), \
+                   f"{list(zip(*result_dict.values()))}"[1:-1]
         elif isinstance(key, (list, tuple)) and isinstance(value, list):
             keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in key]
             if value and isinstance(value[0], (list, tuple)):
@@ -382,7 +380,7 @@ class SqlString(object):
                     logger.error(f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};")
                     return "", ""
                 values = f"{tuple(value)}"
-            return f"{tuple(keys)}".replace("'", ""), values
+            return f"{tuple(keys)}".replace("'", "\\'").replace('\\"', '\\"'), values
         else:
             logger.error("传入了不支持的数据类型")
             return "", ""
@@ -420,10 +418,13 @@ class SqlString(object):
         base_update = base_update.rstrip(' AND ') + ";"
         return self.__clear_string(base_update)
 
-    def replace(self):
+    def replace(self, keys: Union[dict, list, tuple], values: list = None) -> Optional[str]:
         """
-        放着 有空再更新啦
+        不确定是否可以用
         """
+        string = self.insert(keys, values)
+        string = string.replace('INSERT', 'REPLACE')
+        return string
 
     def delete(self, where: Union[dict, str] = None) -> Optional[str]:
         """
@@ -477,12 +478,3 @@ def math_string(string: str) -> str:
         if getter:
             new_string = new_string.replace(rule, getter)
     return new_string
-
-
-if __name__ == "__main__":
-    base_sql = SqlString('testtable')
-    a = [{"a": 10}, {"a": 20}]
-    b = [{"key": "I'm Your \"King\"", "b": 11}, {"key": 20, "b": 21}]
-
-    print(base_sql.insert(a))
-    print(base_sql.insert(b))

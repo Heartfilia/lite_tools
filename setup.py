@@ -20,8 +20,9 @@ base_requires = ['loguru', 'urllib3', 'colorama', 'httpx', 'httpx[http2]']
 # 这里暂时没有用到 -- 一些完整包的情况下的功能  # rich/datetime 目前没有用到 以后会用 先给大家装着
 file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter", "numpy", "rich"]
 date_requires = ["datetime", "lxml", "requests", "prettytable"]
+sql_requires = ['pymysql>=1.0.2', 'dbutils>=3.0.2']
 
-all_requires = date_requires + file_requires
+all_requires = date_requires + file_requires + sql_requires
 
 
 setup(
@@ -41,6 +42,7 @@ setup(
         # 'lite_tools.balls',    # 还没有调整好 先不放出来
         'lite_tools.weather',
         'lite_tools.commands',
+        'lite_tools.sql',
         'lite_tools.lib_jar',
         'lite_tools.utils_jar'
     ],
@@ -52,8 +54,9 @@ setup(
     python_requires=">=3.6",
     extras_require={
         "all": all_requires,
+        "sql": sql_requires,
         "date": date_requires,
-        "file": file_requires
+        "file": file_requires,
     },
     classifiers=[
         'Intended Audience :: Developers',
