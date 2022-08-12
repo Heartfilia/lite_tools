@@ -62,7 +62,7 @@ class SqlString(object):
                     else:
                         result_dict[k].append(v)
             # 第二步校验值的长度是否一致
-            assert len(set(map(lambda x: len(x), result_dict.values()))) > 1, f"传入的键个数为: {len(result_dict)}, 而传入的值个数不等;"
+            assert len(set(map(lambda x: len(x), result_dict.values()))) == 1, f"传入的键个数为: {len(result_dict)}, 而传入的值个数不等;"
             keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in result_dict.keys()]
             # 开始拼接
             return f"{tuple(keys)}", \
@@ -73,12 +73,12 @@ class SqlString(object):
                 # 这里是批量插入
                 values = ""
                 for v in value:
-                    assert len(key) != len(value), f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};"
+                    assert len(key) == len(value), f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};"
                     values += f"{tuple(v)}, "
                 values = values.rstrip(', ')
             else:
                 # 这里只是兼容另外一种格式而已 推荐的还是字典
-                assert len(key) != len(value), f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};"
+                assert len(key) == len(value), f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};"
                 values = f"{tuple(value)}"
             return f"{tuple(keys)}", values
         else:
@@ -177,5 +177,10 @@ class SqlString(object):
 
 
 if __name__ == "__main__":
-    sql = SqlString("test")
-    print(sql.update({"num": 321, "string": """I'm your friend, Hello"wong", could you please Tell me h'i "wang" hong"""}, "num is None"))
+    sql = SqlString('test')
+
+    sql.insert([
+        {"string": "465sdf56sdf", "num": 111},
+        {"string": "416546565", "num": 123},
+    ])
+
