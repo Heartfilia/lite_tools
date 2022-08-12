@@ -130,10 +130,12 @@ class MySql:
                 yield all_num, row
                 all_num -= 1
 
-    def insert(self, items: dict, ignore: bool = False):
-        """这里目前只支持单条的 字典映射关系插入"""
+    def insert(self, items: Union[dict, list, tuple], values: list = None, ignore: bool = False):
+        """
+        这里目前只支持单条的 字典映射关系插入 当然你要多值传入我也兼容
+        """
         self._check_table()
-        sql = self.sql_base.insert(items, ignore=ignore)
+        sql = self.sql_base.insert(items, values, ignore=ignore)
         self.execute(sql)
 
     def update(self, items: dict, where: Union[dict, str]):
