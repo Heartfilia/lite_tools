@@ -25,7 +25,7 @@ import pymysql
 from loguru import logger
 from dbutils.pooled_db import PooledDB
 
-from lite_tools.lib_jar.lib_string_parser import SqlString
+from lite_tools.lib_jar.lib_mysql_string import SqlString
 from lite_tools.sql.config import Config
 
 
@@ -33,10 +33,28 @@ class MySql:
     def __init__(
             self,
             pool: PooledDB = None,
-            config: Config = None
+            *,
+            config: Config = None,
+            table_name: str = None
     ):
+        """
+        这里打印的日志不可关闭  --->  除非你改我源码
+        pool: 如果用的自己构建的连接池 那么就传自己构建好了的进来，但是如果要用insert,update,delete等方法就还需要额外传入table_name
+            | from dbutils.pooled_db import PooledDB 需要这个pool
+        config: from lite_tools import Config --> 然后构建一个 config 对象 传入即可,这个配置文件不需要传table_name,包含了的
+            |默认参数--> database: str,
+                        host: str,
+                        user: str,
+                        password: str = "",
+                        port: int = 3306,
+                        charset: str = "utf8mb4",
+                        maxconnections: int = 20,
+                        table_name: str = None,
+        """
         if pool:
+            self.log = True   # 默认肯定是要打印日志的啦
             self.pool = pool
+            self.table_name = table_name
         elif not pool and config and isinstance(config, Config):
             self.pool = None
             self.config = config
@@ -49,6 +67,7 @@ class MySql:
                 self.config.database, self.config.maxconnections,
                 self.config.host, self.config.port, self.config.user, self.config.password, self.config.charset
             )
+            self.log = self.config.log
         else:
             raise ValueError
 
@@ -82,10 +101,10 @@ class MySql:
                 result = cursor.execute(sql)
             conn.commit()
             end_time = time.time()
-            logger.debug(f"耗时: {end_time-start_time:.3f}s 影响行数: [{result}] SQL --> {sql}")
+            self._my_logger(f"耗时: {end_time-start_time:.3f}s 影响行数: [{result}]", "", "debug")
         except Exception as err:
             end_time = time.time()
-            logger.error(f"耗时: {end_time-start_time:.3f}s 异常原因: [{err}] SQL --> {sql}")
+            self._my_logger(f"耗时: {end_time-start_time:.3f}s 异常原因: [{err}]", sql, "error")
             conn.rollback()
         finally:
             conn.close()
@@ -103,7 +122,7 @@ class MySql:
         conn.close()
         end_time = time.time()
         all_num = len(items)
-        logger.success(f"耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]  SQL --> {sql}")
+        self._my_logger(f"耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
         for row in items:
             if count is False:
                 yield row
@@ -135,13 +154,37 @@ class MySql:
 
     def _check_table(self):
         if not self.table_name:
-            logger.error("你现在执行的操作是需要传入 table 的名字 mysql = MySql(table_name='xxx')")
+            self._my_logger("你现在执行的操作是需要传入 table 的名字 mysql = MySql(table_name='xxx')", "", "error")
             raise ValueError
 
-    @staticmethod
-    def _secure_check(string):
+    def _secure_check(self, string):
         if string.upper().startswith("DROP"):
-            logger.warning(f"SQL: {string}  确定要删除操作吗? Y/N")
+            self._my_logger(f"SQL: {string}  确定要删除操作吗? Y/N", "", "warning")
             flag = input(">>> ")
             if flag.upper() == "Y":
-                return True
+                self._my_logger(f"哈哈哈 这里是唬你的 程序里面不给你--DROP--操作的 我肯定直接报错啦 ( •̀ ω •́ )y", "", "success")
+                return False
+        return True
+
+    def _my_logger(self, string, sql_string, string_level):
+        """
+        level: (error > warning > info > success > debug)  目前只管是否要打日志 没有弄等级处理
+        :param string: 需要提示的信息
+        :param sql_string: 执行的sql语句
+        :param string_level: 传入过来的等级
+        """
+        if not self.log:
+            return
+
+        level_rate, log_func = _log_level.get(string_level.lower(), (0, None))
+        if level_rate:
+            log_func(f"{string}{'' if not sql_string else '  SQL --> '+sql_string}")
+
+
+_log_level = {
+    "error": (10, logger.error),
+    "warning": (8, logger.warning),
+    "info": (6, logger.info),
+    "success": (4, logger.success),
+    "debug": (2, logger.debug)
+}
