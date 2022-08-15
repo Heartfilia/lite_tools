@@ -33,36 +33,44 @@ class SqlString(object):
         key_string, value_string = self.__handle_insert_data(keys, values)
         if key_string == "":
             return None
-        insert_string = f"{base_insert} {self._handle_key(key_string)} VALUES {self._handle_value(value_string)};"
+        insert_string = f"{base_insert} {self._handle_key(key_string)} VALUES {value_string};"
         return self.__clear_string(insert_string)
 
     @staticmethod
     def __clear_string(string: str) -> str:
-        string = re.sub("=.?[Nn]one|is.?[Nn]one", "IS NULL", string)
-        string = re.sub("=.?[Tt]rue", "= 1", string)
-        string = re.sub("=.?[Ff]alse", "= 0", string)
+        string = re.sub("= ?[Nn]one|is ?[Nn]one", "IS NULL", string)
+        string = re.sub("= ?[Tt]rue", "= 1", string)
+        string = re.sub("= ?[Ff]alse", "= 0", string)
         return string.replace(",) VALUES", ") VALUES").replace(',);', ');')
 
-    @staticmethod
-    def __handle_insert_data(key, value):
+    def __handle_insert_data(self, key, value):
         if isinstance(key, dict) and value is None:
             keys = []
             values = []
             for key, name in key.items():
                 keys.append(key if key.upper() not in MysqlKeywordsList else f"`{key}`")
                 values.append(name)
-            return f"{tuple(keys)}", f"{tuple(values)}"
+            values_string = '('
+            for each_value in values:
+                if isinstance(each_value, str):
+                    each_value = self._handle_value(each_value)
+                values_string += each_value + ', '
+            values_string = values_string.rstrip(', ') + ')'
+            return f"{tuple(keys)}", values_string
         elif isinstance(key, (list, tuple)) and not value and isinstance(key[0], dict):
             result_dict = {}
             # 第一步构造键值对
             for item in key:
                 for k, v in item.items():
+                    if isinstance(v, str):
+                        v = self._handle_value(v)
                     if k not in result_dict:
                         result_dict[k] = [v]
                     else:
                         result_dict[k].append(v)
             # 第二步校验值的长度是否一致
-            assert len(set(map(lambda x: len(x), result_dict.values()))) == 1, f"传入的键个数为: {len(result_dict)}, 而传入的值个数不等;"
+            assert len(set(map(lambda x: len(x), result_dict.values()))) == 1, \
+                f"传入的键个数为: {len(result_dict)}, 而传入的值个数不等;"
             keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in result_dict.keys()]
             # 开始拼接
             return f"{tuple(keys)}", \
@@ -71,15 +79,21 @@ class SqlString(object):
             keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in key]
             if value and isinstance(value[0], (list, tuple)):
                 # 这里是批量插入
-                values = ""
-                for v in value:
-                    assert len(key) == len(value), f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};"
-                    values += f"{tuple(v)}, "
-                values = values.rstrip(', ')
+                values = '('
+                for value_jar in value:
+                    for each_value in value_jar:
+                        if isinstance(each_value, str):
+                            each_value = self._handle_value(each_value)
+                        values += each_value + ', '
+                values = values.rstrip(', ') + ')'
             else:
                 # 这里只是兼容另外一种格式而已 推荐的还是字典
-                assert len(key) == len(value), f"传入的键个数为: {len(key)}, 而传入的值个数为: {len(value)};"
-                values = f"{tuple(value)}"
+                values = '('
+                for each_value in value:
+                    if isinstance(each_value, str):
+                        each_value = self._handle_value(each_value)
+                    values += each_value + ', '
+                values = values.rstrip(', ') + ')'
             return f"{tuple(keys)}", values
         else:
             raise Exception("错误的数据类型")
@@ -173,14 +187,6 @@ class SqlString(object):
 
     @staticmethod
     def _handle_value(key_string: str) -> str:
-        return key_string.replace("'", "\'").replace('"', '\\"')
-
-
-if __name__ == "__main__":
-    sql = SqlString('test')
-
-    sql.insert([
-        {"string": "465sdf56sdf", "num": 111},
-        {"string": "416546565", "num": 123},
-    ])
-
+        key_string = re.sub(r"(?<!=\\)'", "\'", key_string)
+        key_string = re.sub(r'(?<!=\\)"', '\"', key_string)
+        return key_string

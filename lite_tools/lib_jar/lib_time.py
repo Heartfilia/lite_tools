@@ -8,7 +8,7 @@ from typing import Union
 from inspect import currentframe
 
 from lite_tools.utils_jar.logs import my_logger, get_using_line_info, logger
-from lite_tools.lib_jar.lib_dict_parser import match_case
+from lite_tools.lib_jar.lib_matchcase import match_case
 from lite_tools.utils_jar.u_re_time import DATETIME_PATTERN
 
 

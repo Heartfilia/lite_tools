@@ -2,14 +2,15 @@
 # @Time   : 2021-04-06 15:26
 # @Author : Lodge
 import re
+import copy
 import json as _json
-import functools
-from typing import Any, Optional, Iterator
+from typing import Any, Optional, Iterator, Union
 
 from lite_tools.utils_jar.logs import my_logger, get_using_line_info, logger
+from lite_tools.utils_jar.AllException import TemplateFormatError, NotJsonException, NotGoalItemException
 
 
-__ALL__ = ["match_case", 'try_get', 'try_key', 'FlattenJson', 'JsJson']
+__ALL__ = ['try_get', 'try_key', 'FlattenJson', 'JsJson', 'WrapJson']
 """
 try_get 取值和 FlattenJson 取值规则不一样 两者的时间复杂度也不一样 
 TODO (这里需要优化代码 文件读取位置需要调整)  get_using_line_info  这个也得调整
@@ -17,8 +18,8 @@ TODO (这里需要优化代码 文件读取位置需要调整)  get_using_line_i
 
 
 def try_get(
-        renderer, getters=None, default=None, expected_type=None, log=False,
-        json=False, options: dict = None) -> Any:
+        renderer,
+        getters=None, default=None, expected_type=None, log=False, json=False, options: dict = None) -> Any:
     r"""
     获取字典键值  --> 只获取**一个结果** 如果碰到了列表 只获取**第一个值**或者**特定值**
     只传入一个json串 那么就是转换为字典:
@@ -478,6 +479,9 @@ class FlattenJson(object):
         """按照键值方式取值"""
         return self.result_data.get(getter, default)
 
+    def exists(self, getter: str) -> bool:
+        return True if getter in self.result_data else False
+
 
 class JsJson(object):
     """
@@ -543,79 +547,75 @@ class JsJson(object):
         return try_get(self.result, json=True)
 
 
-def match_case(func):
-    """
-    也是一个装饰器来着
-    修改了原来的命名 使其更加好记 采用了如下源的代码
-    新增优化,支持了类 内部函数的调用->同原方案一样 主要是 dispatches by value of the first arg""
-    """
-    # This source file is part of the EdgeDB open source project.
-    #
-    # Copyright 2021-present MagicStack Inc. and the EdgeDB authors.
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-    #
-    """Like singledispatch() but dispatches by value of the first arg.
-    Example:
-        @match_case
-        def eat(fruit):
-            return f"I don't want a {fruit}..."
-        @eat.register('apple')
-        def _eat_apple(fruit):
-            return "I love apples!"
-        @eat.register('eggplant')
-        @eat.register('squash')
-        def _eat_what(fruit):
-            return f"I didn't know {fruit} is a fruit!"
-    An alternative to applying multuple `register` decorators is to
-    use the `register_all` helper:
-        @eat.register_all({'eggplant', 'squash'})
-        def _eat_what(fruit):
-            return f"I didn't know {fruit} is a fruit!"
-    """
+class WrapJson(object):
+    def __init__(self, template: Union[dict, list]):
+        """
+        :param template: 传入的最小单元组的模板 模板的最小级别单位不允许传入具体的值
+        如 {
+            ”a“: str,         # a 必须为字符串
+            "b": {
+                "c": list     # c 必须为列表
+            },
+            "d": ...          # 忽略格式但是必须存在
+        }
+        """
+        self.check_items = FlattenJson(template)          # 后面提取数据需要这个校验
+        for tes_key, each_value in self.check_items.get_all():
+            if type(each_value) is not type and each_value is not ...:
+                logger.error("模板只允许 基本单位的类型(list, int, str ...) 以及 省略(...) 不支持typing的进阶操作及具体值")
+                raise TemplateFormatError
+        self.results = []  # 给列表操作的时候用的 --> 用这个函数请避免用在多线程,毕竟这个效果只是为了单线程服务
+        self.template = template
 
-    registry = {}
+    def get_all(self, items: Union[str, list, dict]):
+        dict_item = _judge_json(items)   # str --> 为了兼容json数据,json可以直接转换为python数据类型处理
+        if not dict_item:
+            raise NotJsonException
 
-    @functools.wraps(func)
-    def wrapper(arg0, *args, **kwargs):
-        try:
-            if args and "__module__" in dir(arg0):
-                arg0 = args[0]  # 这里是给类使用
-            delegate = registry[arg0]
-        except KeyError:
-            pass
+        if isinstance(items, dict):
+            # 如果初始的数据格式样式为字典,那么返回的结果就是字典，只是单纯压缩数据
+            result = self._wrap_from_dict(items)
+        elif isinstance(items, list):
+            # 如果初始的数据是列表 那么就提出来的结果也是列表
+            self.results = []
+            for _ in self._wrap_from_list(items):
+                ...
+            result = self.results
         else:
-            return delegate(arg0, *args, **kwargs)
+            result = ""   # 走不到这里来, 我只是看不惯idea的报错提示
 
-        return func(arg0, *args, **kwargs)
+        return result
 
-    def register(value):
-        def wrap(func):
-            if value in registry:
-                return func
-            registry[value] = func
-            return func
-        return wrap
+    @staticmethod
+    def _parse_rules(key: str) -> str:
+        base_key = ""
+        split_key = key.split('.')   # a   [0]   c
+        for sk in split_key:
+            if sk.endswith(']') and sk.startswith('['):
+                base_key += sk
+            else:
+                base_key += f"['{sk}']"
+        return base_key
 
-    def register_all(values):
-        def wrap(func):
-            for value in values:
-                if value in registry:
-                    continue
-                registry[value] = func
-            return func
-        return wrap
+    def _wrap_from_dict(self, item: dict) -> dict:
+        base_model = copy.deepcopy(self.template)
+        flatten_json = FlattenJson(item)
+        for key, value in self.check_items.get_all():
+            result = flatten_json.get(key)
+            parser_key = self._parse_rules(key)
+            if value != type(result) and self.check_items.get(key) is not ...:
+                raise NotGoalItemException
+            exec(f"base_model{parser_key} = {repr(result)}")
+        return base_model
 
-    wrapper.register = register
-    wrapper.register_all = register_all
-    return wrapper
+    def _wrap_from_list(self, item: list):
+        for each in item:
+            if isinstance(each, list):
+                yield from self._wrap_from_list(each)
+            elif isinstance(each, dict):
+                try:
+                    result = self._wrap_from_dict(each)
+                except NotGoalItemException:
+                    pass
+                else:
+                    self.results.append(result)

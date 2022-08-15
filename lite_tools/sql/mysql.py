@@ -91,8 +91,8 @@ class MySql:
                 charset=charset
             )
 
-    def execute(self, sql: str) -> None:
-        """不走智能执行的时候走这里可以执行手动输入的sql语句"""
+    def execute(self, sql: str, batch: bool = False, log: bool = True) -> None:
+        """不走智能执行的时候走这里可以执行手动输入的sql语句 这里的log不与全局self.log共享"""
         assert self._secure_check(sql), '删除操作终止!!!'
         start_time = time.time()
         conn = self.connection()
@@ -101,11 +101,16 @@ class MySql:
                 result = cursor.execute(sql)
             conn.commit()
             end_time = time.time()
-            self._my_logger(f"耗时: {end_time-start_time:.3f}s 影响行数: [{result}]", "", "debug")
+            self._my_logger(f"耗时: {end_time-start_time:.3f}s 影响行数: [{result}]", "", "success")
         except Exception as err:
+            if str(err).find("Duplicate entry") != -1 and log is False:
+                return
             end_time = time.time()
             self._my_logger(f"耗时: {end_time-start_time:.3f}s 异常原因: [{err}]", sql, "error")
             conn.rollback()
+            if str(err).find("Duplicate entry") != -1 and batch is True:
+                logger.warning(f"批量操作异常 --> 现在转入单条操作... 重复的字段内容日志将不会再打印")
+                raise DuplicateEntryException
         finally:
             conn.close()
 
@@ -135,8 +140,22 @@ class MySql:
         这里目前只支持单条的 字典映射关系插入 当然你要多值传入我也兼容
         """
         self._check_table()
+        if isinstance(items, (list, tuple)):
+            batch = True
+        else:
+            batch = False
         sql = self.sql_base.insert(items, values, ignore=ignore)
-        self.execute(sql)
+        try:
+            self.execute(sql, batch)
+        except DuplicateEntryException:
+            if values is None:
+                for each_key in items:
+                    new_sql = self.sql_base.insert(each_key, values, ignore, log=False)
+                    self.execute(new_sql)
+            else:
+                for each_value in values:
+                    new_sql = self.sql_base.insert(items, each_value, ignore, log=False)
+                    self.execute(new_sql)
 
     def update(self, items: dict, where: Union[dict, str]):
         """预留 """
@@ -190,3 +209,8 @@ _log_level = {
     "success": (4, logger.success),
     "debug": (2, logger.debug)
 }
+
+
+class DuplicateEntryException(Exception):
+    def __init__(self):
+        pass

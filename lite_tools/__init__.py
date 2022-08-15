@@ -14,9 +14,10 @@ __ALL__ = [
     "try_get",
     "try_key",
     "Mysql",
-    "Config",   # mysql -- 专属配置
+    "Config",      # mysql -- 专属配置
     "FlattenJson",
     "JsJson",
+    "WrapJson",
     "match_case",
     "CleanString",
     "color_string",
@@ -26,7 +27,8 @@ __ALL__ = [
 ]
 
 from lite_tools.lib_jar.lib_base64 import get_b64d, get_b64e
-from lite_tools.lib_jar.lib_dict_parser import try_get, try_key, match_case, FlattenJson, JsJson
+from lite_tools.lib_jar.lib_matchcase import match_case
+from lite_tools.lib_jar.lib_dict_parser import try_get, try_key, FlattenJson, JsJson, WrapJson
 from lite_tools.lib_jar.lib_hashlib import get_md5, get_sha, get_sha3
 from lite_tools.lib_jar.lib_mysql_string import SqlString
 from lite_tools.lib_jar.lib_string_parser import CleanString, color_string, math_string
