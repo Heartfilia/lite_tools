@@ -54,7 +54,7 @@ class SqlString(object):
             for each_value in values:
                 if isinstance(each_value, str):
                     each_value = self._handle_value(each_value)
-                values_string += each_value + ', '
+                values_string += f'{repr(each_value)}, '
             values_string = values_string.rstrip(', ') + ')'
             return f"{tuple(keys)}", values_string
         elif isinstance(key, (list, tuple)) and not value and isinstance(key[0], dict):
