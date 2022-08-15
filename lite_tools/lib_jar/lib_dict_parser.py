@@ -572,13 +572,13 @@ class WrapJson(object):
         if not dict_item:
             raise NotJsonException
 
-        if isinstance(items, dict):
+        if isinstance(dict_item, dict):
             # 如果初始的数据格式样式为字典,那么返回的结果就是字典，只是单纯压缩数据
-            result = self._wrap_from_dict(items)
-        elif isinstance(items, list):
+            result = self._wrap_from_dict(dict_item)
+        elif isinstance(dict_item, list):
             # 如果初始的数据是列表 那么就提出来的结果也是列表
             self.results = []
-            for _ in self._wrap_from_list(items):
+            for _ in self._wrap_from_list(dict_item):
                 ...
             result = self.results
         else:
@@ -594,7 +594,14 @@ class WrapJson(object):
             if sk.endswith(']') and sk.startswith('['):
                 base_key += sk
             else:
-                base_key += f"['{sk}']"
+                if sk.find('[') != -1 and sk.find(']') != -1:
+                    ind_xs = re.findall(r'(\[\d+])', sk)
+                    sk = re.sub(r'\[\d+]', "", sk)
+                    base_key += f"['{sk}']"
+                    for ind in ind_xs:
+                        base_key += ind
+                else:
+                    base_key += f"['{sk}']"
         return base_key
 
     def _wrap_from_dict(self, item: dict) -> dict:
