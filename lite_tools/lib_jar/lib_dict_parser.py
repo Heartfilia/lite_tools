@@ -556,13 +556,15 @@ class WrapJson(object):
             "b": {
                 "c": list     # c 必须为列表
             },
-            "d": ...          # 忽略格式但是必须存在
+            "d": ...          # 忽略格式但是必须存在（不允许是list,tuple,set,dict...这些集合类型）
         }
         """
         self.check_items = FlattenJson(template)          # 后面提取数据需要这个校验
         for tes_key, each_value in self.check_items.get_all():
             if type(each_value) is not type and each_value is not ...:
-                logger.error("模板只允许 基本单位的类型(list, int, str ...) 以及 省略(...) 不支持typing的进阶操作及具体值")
+                logger.error("模板只允许 基本单位的类型(int, str, float, bool) 以及 省略符号(...) 可以忽略参数类型")
+                logger.warning("其中(list,dict,set,tuple..)这些类型不允许用 ...匹配,只能指定是list或者tuple类型,否则返回None")
+                logger.error("不支持typing的进阶操作及具体值")
                 raise TemplateFormatError
         self.results = []  # 给列表操作的时候用的 --> 用这个函数请避免用在多线程,毕竟这个效果只是为了单线程服务
         self.template = template
@@ -608,11 +610,17 @@ class WrapJson(object):
         base_model = copy.deepcopy(self.template)
         flatten_json = FlattenJson(item)
         for key, value in self.check_items.get_all():
-            result = flatten_json.get(key)
             parser_key = self._parse_rules(key)
-            if value != type(result) and self.check_items.get(key) is not ...:
-                raise NotGoalItemException
+            if value in [list, tuple, set, dict, frozenset]:
+                result = try_get(item, key)
+                if not isinstance(result, value):
+                    raise NotGoalItemException
+            else:
+                result = flatten_json.get(key)
+                if value != type(result) and self.check_items.get(key) is not ...:
+                    raise NotGoalItemException
             exec(f"base_model{parser_key} = {repr(result)}")
+
         return base_model
 
     def _wrap_from_list(self, item: list):

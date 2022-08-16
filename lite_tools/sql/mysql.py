@@ -150,12 +150,12 @@ class MySql:
         except DuplicateEntryException:
             if values is None:
                 for each_key in items:
-                    new_sql = self.sql_base.insert(each_key, values, ignore, log=False)
-                    self.execute(new_sql)
+                    new_sql = self.sql_base.insert(each_key, values, ignore)
+                    self.execute(new_sql, log=False)
             else:
                 for each_value in values:
-                    new_sql = self.sql_base.insert(items, each_value, ignore, log=False)
-                    self.execute(new_sql)
+                    new_sql = self.sql_base.insert(items, each_value, ignore)
+                    self.execute(new_sql, log=False)
 
     def update(self, items: dict, where: Union[dict, str]):
         """预留 """

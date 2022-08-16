@@ -152,8 +152,8 @@ def _guess_fmt(string):
     TODO(会自动匹配时间)
     """
     _ = string
-    from dateutil.parser import parse
-    from dateparser import parse
+    # from dateutil.parser import parse
+    # from dateparser import parse
     return ""
 
 
