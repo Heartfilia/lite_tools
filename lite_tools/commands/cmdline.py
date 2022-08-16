@@ -22,9 +22,9 @@ import re
 import sys
 
 from lite_tools.version import VERSION
-from lite_tools.utils_jar.logs import logger
-from lite_tools.lib_jar.lib_dict_parser import match_case
-from lite_tools.today.fisher_date import print_date
+from lite_tools.tools.utils.logs import logger
+from lite_tools.tools.lib_matchcase import match_case
+from lite_tools.commands.today.fisher_date import print_date
 
 
 def _print_base():
@@ -60,7 +60,7 @@ def get_fish_date(_, *args):
 @chose_option.register("ball")
 def get_ball(_, *args):
     try:
-        from lite_tools.balls.ball_cmd import ball_cmdline
+        from lite_tools.commands.balls.ball_cmd import ball_cmdline
     except ImportError:
         logger.warning("ball 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
         sys.exit(0)
@@ -70,7 +70,7 @@ def get_ball(_, *args):
 @chose_option.register("weather")
 def get_weather(_, *args):
     try:
-        from lite_tools.weather.weather_cmd import weather_cmdline
+        from lite_tools.commands.weather.weather_cmd import weather_cmdline
     except ImportError:
         logger.warning("weather 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
         sys.exit(0)
@@ -82,8 +82,8 @@ def get_today_info(_, *args):
     if len(args) > 0:
         args = args[0]
     try:
-        from lite_tools.today.oil_price import print_oil
-        from lite_tools.today.script_almanac import print_today, print_today_history
+        from lite_tools.commands.today.oil_price import print_oil
+        from lite_tools.commands.today.script_almanac import print_today, print_today_history
     except ImportError:
         logger.warning("today 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
         sys.exit(0)
@@ -103,10 +103,10 @@ def trans_files(_, *args):
     if len(args) > 0:
         args = args[0]
     try:
-        from lite_tools.trans.pdf import pdf_run
-        from lite_tools.trans.excel import excel_run
-        from lite_tools.trans.pic import pic_run
-        from lite_tools.trans.word import word_run
+        from lite_tools.commands.trans.pdf import pdf_run
+        from lite_tools.commands.trans.excel import excel_run
+        from lite_tools.commands.trans.pic import pic_run
+        from lite_tools.commands.trans.word import word_run
     except ImportError:
         logger.warning("trans 为进阶版功能 请安装>> 文件版: lite-tools[file] 或者补充版: lite-tools[all]")
         sys.exit(0)
@@ -133,7 +133,7 @@ def get_hot_news(_, *args):
     else:
         args = []
     try:
-        from lite_tools.news.news_cmd import news_cmdline
+        from lite_tools.commands.news.news_cmd import news_cmdline
     except ImportError:
         logger.warning("news 为进阶版功能 请安装>> 日历版: lite-tools[date] 或者补充版: lite-tools[all]")
         sys.exit(0)

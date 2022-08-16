@@ -70,7 +70,7 @@ class MySql(LiteMySql):
 
     def insert(self, keys: Union[dict, list, tuple], values: list = None, ignore: bool = False):
         """这里目前只支持单条的 字典映射关系插入"""
-        super(MySql, self).insert(keys, values, ignore)
+        super().insert(keys, values, ignore)
 
     def update(self, items: dict, where: Union[dict, str]):
         """预留 """

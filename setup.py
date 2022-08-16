@@ -28,7 +28,7 @@ all_requires = date_requires + file_requires + sql_requires
 setup(
     name='lite-tools',
     version=VERSION.strip(),
-    description='一些基于内建函数的小工具集合[更多拓展功能基于第三方包,安装参考github页面]',
+    description='一些让你效率提升的小工具集合包[还在持续增加及优化]',
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='Lodge',
@@ -36,15 +36,17 @@ setup(
     url='https://github.com/Heartfilia/lite_tools',
     packages=[
         'lite_tools',
-        'lite_tools.trans',
-        'lite_tools.news',      # 新闻模块功能比较多 单独抽出来一个包搞
-        'lite_tools.today',
-        # 'lite_tools.balls',    # 还没有调整好 先不放出来
-        'lite_tools.weather',
         'lite_tools.commands',
-        'lite_tools.sql',
-        'lite_tools.lib_jar',
-        'lite_tools.utils_jar'
+        'lite_tools.commands.trans',
+        'lite_tools.commands.news',      # 新闻模块功能比较多 单独抽出来一个包搞
+        'lite_tools.commands.today',
+        # 'lite_tools.commands.balls',    # 还没有调整好 先不放出来
+        'lite_tools.commands.weather',
+        'lite_tools.tools',
+        'lite_tools.tools.sql',
+        'lite_tools.tools.pure',
+        'lite_tools.tools.utils',
+        'lite_tools.exceptions'
     ],
     license='MIT',
     install_requires=base_requires,
