@@ -5,12 +5,12 @@ import re
 import time
 import functools
 from typing import Union
-from inspect import currentframe
+# from inspect import currentframe
 
-from lite_tools.tools.utils.logs import my_logger, get_using_line_info, logger
+from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.lib_matchcase import match_case
 from lite_tools.tools.utils.u_re_time import DATETIME_PATTERN
-
+from lite_tools.exceptions.TimeExceptions import TimeFormatException
 
 """
 这里可以用 但是比较臃肿 
@@ -35,7 +35,7 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
-    params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整
+    params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整 --> 可以设置 unit="ms/int" 对double后的结果取整
     params double: 返回小数的时间 还是整数 默认整数  如果搭配goal那么返回浮点数 因为是要把字符串转换为数字来着
     params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串 注意是有大小写区别的
                    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）如 cursor="-2Y"  如果写一堆 取最大的
@@ -51,11 +51,11 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
         fmt_str = fmt
     times = _get_unit_times(unit)
 
-    if goal and double:
+    if goal and double:         # 转换目标格式为 时间戳
         return _fmt_to_timestamp(goal, fmt_str, times)
-    elif goal and not double:
+    elif goal and not double:   # 转换时间戳为 目标时间格式
         return _timestamp_to_f_time(goal, fmt_str)
-    else:
+    else:    # 处理没有参数或者有游标参数的情况或者特定格式参数的情况
         if fmt and not cursor:
             return time.strftime(fmt_str)
         elif fmt and cursor:
@@ -72,7 +72,7 @@ def _get_unit_times(unit):
     :param unit:
     :return:
     """
-    if unit == "ms":
+    if "ms" in unit:
         times = 1000
     else:
         times = 1
@@ -125,10 +125,7 @@ def _timestamp_to_f_time(goal, fmt_str):
             limit_len_time = goal[:10]
             int_time = int(f"{limit_len_time:<010}")
         else:
-            _, fl = get_using_line_info()
-            line = str(currentframe().f_back.f_lineno)
-            my_logger(fl, "get_time", line, f"请输入正确的[ goal ]:传入的是非数字类型的则会默认当前时间的格式化样式")
-            int_time = int(time.time())
+            raise TimeFormatException(f"请输入正确的[ goal ]:传入的是非数字类型的则会默认当前时间的格式化样式")
     return time.strftime(fmt_str, time.localtime(int_time))
 
 
@@ -140,10 +137,7 @@ def _fmt_to_timestamp(goal, fmt_str, times):
         sure_time = time.mktime(time.strptime(goal, fmt_str)) * times
         return sure_time
     except Exception as e:
-        _, fl = get_using_line_info()
-        line = str(currentframe().f_back.f_lineno)
-        my_logger(fl, "get_time", line, f"请输入正确的[ fmt ]格式: {e}")
-        return -1
+        raise TimeFormatException(f"由错误的[ fmt ]格式引发的异常: {e}")
 
 
 def _guess_fmt(string):

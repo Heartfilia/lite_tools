@@ -7,7 +7,7 @@ import json as _json
 from typing import Any, Optional, Iterator, Union, Tuple
 
 from lite_tools.tools.utils.logs import my_logger, get_using_line_info, logger
-from lite_tools.exceptions.dict_exceptions import TemplateFormatError, NotJsonException, NotGoalItemException
+from lite_tools.exceptions.DictExceptions import TemplateFormatError, NotJsonException, NotGoalItemException
 
 
 __ALL__ = ['try_get', 'try_key', 'FlattenJson', 'JsJson', 'WrapJson']

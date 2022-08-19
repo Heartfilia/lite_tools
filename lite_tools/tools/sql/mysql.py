@@ -19,10 +19,10 @@
           ┗━┻━┛   ┗━┻━┛
 """
 import time
+from loguru import logger
 from typing import Iterator, Union
 
 import pymysql
-from loguru import logger
 from dbutils.pooled_db import PooledDB
 
 from lite_tools.tools.sql.lib_mysql_string import SqlString

@@ -24,7 +24,7 @@ import threading
 from functools import wraps
 from asyncio import iscoroutinefunction
 
-from lite_tools.exceptions.timeout_exceptions import HttpXTimeOutError
+from lite_tools.exceptions.TimeExceptions import HttpXTimeOutError
 
 
 def x_timeout(seconds, error_message='HttpX Timed Out'):
