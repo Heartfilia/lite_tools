@@ -140,7 +140,7 @@ def _fmt_to_timestamp(goal, fmt_str, times):
         raise TimeFormatException(f"由错误的[ fmt ]格式引发的异常: {e}")
 
 
-def _guess_fmt(string):
+def _guess_fmt(string: str):
     """
     当默认传入的fmt为True或者False的时候，这里预测fmt的格式
     TODO(会自动匹配时间)

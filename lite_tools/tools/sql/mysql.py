@@ -18,6 +18,7 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+import re
 import time
 from loguru import logger
 from typing import Iterator, Union
@@ -27,6 +28,8 @@ from dbutils.pooled_db import PooledDB
 
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.sql.config import Config
+from lite_tools.tools.sql.SqlLog import log_level
+from lite_tools.exceptions.SqlExceptions import DuplicateEntryException, IterNotNeedRun
 
 
 class MySql:
@@ -114,7 +117,7 @@ class MySql:
         finally:
             conn.close()
 
-    def select(self, sql: str, count: bool = False) -> Iterator:
+    def select(self, sql: str, count: bool = False, *, _function_iter_user: bool = False) -> Iterator:
         """
         return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数
         """
@@ -128,14 +131,36 @@ class MySql:
         end_time = time.time()
         all_num = len(items)
         self._my_logger(f"耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
+        if all_num == 0:
+            if _function_iter_user is True:
+                raise IterNotNeedRun
+            return
         for row in items:
             if count is False:
-                yield row
+                yield row[0] if len(row) == 1 else row
             else:
-                yield all_num, row
+                yield all_num, row[0] if len(row) == 1 else row
                 all_num -= 1
 
-    def insert(self, items: Union[dict, list, tuple], values: list = None, ignore: bool = False):
+    def select_iter(self, sql: str, limit: int) -> Iterator:
+        """
+        :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
+        :param limit : 这里交给我来自动管理
+        return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数
+        """
+        sql = sql.rstrip('; ')  # 剔除右边的符号
+        if "limit" in sql.lower():
+            sql = re.sub(r' limit \d+, *\d+| limit +\d+', '', sql, re.I)  # 剔除原先句子中的
+        cursor = 0
+        while True:
+            new_sql = f"{sql} LIMIT {cursor}, {limit};"
+            try:
+                yield from self.select(new_sql, _function_iter_user=True)
+            except IterNotNeedRun:
+                break
+            cursor += limit
+
+    def insert(self, items: Union[dict, list, tuple], values: list = None, ignore: bool = False) -> None:
         """
         这里目前只支持单条的 字典映射关系插入 当然你要多值传入我也兼容
         """
@@ -157,13 +182,13 @@ class MySql:
                     new_sql = self.sql_base.insert(items, each_value, ignore)
                     self.execute(new_sql, log=False)
 
-    def update(self, items: dict, where: Union[dict, str]):
+    def update(self, items: dict, where: Union[dict, str]) -> None:
         """预留 """
         self._check_table()
         sql = self.sql_base.update(items, where)
         self.execute(sql)
 
-    def delete(self, where: Union[dict, str]):
+    def delete(self, where: Union[dict, str]) -> None:
         """预留 """
         self._check_table()
         sql = self.sql_base.delete(where)
@@ -178,7 +203,7 @@ class MySql:
             self._my_logger("你现在执行的操作是需要传入 table 的名字 mysql = MySql(table_name='xxx')", "", "error")
             raise ValueError
 
-    def _secure_check(self, string):
+    def _secure_check(self, string) -> bool:
         if string.upper().startswith("DROP"):
             self._my_logger(f"SQL: {string}  确定要删除操作吗? Y/N", "", "warning")
             flag = input(">>> ")
@@ -187,7 +212,7 @@ class MySql:
                 return False
         return True
 
-    def _my_logger(self, string, sql_string, string_level):
+    def _my_logger(self, string, sql_string, string_level) -> None:
         """
         level: (error > warning > info > success > debug)  目前只管是否要打日志 没有弄等级处理
         :param string: 需要提示的信息
@@ -197,20 +222,6 @@ class MySql:
         if not self.log:
             return
 
-        level_rate, log_func = _log_level.get(string_level.lower(), (0, None))
+        level_rate, log_func = log_level.get(string_level.lower(), (0, None))
         if level_rate:
             log_func(f"{string}{'' if not sql_string else '  SQL --> '+sql_string}")
-
-
-_log_level = {
-    "error": (10, logger.error),
-    "warning": (8, logger.warning),
-    "info": (6, logger.info),
-    "success": (4, logger.success),
-    "debug": (2, logger.debug)
-}
-
-
-class DuplicateEntryException(Exception):
-    def __init__(self):
-        pass

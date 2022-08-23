@@ -46,9 +46,9 @@ def get_fuli():
             "cookie": "C3VK=0ea372; HMF_CI=088fdbb2e1c09308336e3bdbc7da1466db86050081ec91500c4e78804ffad7c0d4; 21_vq=1"
         },
     )
-    print(resp_base.headers)
+    # print(resp_base.headers)
     # html_1 = requests.get('http://www.cwl.gov.cn/')
-
+    #
     # flag = parse_fuli(html_1.content.decode('utf-8'))
     # if not flag:
     #     print(html_1.text)

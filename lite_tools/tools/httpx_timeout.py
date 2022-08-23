@@ -21,13 +21,14 @@
 import time
 import asyncio
 import threading
+from typing import Union
 from functools import wraps
 from asyncio import iscoroutinefunction
 
 from lite_tools.exceptions.TimeExceptions import HttpXTimeOutError
 
 
-def x_timeout(seconds, error_message='HttpX Timed Out'):
+def x_timeout(seconds: Union[int, float], error_message: str = 'HttpX Timed Out'):
     """
     TODO(还没有搞定 测试单个进程没啥问题 但是没有用 因为程序都是多线程)
     """
