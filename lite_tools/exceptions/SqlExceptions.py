@@ -28,3 +28,11 @@ class DuplicateEntryException(Exception):
 class IterNotNeedRun(Exception):
     def __init__(self):
         pass
+
+
+class NotSupportType(Exception):
+    def __init__(self):
+        self.error = "不支持的类型"
+
+    def __str__(self):
+        return self.error

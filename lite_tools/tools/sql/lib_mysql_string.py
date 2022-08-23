@@ -2,6 +2,7 @@
 import re
 from typing import Union, Optional
 
+from lite_tools.exceptions.SqlExceptions import NotSupportType
 from lite_tools.tools.utils.u_sql_base_string import MysqlKeywordsList
 
 
@@ -96,7 +97,7 @@ class SqlString(object):
                 values = values.rstrip(', ') + ')'
             return f"{tuple(keys)}", values
         else:
-            raise Exception("错误的数据类型")
+            raise NotSupportType
 
     def update(self, keys: dict, where: Union[dict, list, tuple, str]) -> Optional[str]:
         """
@@ -109,7 +110,7 @@ class SqlString(object):
             --> 如果是字符串: 'test < 5 AND hello = 1'   这样传入
         """
         if not keys or not isinstance(keys, dict) or not where:
-            raise ValueError
+            raise NotSupportType
 
         base_update = f"UPDATE {self.table_name} SET "
         for key, value in keys.items():
@@ -117,18 +118,15 @@ class SqlString(object):
                            f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_update_value(value)}, '
         base_update = base_update.rstrip(', ') + " WHERE "
         if isinstance(where, dict):
-            for key, value in where.items():
-                base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
-                               f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_update_value(value)} ' \
-                               f'AND '
+            base_update = base_update + self._handle_where_dict(where)
         elif isinstance(where, (list, tuple)):
             for value in where:
                 base_update += f"{value} AND "
+            base_update = base_update.rstrip(' AND ') + ";"
         elif isinstance(where, str):
-            base_update += where
+            base_update += where + ";"
         else:
-            raise Exception("错误的 where 参数类型")
-        base_update = base_update.rstrip(' AND ') + ";"
+            raise NotSupportType
         return self.__clear_string(base_update)
 
     @staticmethod
@@ -161,8 +159,39 @@ class SqlString(object):
         elif isinstance(where, str):
             base_delete += where + ";"
         else:
-            raise Exception("错误的 where 数据类型")
+            raise NotSupportType
         return self.__clear_string(base_delete)
+
+    def exists(self, where: Union[dict, str]) -> Optional[str]:
+        """
+        这个是查询键值在不在mysql中,一般推荐用**主键** 如果用其它键就需要加索引了
+        """
+        base_sql = f"SELECT COUNT(1) FROM {self.table_name} WHERE "
+        if isinstance(where, dict):
+            base_sql = base_sql + self._handle_where_dict(where)
+        elif isinstance(where, str):
+            base_sql += where
+            if not base_sql.endswith(';'):
+                base_sql += ";"
+        else:
+            raise NotSupportType
+        return self.__clear_string(base_sql)
+
+    def count(self, where: Union[dict, str] = None) -> Optional[str]:
+        base_sql = f"SELECT COUNT(1) FROM {self.table_name}"
+        if where is None:
+            return f"{base_sql};"
+
+        base_sql += " WHERE "
+        if isinstance(where, dict):
+            base_sql = base_sql + self._handle_where_dict(where)
+        elif isinstance(where, str):
+            base_sql += where
+            if not base_sql.endswith(';'):
+                base_sql += ";"
+        else:
+            raise NotSupportType
+        return self.__clear_string(base_sql)
 
     def truncate(self) -> Optional[str]:
         """
@@ -190,3 +219,12 @@ class SqlString(object):
         key_string = re.sub(r"(?<!=\\)'", "\'", key_string)
         key_string = re.sub(r'(?<!=\\)"', '\"', key_string)
         return key_string
+
+    def _handle_where_dict(self, where: dict) -> str:
+        base_string = ""
+        for key, value in where.items():
+            base_string += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
+                           f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_update_value(value)} ' \
+                           f'AND '
+        base_string = base_string.rstrip(' AND ') + ";"
+        return base_string

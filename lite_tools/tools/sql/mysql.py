@@ -118,9 +118,13 @@ class MySql:
         finally:
             conn.close()
 
-    def select(self, sql: str, count: bool = False, *, _function_iter_user: bool = False) -> Iterator:
+    def select(self, sql: str, count: bool = False, *, query_log: bool = True, **kwargs) -> Iterator:
         """
-        return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数
+        一次性查询全部数据
+        :param sql: 传入的查询sql语句
+        :param count: 是否需要统计剩余的行数 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数
+        :param query_log: 是否把query的查询日志打印出来,默认就是打印出来
+        :return:
         """
         start_time = time.time()
         conn = self.connection()
@@ -131,9 +135,10 @@ class MySql:
         conn.close()
         end_time = time.time()
         all_num = len(items)
-        self._my_logger(f"耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
+        if query_log is True:
+            self._my_logger(f"耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
         if all_num == 0:
-            if _function_iter_user is True:
+            if kwargs.get("_function_use") is True:
                 raise IterNotNeedRun
             return
         for row in items:
@@ -145,6 +150,7 @@ class MySql:
 
     def select_iter(self, sql: str, limit: int) -> Iterator:
         """
+        通过批量的迭代获取数据
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
         :param limit : 这里交给我来自动管理
         return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数
@@ -156,14 +162,40 @@ class MySql:
         while True:
             new_sql = f"{sql} LIMIT {cursor}, {limit};"
             try:
-                yield from self.select(new_sql, _function_iter_user=True)
+                yield from self.select(new_sql, _function_use=True)
             except IterNotNeedRun:
                 break
             cursor += limit
 
+    def exists(self, where: Union[dict, str]) -> bool:
+        """
+        判断条件在不在该表中有数据
+        :param where: 通过字典的方式传入条件(推荐) 或者字符串的条件
+        """
+        self._check_table()
+        sql = self.sql_base.exists(where)
+        for num in self.select(sql, query_log=False):
+            if num == 0:
+                return False
+            else:
+                return True
+        return False   # 走不到这里来的(为了严谨)
+
+    def count(self, where: Union[dict, str] = None) -> int:
+        """
+        判断有
+        """
+        self._check_table()
+        sql = self.sql_base.count(where)
+        for num in self.select(sql, query_log=False):
+            return num
+
     def insert(self, items: Union[dict, list, tuple], values: list = None, ignore: bool = False) -> None:
         """
-        这里目前只支持单条的 字典映射关系插入 当然你要多值传入我也兼容
+        这里目前只支持单条的 字典映射关系插入 当然你要多值传入我也兼容 这里的匹配比较迷，但是习惯就好
+        :param items: 插入的值(单条的话只需要传这个 传字典就好了) (多条的话这里可以传列表里字典)
+        :param values: 如果多条插入 值可以这里插入
+        :param ignore: 是否忽略主键重复的警报
         """
         self._check_table()
         if isinstance(items, (list, tuple)):
@@ -184,18 +216,26 @@ class MySql:
                     self.execute(new_sql, log=False)
 
     def update(self, items: dict, where: Union[dict, str]) -> None:
-        """预留 """
+        """
+        更新数据
+        :param items: 更新的结果 字典表示
+        :param where: 需要更新数据的时候使用的条件
+        """
         self._check_table()
         sql = self.sql_base.update(items, where)
         self.execute(sql)
 
     def delete(self, where: Union[dict, str]) -> None:
-        """预留 """
+        """
+        删除数据操作
+        :param where: 需要删除数据的时候使用的条件
+        """
         self._check_table()
         sql = self.sql_base.delete(where)
         self.execute(sql)
 
     def connection(self):
+        """获取链接对象"""
         conn = self.pool.connection()
         return conn
 
@@ -204,7 +244,10 @@ class MySql:
             self._my_logger("你现在执行的操作是需要传入 table 的名字 mysql = MySql(table_name='xxx')", "", "error")
             raise ValueError
 
-    def _secure_check(self, string) -> bool:
+    def _secure_check(self, string: str) -> bool:
+        """
+        安全检查-->程序里面不给你操作drop操作的
+        """
         if string.upper().startswith("DROP"):
             self._my_logger(f"SQL: {string}  确定要删除操作吗? Y/N", "", "warning")
             flag = input(">>> ")
@@ -213,7 +256,7 @@ class MySql:
                 return False
         return True
 
-    def _my_logger(self, string, sql_string, string_level) -> None:
+    def _my_logger(self, string: str, sql_string: str, string_level: str) -> None:
         """
         level: (error > warning > info > success > debug)  目前只管是否要打日志 没有弄等级处理
         :param string: 需要提示的信息

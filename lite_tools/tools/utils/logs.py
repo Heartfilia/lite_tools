@@ -69,7 +69,7 @@ def handle_exception(traceback_format_info: str, function_name: str):
     for item in results[::-1]:
         if function_name in item:
             line = "".join(re.findall(r'line (\d+)', item))
-            fl = ''.join(re.findall(r'File "(.*)"', item))
+            fl = ''.join(re.findall(r'File "(.*)",', item))
             break
     exception_type = results[-2]
     exception_detail = results[-3].strip()
