@@ -65,8 +65,17 @@ class MySql(LiteMySql):
             self.sql_base = None
         self._init_mysql(database, maxconnections, host, port, user, password, charset)
 
-    def select(self, sql: str, count: bool = False) -> Iterator:
-        yield from super().select(sql, count)
+    def select(self, sql: str, count: bool = False, *, query_log: bool = True, **kwargs) -> Iterator:
+        yield from super().select(sql, count, query_log=query_log, kwargs=kwargs)
+
+    def select_iter(self, sql: str, limit: int) -> Iterator:
+        yield from super().select_iter(sql, limit)
+
+    def count(self, where: Union[dict, str] = None) -> int:
+        return super().count(where)
+
+    def exists(self, where: Union[dict, str]) -> bool:
+        return super().exists(where)
 
     def insert(self, keys: Union[dict, list, tuple], values: list = None, ignore: bool = False):
         """这里目前只支持单条的 字典映射关系插入"""
