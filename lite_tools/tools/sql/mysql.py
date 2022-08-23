@@ -62,10 +62,6 @@ class MySql:
             self.pool = None
             self.config = config
             self.table_name = self.config.table_name
-            if self.table_name is not None:
-                self.sql_base = SqlString(self.table_name)
-            else:
-                self.sql_base = None
             self._init_mysql(
                 self.config.database, self.config.maxconnections,
                 self.config.host, self.config.port, self.config.user, self.config.password, self.config.charset
@@ -73,6 +69,11 @@ class MySql:
             self.log = self.config.log
         else:
             raise ValueError
+
+        if self.table_name is not None:
+            self.sql_base = SqlString(self.table_name)
+        else:
+            self.sql_base = None
 
     def _init_mysql(self, database, maxconnections, host, port, user, password, charset):
         if self.pool is None:
