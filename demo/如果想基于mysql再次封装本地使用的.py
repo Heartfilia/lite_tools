@@ -18,15 +18,12 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+import time
 from typing import Iterator, Union
 
 from lite_tools import SqlString
 from lite_tools import MySql as LiteMySql
-
-
-class DuplicateEntryException(Exception):
-    def __init__(self):
-        pass
+from lite_tools.exceptions.SqlExceptions import IterNotNeedRun
 
 
 class MySql(LiteMySql):
@@ -66,7 +63,28 @@ class MySql(LiteMySql):
         self._init_mysql(database, maxconnections, host, port, user, password, charset)
 
     def select(self, sql: str, count: bool = False, *, query_log: bool = True, **kwargs) -> Iterator:
-        yield from super().select(sql, count, query_log=query_log, kwargs=kwargs)
+        # NOTE(这里不能继承 否则会导致select_iter 迭代时候退不出去)
+        start_time = time.time()
+        conn = self.connection()
+        with conn.cursor() as cursor:  # 这里是有结果返回的
+            cursor.execute(sql)
+        conn.commit()
+        items = cursor.fetchall()
+        conn.close()
+        end_time = time.time()
+        all_num = len(items)
+        if query_log is True:
+            self._my_logger(f"耗时: {end_time - start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
+        if all_num == 0:
+            if kwargs.get("_function_use") is True:
+                raise IterNotNeedRun
+            return
+        for row in items:
+            if count is False:
+                yield row[0] if len(row) == 1 else row
+            else:
+                yield all_num, row[0] if len(row) == 1 else row
+                all_num -= 1
 
     def select_iter(self, sql: str, limit: int) -> Iterator:
         yield from super().select_iter(sql, limit)

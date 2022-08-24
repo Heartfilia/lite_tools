@@ -153,7 +153,7 @@ class MySql:
         通过批量的迭代获取数据
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
         :param limit : 这里交给我来自动管理
-        return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数
+        return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数w2  Q12
         """
         sql = sql.rstrip('; ')  # 剔除右边的符号
         if "limit" in sql.lower():
@@ -206,11 +206,11 @@ class MySql:
         try:
             self.execute(sql, batch)
         except DuplicateEntryException:
-            if values is None:
+            if values is None and isinstance(items, (list, tuple)):
                 for each_key in items:
                     new_sql = self.sql_base.insert(each_key, values, ignore)
                     self.execute(new_sql, log=False)
-            else:
+            elif values is not None and isinstance(values, (list, tuple)):
                 for each_value in values:
                     new_sql = self.sql_base.insert(items, each_value, ignore)
                     self.execute(new_sql, log=False)
