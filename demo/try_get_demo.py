@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from lite_tools.tools.pure.lib_dict_parser import try_get_by_name
+from lite_tools.tools.core.lite_parser import try_get_by_name
 
 # about try_get   // try_get_by_name
 r"""

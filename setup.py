@@ -45,7 +45,8 @@ setup(
         'lite_tools.commands.weather',
         'lite_tools.tools',
         'lite_tools.tools.sql',
-        'lite_tools.tools.pure',
+        'lite_tools.tools.core',
+        'lite_tools.tools.time',
         'lite_tools.tools.utils',
         'lite_tools.exceptions'
     ],

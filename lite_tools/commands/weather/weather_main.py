@@ -24,11 +24,11 @@ from urllib.parse import quote
 from prettytable import PrettyTable
 
 from loguru import logger
-from lite_tools.tools.pure.lib_ua import get_ua
-from lite_tools.tools.pure.lib_time import get_time
-from lite_tools.tools.pure.lib_try import try_catch
-from lite_tools.tools.lib_string_parser import color_string
-from lite_tools.tools.pure.lib_dict_parser import try_key, JsJson, try_get
+from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.time.lite_time import get_time
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.tools.core.lite_string import color_string
+from lite_tools.tools.core.lite_parser import try_key, JsJson, try_get
 
 from lite_tools.commands.weather.citys import city_data
 

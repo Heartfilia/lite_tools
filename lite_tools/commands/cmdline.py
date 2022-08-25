@@ -23,13 +23,19 @@ import sys
 
 from lite_tools.version import VERSION
 from lite_tools.tools.utils.logs import logger
-from lite_tools.tools.lib_matchcase import match_case
+from lite_tools.tools.core.lite_string import color_string
+from lite_tools.tools.core.lite_match import match_case
 from lite_tools.commands.today.fisher_date import print_date
+
+
+_my_image = """
+想在这里搞个牛逼的字符
+"""
 
 
 def _print_base():
     """输出lite-tools基本信息的"""
-    print_info = f"lite-tools {VERSION}  当前版本均为测试(试玩)版,等1.0修复稳定了才是正式的\n\n"
+    print_info = f"lite-tools {color_string(VERSION, 'cyan')}  当前版本均为测试版,等1.0修复稳定了才是正式的\n\n"
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
     print_info += "  fish        获取摸鱼人日历\n"

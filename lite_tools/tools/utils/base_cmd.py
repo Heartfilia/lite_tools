@@ -22,7 +22,7 @@ import os
 import sys
 from typing import Any
 
-from lite_tools.tools.pure.lib_try import try_catch
+from lite_tools.tools.core.lite_try import try_catch
 
 
 def clear_screen():

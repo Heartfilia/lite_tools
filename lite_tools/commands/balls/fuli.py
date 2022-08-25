@@ -28,9 +28,9 @@ except ImportError:
     logger.error("需要安装requests和lxml才可以")
     sys.exit(0)
 
-from lite_tools.tools.pure.lib_ua import get_ua
+from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.utils.lite_table import print_head
-from lite_tools.tools.lib_string_parser import color_string
+from lite_tools.tools.core.lite_string import color_string
 
 # TODO(这里不知道为啥就第一次可以请求到数据 后面的就拿不到了 当然加上代理就随时能拿到数据 可是网页还是能正常访问的)
 

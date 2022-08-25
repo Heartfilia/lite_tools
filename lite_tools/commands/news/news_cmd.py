@@ -26,8 +26,8 @@ try:
 except ImportError:
     raise ImportError
 
-from lite_tools.tools.lib_matchcase import match_case
-from lite_tools.tools.lib_string_parser import color_string
+from lite_tools.tools.core.lite_match import match_case
+from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.utils.base_cmd import circle_cmd, input_option
 
 

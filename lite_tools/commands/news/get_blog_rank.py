@@ -21,11 +21,11 @@
 import requests
 from prettytable import PrettyTable
 
-from lite_tools.tools.pure.lib_ua import get_ua
-from lite_tools.tools.pure.lib_time import get_time
-from lite_tools.tools.pure.lib_try import try_catch
-from lite_tools.tools.pure.lib_dict_parser import try_get
-from lite_tools.tools.lib_string_parser import color_string
+from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.time.lite_time import get_time
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.tools.core.lite_parser import try_get
+from lite_tools.tools.core.lite_string import color_string
 
 
 @try_catch(log="本功能需要网络或者页面数据获取模式变更,和当前网络也有关系,可以重试一下")

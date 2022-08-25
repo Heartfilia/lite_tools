@@ -3,7 +3,7 @@ import os
 """
 这里只先实现基础的打印功能  后面再添加
 """
-from lite_tools.tools.lib_string_parser import color_string
+from lite_tools.tools.core.lite_string import color_string
 
 
 class LiteTable:

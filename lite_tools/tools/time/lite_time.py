@@ -8,7 +8,7 @@ from typing import Union
 # from inspect import currentframe
 
 from lite_tools.tools.utils.logs import logger
-from lite_tools.tools.lib_matchcase import match_case
+from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.utils.u_re_time import DATETIME_PATTERN
 from lite_tools.exceptions.TimeExceptions import TimeFormatException
 

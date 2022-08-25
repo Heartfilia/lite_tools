@@ -26,9 +26,9 @@ try:
 except ImportError:
     raise ImportError
 
-from lite_tools.tools.pure.lib_ua import get_ua
-from lite_tools.tools.pure.lib_try import try_catch
-from lite_tools.tools.lib_string_parser import color_string
+from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.tools.core.lite_string import color_string
 
 
 @try_catch(log="本功能为在线功能,需要网络。如有网络不要频繁请求，[如果网页数据版式有改动,这样的话这个功能暂时就废了需要修复]")

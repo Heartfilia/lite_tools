@@ -26,7 +26,7 @@ try:
 except ImportError:
     raise ImportError
 
-from lite_tools.tools.lib_matchcase import match_case
+from lite_tools.tools.core.lite_match import match_case
 
 
 def _print_ball_option():

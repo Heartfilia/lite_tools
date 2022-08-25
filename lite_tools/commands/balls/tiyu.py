@@ -27,11 +27,11 @@ except ImportError:
     logger.error("需要安装requests和lxml才可以")
     sys.exit(0)
 
-from lite_tools.tools.pure.lib_ua import get_ua
-from lite_tools.tools.pure.lib_try import try_catch
+from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.utils.lite_table import print_head
-from lite_tools.tools.pure.lib_dict_parser import try_get
-from lite_tools.tools.lib_string_parser import color_string
+from lite_tools.tools.core.lite_parser import try_get
+from lite_tools.tools.core.lite_string import color_string
 
 
 @try_catch(log="需要网络,可以重试,也可能网站数据源变更")
