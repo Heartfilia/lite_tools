@@ -22,9 +22,7 @@
 >> 第一版先只兼容同步的函数   **异步没有兼容** <<
 """
 import time
-import asyncio
 from queue import Empty
-from typing import Union
 from functools import wraps
 from multiprocessing import Queue
 from threading import Lock, current_thread
@@ -62,21 +60,19 @@ class Singleton(type):
 class Buffer(metaclass=Singleton):
     queue_long: int = 10000   # 设置队列的长度 默认 10000   如果要改 --> Buffer.queue_long = 100
     __task_flag = True        # 队列什么时候结束由这里和队列长度一起说了算
-    __queues: Union[Queue, asyncio.Queue] = None           # 队列需要放个名字上 用字典取值 因为我要保证同一个buffer
+    __queues: Queue = None     # 创建任务的时候初始化这个 取任务要是没有直接会报错..
     __task_count = set()      # 线程情况统计
     _lock: Lock = Lock()
 
     @classmethod
     def seed(cls):
-        with cls._lock:
-            if not cls.__queues.empty():
-                try:
-                    return cls.__queues.get(timeout=3)
-                except Empty:
-                    raise QueueEmptyNotion
-            else:
+        if not cls.__queues.empty():
+            try:
+                return cls.__queues.get(timeout=3)
+            except Empty:
                 raise QueueEmptyNotion
-
+        else:
+            raise QueueEmptyNotion
 
     @classmethod
     def task(cls, func):
@@ -120,6 +116,6 @@ class Buffer(metaclass=Singleton):
 
     @classmethod
     def __init__queue__(cls):
-        with cls._lock:
-            if not cls.__queues:
+        if not cls.__queues:  # 乐观锁hhh
+            with cls._lock:
                 cls.__queues = Queue(cls.queue_long)
