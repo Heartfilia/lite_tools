@@ -13,7 +13,7 @@ __ALL__ = [
     "get_ua",
     "try_get",
     "try_key",
-    "Mysql",
+    "MySql",
     "Config",      # mysql -- 专属配置
     "FlattenJson",
     "JsJson",
@@ -23,7 +23,9 @@ __ALL__ = [
     "color_string",
     "SqlString",
     "math_string"
-    "x_timeout"
+    "x_timeout",   # 这个没有弄好
+    "Singleton",
+    "Buffer"
 ]
 
 from lite_tools.tools.core.lib_base64 import get_b64d, get_b64e

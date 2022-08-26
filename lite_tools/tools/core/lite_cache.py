@@ -22,8 +22,9 @@
 >> 第一版先只兼容同步的函数   **异步没有兼容** <<
 """
 import time
+from typing import Dict, Any
 from queue import Empty
-from functools import wraps
+from functools import wraps, partial
 from multiprocessing import Queue
 from threading import Lock, current_thread
 
@@ -51,58 +52,65 @@ class Singleton(type):
                 cls._instances[cls] = instance
         return cls._instances[cls]
 
-
 """
 下面是还没有搞完的缓存区
 """
 
 
 class Buffer(metaclass=Singleton):
-    queue_long: int = 10000   # 设置队列的长度 默认 10000   如果要改 --> Buffer.queue_long = 100
-    __task_flag = True        # 队列什么时候结束由这里和队列长度一起说了算
-    __queues: Queue = None     # 创建任务的时候初始化这个 取任务要是没有直接会报错..
-    __task_count = set()      # 线程情况统计
+    __task_flag: Dict[str, bool] = {}     # 队列什么时候结束由这里和队列长度一起说了算
+    __queues: Dict[str, Queue] = {}       # 创建任务的时候初始化这个 取任务要是没有直接会报错..
+    __task_count: Dict[str, set] = {}     # 线程情况统计
     _lock: Lock = Lock()
 
     @classmethod
-    def seed(cls):
-        if not cls.__queues.empty():
+    def seed(cls, name: str = "default") -> Any:
+        if not cls.__queues[name].empty():
             try:
-                return cls.__queues.get(timeout=3)
+                return cls.__queues[name].get(timeout=3)
             except Empty:
                 raise QueueEmptyNotion
         else:
             raise QueueEmptyNotion
 
     @classmethod
-    def task(cls, func):
+    def task(cls, func=None, *, name: str = "default"):
+        if func is None:
+            return partial(cls.task, name=name)
+        cls.__init__queue__(name)
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             # 这里是一个独立的线程运行
-            cls.__task_flag = True
+            if name not in cls.__task_count:
+                cls.__task_flag[name] = True
             for job in func(*args, **kwargs):
-                cls.__queues.put(job)
-            cls.__task_flag = False
+                cls.__queues[name].put(job)
+            cls.__task_flag[name] = False
 
-        cls.__init__queue__()
         return wrapper
 
     @classmethod
-    def worker(cls, func):
+    def worker(cls, func=None, *, name: str = "default"):
+        if func is None:
+            return partial(cls.worker, name=name)
+
+        cls.__init__queue__(name)
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             with cls._lock:
-                if current_thread().name not in cls.__task_count:
-                    cls.__task_count.add(current_thread().name)
+                if current_thread().name not in cls.__task_count[name]:
+                    cls.__task_count[name].add(current_thread().name)
             while True:
-                if not cls.__task_flag and cls.__queues.empty():
+                if not cls.__task_flag.get(name, False) and cls.__queues[name].empty():
                     with cls._lock:
-                        if current_thread().name in cls.__task_count:
-                            cls.__task_count.remove(current_thread().name)
-                        if not cls.__task_count:
-                            logger.debug(f"队列-> 任务种子消耗完毕,worker结束.")
+                        if current_thread().name in cls.__task_count[name]:
+                            cls.__task_count[name].remove(current_thread().name)
+                        if not cls.__task_count[name]:
+                            logger.debug(f"队列 {name} -> 任务种子消耗完毕,worker结束.")
                     break
-                if cls.__queues.empty():
+                if cls.__queues[name].empty():
                     time.sleep(1)
                     continue
 
@@ -111,11 +119,15 @@ class Buffer(metaclass=Singleton):
                 except QueueEmptyNotion:
                     pass
 
-        cls.__init__queue__()
         return wrapper
 
     @classmethod
-    def __init__queue__(cls):
-        if not cls.__queues:  # 乐观锁hhh
-            with cls._lock:
-                cls.__queues = Queue(cls.queue_long)
+    def __init__queue__(cls, name):
+        cls._lock.acquire()
+        if name not in cls.__queues:
+            cls.__queues[name] = Queue(10000)
+        if name not in cls.__task_count:
+            cls.__task_count[name] = set()
+        if name not in cls.__task_flag:
+            cls.__task_flag[name] = True
+        cls._lock.release()
