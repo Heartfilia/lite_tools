@@ -53,7 +53,7 @@ class Singleton(type):
         return cls._instances[cls]
 
 """
-下面是还没有搞完的缓存区
+TODO:下面缓存区还需要加一个超时异常结束程序的操作.
 """
 
 
