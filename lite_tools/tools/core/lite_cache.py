@@ -61,6 +61,7 @@ class Buffer(metaclass=Singleton):
     __task_flag: Dict[str, bool] = {}     # 队列什么时候结束由这里和队列长度一起说了算
     __queues: Dict[str, Queue] = {}       # 创建任务的时候初始化这个 取任务要是没有直接会报错..
     __task_count: Dict[str, set] = {}     # 线程情况统计
+    __task_time: Dict[str, float] = {}    # 统计任务耗时
     _lock: Lock = Lock()
 
     @classmethod
@@ -84,6 +85,8 @@ class Buffer(metaclass=Singleton):
             # 这里是一个独立的线程运行
             if name not in cls.__task_count:
                 cls.__task_flag[name] = True
+            if name not in cls.__task_time:
+                cls.__task_time[name] = time.time()
             for job in func(*args, **kwargs):
                 cls.__queues[name].put(job)
             cls.__task_flag[name] = False
@@ -108,7 +111,9 @@ class Buffer(metaclass=Singleton):
                         if current_thread().name in cls.__task_count[name]:
                             cls.__task_count[name].remove(current_thread().name)
                         if not cls.__task_count[name]:
-                            logger.debug(f"队列 {name} -> 任务种子消耗完毕,worker结束.")
+                            logger.debug(
+                                f"[{name}] 队列任务种子消耗完毕,worker结束.耗时:{time.time() - cls.__task_time[name]:.3f} s"
+                            )
                     break
                 if cls.__queues[name].empty():
                     time.sleep(1)
@@ -130,4 +135,6 @@ class Buffer(metaclass=Singleton):
             cls.__task_count[name] = set()
         if name not in cls.__task_flag:
             cls.__task_flag[name] = True
+        if name not in cls.__task_time:
+            cls.__task_time[name] = time.time()
         cls._lock.release()
