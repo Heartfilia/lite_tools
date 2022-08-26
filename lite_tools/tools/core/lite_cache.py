@@ -85,8 +85,8 @@ class Buffer(metaclass=Singleton):
             # 这里是一个独立的线程运行
             if name not in cls.__task_count:
                 cls.__task_flag[name] = True
-            if name not in cls.__task_time:
-                cls.__task_time[name] = time.time()
+
+            cls.__task_time[name] = time.time()
             for job in func(*args, **kwargs):
                 cls.__queues[name].put(job)
             cls.__task_flag[name] = False
