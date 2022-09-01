@@ -11,8 +11,9 @@ __ALL__ = ["SqlString"]
 
 class SqlString(object):
     """
-    这里只负责拼接sql语句 不负责处理sql事务 // 还没有测试好
+    这里只负责拼接sql语句 不负责处理sql事务
     这个功能主要是配合Mysql使用，当然单独使用也可以，后续拿到sql语句自己操作也可以
+    大部分键值操作推荐用字典，当然其它格式也有些许兼容，处理的语法都是最基础的 进阶的操作自己实现
     """
 
     def __init__(self, table_name: str) -> None:
@@ -166,19 +167,21 @@ class SqlString(object):
         """
         这个是查询键值在不在mysql中,一般推荐用**主键** 如果用其它键就需要加索引了
         """
-        base_sql = f"SELECT COUNT(1) FROM {self.table_name} WHERE "
+        base_sql = f"SELECT 1 FROM {self.table_name} WHERE "
         if isinstance(where, dict):
             base_sql = base_sql + self._handle_where_dict(where)
         elif isinstance(where, str):
             base_sql += where
-            if not base_sql.endswith(';'):
-                base_sql += ";"
         else:
             raise NotSupportType
+        if not re.search("where.*?limit", base_sql, re.I):
+            base_sql = base_sql.strip(";") + " LIMIT 1;"
+        elif not base_sql.strip().endswith(";"):
+            base_sql += ";"
         return self.__clear_string(base_sql)
 
     def count(self, where: Union[dict, str] = None) -> Optional[str]:
-        base_sql = f"SELECT COUNT(1) FROM {self.table_name}"
+        base_sql = f"SELECT COUNT(*) FROM {self.table_name}"
         if where is None:
             return f"{base_sql};"
 
@@ -228,3 +231,8 @@ class SqlString(object):
                            f'AND '
         base_string = base_string.rstrip(' AND ') + ";"
         return base_string
+
+
+if __name__ == "__main__":
+    a = SqlString('api_error_log')
+    print(a.exists({"_id": "0035c6d84df1512f150a6c7adfcbd77b"}))

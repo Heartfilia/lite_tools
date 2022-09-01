@@ -234,8 +234,8 @@ class TimeMaker(object):
         """
         TODO 将会在这里处理时间的模式 第一版先提供给`get_time`使用 后续做成通用模块  当前主要是转换成时间戳
         """
-        self.base_time = ""
-        self.base_template = "1970-01-01 00:00:00"
+        self.base_time: str = ""
+        self.base_template: str = "1970-01-01 00:00:00"
         self.little_day_info = [("一", 1), ("二", 2), ("三", 3), ("四", 4), ("五", 5),
                                 ("六", 6), ("七", 7), ("八", 8), ("九", 9), ("十", 10)]
         # 下面这个主要是记录月份的特殊情况 只弄了 中英法德俄 语言
@@ -284,6 +284,7 @@ class TimeMaker(object):
     def _handle_chinese_cursor_time(self):
         # 处理中文的位移量的时间形式 不搞英文的 因为英文的太难写了
         if "前" in self.base_time:
+            self.base_time = self.base_time.replace('日', '天').replace('/', '-').replace('星期', "周").replace('.', '-')
             if "秒" in self.base_time:
                 wait = re.search(r"(\d+)\s*秒", self.base_time)
                 cursor = 1
@@ -293,16 +294,20 @@ class TimeMaker(object):
             elif "时" in self.base_time:
                 wait = re.search(r"(\d+)\s*个?小时", self.base_time)
                 cursor = 3600
-            elif "周" in self.base_time or "星期" in self.base_time:
-                wait = re.search(r"(\d+)\s*周", self.base_time) or re.search(r"(\d+)\s*个?星期", self.base_time)
+            elif "周" in self.base_time:
+                wait = re.search(r"(\d+)\s*周", self.base_time)
                 cursor = 3600 * 7
             elif "天" in self.base_time:
                 # 处理十天内的中文字符问题
+                for chn_char, num_char in self.little_day_info:
+                    if chn_char in self.base_time:
+                        self.base_time.replace(chn_char, str(num_char))
+                        break
 
                 wait = re.search(r"(\d+)\s*天", self.base_time)
                 cursor = 86400
             elif "月" in self.base_time:
-                wait = re.search(r"(\d+)\s*个?月", self.base_time)
+                wait = re.search(r"(\d+)[\s个]*月", self.base_time)
                 cursor = 86400 * 30
             elif "年" in self.base_time:
                 wait = re.search(r"(\d+)\s*年", self.base_time)
@@ -321,7 +326,7 @@ def time_count(fn):
     def inner(*args, **kwargs):
         t1 = time.time()
         bk = fn(*args, **kwargs)
-        logger.debug(f'[{fn.__name__}] Time consuming: {time.time()-t1:.3f}')
+        logger.debug(f'[{fn.__name__}] 耗时: {time.time()-t1:.3f}')
         return bk
     return inner
 

@@ -95,7 +95,7 @@ class MySql:
                 charset=charset
             )
 
-    def execute(self, sql: str, batch: bool = False, log: bool = True) -> None:
+    def execute(self, sql: str, batch: bool = False, log: bool = True) -> int:
         """不走智能执行的时候走这里可以执行手动输入的sql语句 这里的log不与全局self.log共享"""
         assert self._secure_check(sql), '删除操作终止!!!'
         start_time = time.time()
@@ -106,15 +106,17 @@ class MySql:
             conn.commit()
             end_time = time.time()
             self._my_logger(f"耗时: {end_time-start_time:.3f}s 影响行数: [{result}]", "", "success")
+            return result
         except Exception as err:
             if str(err).find("Duplicate entry") != -1 and log is False:
-                return
+                return 0
             end_time = time.time()
             self._my_logger(f"耗时: {end_time-start_time:.3f}s 异常原因: [{err}]", sql, "error")
             conn.rollback()
             if str(err).find("Duplicate entry") != -1 and batch is True:
                 logger.warning(f"批量操作异常 --> 现在转入单条操作... 重复的字段内容日志将不会再打印")
                 raise DuplicateEntryException
+            return -1
         finally:
             conn.close()
 
@@ -179,7 +181,7 @@ class MySql:
                 return False
             else:
                 return True
-        return False   # 走不到这里来的(为了严谨)
+        return False
 
     def count(self, where: Union[dict, str] = None) -> int:
         """
@@ -192,7 +194,7 @@ class MySql:
 
     def insert(self, items: Union[dict, list, tuple], values: list = None, ignore: bool = False) -> None:
         """
-        这里目前只支持单条的 字典映射关系插入 当然你要多值传入我也兼容 这里的匹配比较迷，但是习惯就好
+        这里目前只支持单条的 字典映射关系插入 当然你要多值传入我也兼容 这里的匹配比较迷，但是习惯就好 这里就不兼容存在更新不存在插入了
         :param items: 插入的值(单条的话只需要传这个 传字典就好了) (多条的话这里可以传列表里字典)
         :param values: 如果多条插入 值可以这里插入
         :param ignore: 是否忽略主键重复的警报
@@ -214,6 +216,22 @@ class MySql:
                 for each_value in values:
                     new_sql = self.sql_base.insert(items, each_value, ignore)
                     self.execute(new_sql, log=False)
+
+    def replace(self, items: Union[dict, list, tuple], values: list = None) -> None:
+        """
+        存在更新 不存在覆盖 但是没有写的的字段会置为null
+        参数同insert 不过少了一个ignore判断
+        """
+        self._check_table()
+        if isinstance(items, (list, tuple)):
+            batch = True
+        else:
+            batch = False
+        sql = self.sql_base.replace(items, values)
+        try:
+            self.execute(sql, batch)
+        except Exception as err:
+            logger.error(f"执行异常--> {sql} : {err}")
 
     def update(self, items: dict, where: Union[dict, str]) -> None:
         """
