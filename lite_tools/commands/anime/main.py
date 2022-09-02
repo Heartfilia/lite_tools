@@ -23,14 +23,14 @@ import sqlite3
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.commands.anime.anime_utils import check_cache_dir
-from lite_tools.commands.anime.anime_store import whether_create_sql_base
+from lite_tools.commands.anime.anime_store import whether_create_sql_base, insert_data
 
 
 base_sql = SqlString("video")
 
 
 @match_case
-def today_information(_, conn: sqlite3.connect = None, *args):
+def today_information(_):
     """
     这里是输出数据流程 也是默认流程
     """
@@ -38,17 +38,17 @@ def today_information(_, conn: sqlite3.connect = None, *args):
 
 
 @today_information.register("insert")
-def insert_log(_, conn: sqlite3.connect, *args):
-    pass
+def insert_log(_):
+    insert_data()
 
 
 @today_information.register("update")
-def update_log(_, conn: sqlite3.connect, store_path: str):
+def update_log(_):
     pass
 
 
 @today_information.register("delete")
-def delete_log(_, conn: sqlite3.connect, store_path: str):
+def delete_log(_):
     pass
 
 
@@ -78,10 +78,8 @@ def main_animation(*args):
     更新数据流程:
     获取路径 --> 输出表数据 --> 指定id --> 修改字段 --> 更新缓存文件
     """
-    store_file = check_cache_dir()
-    conn = whether_create_sql_base(store_file)
     if len(args) >= 1 and args[1] in ["insert", "update", "delete", "-h", "help"]:
-        today_information(args[1], conn)
+        today_information(args[1])
     else:
         today_information()
 

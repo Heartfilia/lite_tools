@@ -116,7 +116,7 @@ class SqlString(object):
         base_update = f"UPDATE {self.table_name} SET "
         for key, value in keys.items():
             base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
-                           f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_update_value(value)}, '
+                           f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)}, '
         base_update = base_update.rstrip(', ') + " WHERE "
         if isinstance(where, dict):
             base_update = base_update + self._handle_where_dict(where)
@@ -129,10 +129,6 @@ class SqlString(object):
         else:
             raise NotSupportType
         return self.__clear_string(base_update)
-
-    @staticmethod
-    def _handle_update_value(string: str):
-        return repr(string).replace('"', '\\"')
 
     def replace(self, keys: Union[dict, list, tuple], values: list = None) -> Optional[str]:
         """
@@ -154,7 +150,7 @@ class SqlString(object):
         if isinstance(where, dict):
             for key, value in where.items():
                 base_delete += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
-                               f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_update_value(value)} ' \
+                               f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)} ' \
                                f'AND '
             base_delete = base_delete.rstrip(' AND ') + ";"
         elif isinstance(where, str):
@@ -218,21 +214,26 @@ class SqlString(object):
         return key_string
 
     @staticmethod
-    def _handle_value(key_string: str) -> str:
-        key_string = re.sub(r"(?<!=\\)'", "\'", key_string)
-        key_string = re.sub(r'(?<!=\\)"', '\"', key_string)
-        return key_string
+    def _handle_value(item: Union[str, list, tuple, dict, set]):
+        if not isinstance(item, str):
+            item = str(item)
+
+        base_string = ""
+        last_word = ""
+        for word in item:
+            if word == "'" and last_word == "\\":
+                word = "\\\\'"
+            elif word == "'":
+                word = "\\'"
+            base_string += word
+            last_word = word
+        return "'" + base_string + "'"
 
     def _handle_where_dict(self, where: dict) -> str:
         base_string = ""
         for key, value in where.items():
             base_string += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
-                           f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_update_value(value)} ' \
+                           f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)} ' \
                            f'AND '
         base_string = base_string.rstrip(' AND ') + ";"
         return base_string
-
-
-if __name__ == "__main__":
-    a = SqlString('api_error_log')
-    print(a.exists({"_id": "0035c6d84df1512f150a6c7adfcbd77b"}))

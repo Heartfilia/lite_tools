@@ -13,7 +13,7 @@ from lite_tools.tools.utils.u_re_time import DATETIME_PATTERN
 from lite_tools.exceptions.TimeExceptions import TimeFormatException
 
 """
-这里可以用 但是比较臃肿 
+这里可以用 但是比较臃肿 暂时不支持 年月日通过游标操作获得年月日 可以实现 但是不知道参数取名和其他的冲突问题
 TODO(my_logger 在多线程中的路径有问题 -- 我也懒得修复 这个是个小问题)
 """
 
@@ -30,13 +30,13 @@ def get_date(timedelta: tuple = None):
 
 
 def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = False, unit: str = "s",
-             double: bool = False, cursor: Union[str, int, float, None] = None):
+             instance: Union[None, type] = None, cursor: Union[str, int, float] = 0, **kwargs):
     """
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
     params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整 --> 可以设置 unit="ms/int" 对double后的结果取整
-    params double: 返回小数的时间 还是整数 默认整数  如果搭配goal那么返回浮点数 因为是要把字符串转换为数字来着
+    params instance: 写 int/float 即可按照int或者float返回数据
     params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串 注意是有大小写区别的
                    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）如 cursor="-2Y"  如果写一堆 取最大的
                    不要写一堆时间符号说 一年三个月5天前这种:只推荐 单命令 如前面就只会提取最大的一年前进行处理
@@ -50,20 +50,25 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
     else:
         fmt_str = fmt
     times = _get_unit_times(unit)
+    if kwargs.get('double') is True:
+        instance = float
 
-    if goal and double:         # 转换目标格式为 时间戳
-        return _fmt_to_timestamp(goal, fmt_str, times)
-    elif goal and not double:   # 转换时间戳为 目标时间格式
+    if instance is not None and instance not in [int, float]:
+        instance = int
+
+    if goal and isinstance(goal, str):  # 转换目标格式为 时间戳
+        return _fmt_to_timestamp(goal, fmt_str, times, instance)
+    elif goal and isinstance(goal, (float, int)) and cursor == 0:   # 转换时间戳为 目标时间格式
         return _timestamp_to_f_time(goal, fmt_str)
     else:    # 处理没有参数或者有游标参数的情况或者特定格式参数的情况
-        if fmt and not cursor:
+        if fmt and not cursor and instance is None:
             return time.strftime(fmt_str)
         elif fmt and cursor:
             return _cursor_to_f_time(cursor, fmt_str)
         elif not fmt and cursor:
-            return _cursor_to_timestamp(double, cursor, times)
+            return _cursor_to_timestamp(instance, cursor, times)
         else:
-            return _default_now_time(double, times)
+            return _default_now_time(instance, times)
 
 
 def _get_unit_times(unit):
@@ -79,23 +84,23 @@ def _get_unit_times(unit):
     return times
 
 
-def _default_now_time(double, times):
+def _default_now_time(instance, times):
     """
     默认输出--当前时间，是否要浮点数
     """
     time_now = time.time()
-    if double:
+    if instance == float:
         return time_now * times
     else:
         return int(time_now * times)
 
 
-def _cursor_to_timestamp(double, cursor, times):
+def _cursor_to_timestamp(instance, cursor, times):
     """
     通过游标时间输出时间戳
     """
     result = _get_time_block(cursor)
-    if double:
+    if instance == float:
         return result * times
     else:
         return int(result * times)
@@ -106,7 +111,7 @@ def _cursor_to_f_time(cursor, fmt_str):
     通过游标时间输出格式化字符串
     """
     result = _get_time_block(cursor)
-    if isinstance(result, int) or isinstance(result, float):
+    if isinstance(result, (int, float)):
         return time.strftime(fmt_str, time.localtime(result))
     else:
         return result
@@ -129,13 +134,15 @@ def _timestamp_to_f_time(goal, fmt_str):
     return time.strftime(fmt_str, time.localtime(int_time))
 
 
-def _fmt_to_timestamp(goal, fmt_str, times):
+def _fmt_to_timestamp(goal, fmt_str, times, instance):
     """
     时间串转换为时间戳
     """
     try:
         sure_time = time.mktime(time.strptime(goal, fmt_str)) * times
-        return sure_time
+        if instance == float:
+            return sure_time
+        return int(sure_time)
     except Exception as e:
         raise TimeFormatException(f"由错误的[ fmt ]格式引发的异常: {e}")
 
@@ -329,10 +336,3 @@ def time_count(fn):
         logger.debug(f'[{fn.__name__}] 耗时: {time.time()-t1:.3f}')
         return bk
     return inner
-
-
-if __name__ == "__main__":
-    t = time.time()
-    a = TimeMaker()
-    print(a.make("2012.2.15 3时20分"))
-    print(time.time() - t)

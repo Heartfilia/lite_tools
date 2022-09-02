@@ -17,5 +17,12 @@
         ┗━┓ ┓ ┏━━━┳ ┓ ┏━┛
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
-for json
 """
+
+
+class BadModeException(Exception):
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "不支持的格式"

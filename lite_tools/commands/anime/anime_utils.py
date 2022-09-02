@@ -49,3 +49,14 @@ def check_cache_dir() -> str:
     if not os.path.exists(lite_animate_path):
         os.makedirs(lite_animate_path)
     return lite_animate_path
+
+
+def input_data(msg: str = "") -> str:
+    while True:
+        try:
+            info = input(f"{msg + ' ' if msg else ''}>> ").strip()
+            if not info and '[*]' in msg and "名称" not in msg:  # 如果标题带了[*]就是必填参数
+                continue
+            return info
+        except KeyboardInterrupt:
+            break
