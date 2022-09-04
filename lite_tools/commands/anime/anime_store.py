@@ -30,7 +30,8 @@ from lite_tools.tools.time.lite_time import get_time
 from lite_tools.tools.core.lib_hashlib import get_md5
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.exceptions.AnimeExceptions import QuitEarly
-from lite_tools.commands.anime.anime_utils import check_cache_dir, input_data
+from lite_tools.commands.anime.anime_utils import input_data
+from lite_tools.tools.utils.lite_dir import lite_tools_dir
 
 
 base_sql = SqlString("video")
@@ -87,7 +88,7 @@ def whether_create_sql_base() -> Optional[sqlite3.connect]:
     global file_dir, file_dir
 
     if not file_dir:
-        store_path = check_cache_dir()
+        store_path = lite_tools_dir()
         file_dir = os.path.join(store_path, "store.db")
 
     if not os.path.exists(file_dir):
