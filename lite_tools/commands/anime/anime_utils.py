@@ -21,8 +21,6 @@
 import os
 import sys
 
-from loguru import logger
-
 
 def get_base_dir() -> str:
     """目前兼容win/linux、、、mac不确定"""
@@ -34,9 +32,11 @@ def get_base_dir() -> str:
             return "/root"
         else:
             return "/home/" + user_name
+    elif sys.platform == "darwin":
+        # mac的适配不一定正确
+        return "/Users/" + os.environ['USER']
     else:
-        logger.warning("mac 还不适配")
-        return ""
+        raise Exception("不支持的平台")
 
 
 def check_cache_dir() -> str:
