@@ -51,16 +51,19 @@ def _print_base():
 
 @match_case
 def chose_option(_, *args):
+    _ = args
     _print_base()
 
 
 @chose_option.register_all(["--version", "-V"])
 def get_version(_, *args):
+    _ = args
     print(VERSION)
 
 
 @chose_option.register("fish")
 def get_fish_date(_, *args):
+    _ = args
     print_date()
 
 

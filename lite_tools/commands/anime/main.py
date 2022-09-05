@@ -36,19 +36,25 @@ base_sql = SqlString("video")
 def today_information(_):
     """
     这里是输出数据流程(直接展示今天的数据) 也是默认流程
+    需要先读取缓存 --> 判断缓存时间 --> 展示数据  --> 否则从新查表 --> 从新生成缓存文件 --> 展示数据
     """
     show_data_tables()  # 展示今天的数据
 
 
 @today_information.register("insert")
 def insert_log(_):
+    """
+    进入插入数据模式
+    """
     insert_data()
 
 
 @today_information.register("fresh")
 def fresh_cache(_):
     """
-    这里是刷新缓存文件 可以手动更新缓存和数据对齐  一般在 insert和update后会自动执行
+    这里是刷新缓存文件 --> 只给日常查询数据使用意思就是把当天数据缓存下来
+    这里其实也是**更新操作** 只不过是自动更新 主要更新字段为 --> updateTime  nowEpisode  nowWeek
+    可以手动更新缓存和数据对齐  一般在 insert和update后会自动执行
     """
 
 
@@ -112,8 +118,8 @@ def print_tags(_):
     """
     这里是打印这里的帮助信息
     """
-    base_help = "lite-tools anime 管理番剧助手~\n\n"
-    base_help += "Usage: lite-tools anime <command>\n"
+    base_help = "lite-tools acg 管理番剧助手~\n\n"
+    base_help += "Usage: lite-tools acg <command>\n"
     base_help += "Available commands:\n"
     base_help += "  -h help         获取当前信息啦\n"
     base_help += "  insert          插入一条信息啦\n"
