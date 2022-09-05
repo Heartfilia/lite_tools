@@ -56,7 +56,7 @@ class SqlString(object):
             for each_value in values:
                 if isinstance(each_value, str):
                     each_value = self._handle_value(each_value)
-                values_string += f'{repr(each_value)}, '
+                values_string += f'{each_value}, '
             values_string = values_string.rstrip(', ') + ')'
             return f"{tuple(keys)}", values_string
         elif isinstance(key, (list, tuple)) and not value and isinstance(key[0], dict):
@@ -84,16 +84,14 @@ class SqlString(object):
                 values = '('
                 for value_jar in value:
                     for each_value in value_jar:
-                        if isinstance(each_value, str):
-                            each_value = self._handle_value(each_value)
+                        each_value = self._handle_value(each_value)
                         values += each_value + ', '
                 values = values.rstrip(', ') + ')'
             else:
                 # 这里只是兼容另外一种格式而已 推荐的还是字典
                 values = '('
                 for each_value in value:
-                    if isinstance(each_value, str):
-                        each_value = self._handle_value(each_value)
+                    each_value = self._handle_value(each_value)
                     values += each_value + ', '
                 values = values.rstrip(', ') + ')'
             return f"{tuple(keys)}", values

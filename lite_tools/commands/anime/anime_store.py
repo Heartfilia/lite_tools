@@ -64,7 +64,7 @@ def create_table(conn: sqlite3.connect):
         name text NOT NULL,
         date text,
         hour integer,
-        updateTime integer NOT NULL,
+        updateTime text NOT NULL,
         nowEpisode integer,
         allEpisode integer,
         done real,
@@ -108,10 +108,11 @@ def check_insert_param(input_string: str):
         raise QuitEarly
 
 
-def check_video_exists(conn: sqlite3.connect, md5: str) -> bool:
+def check_video_exists(md5: str) -> bool:
     """
     校验视频是否在table中存在
     """
+    conn = whether_create_sql_base()
     sql = base_sql.exists({"_id": md5})
     cursor = conn.cursor()
     result = cursor.execute(sql)
@@ -145,7 +146,7 @@ def insert_data():
 
             _id = get_md5(name)
 
-            in_flag = check_video_exists(conn, _id)
+            in_flag = check_video_exists(_id)
             if in_flag:
                 logger.info(f"【{name}】视频已经存在现在跳过存储此条数据,如果需要修改请修改模式下改数据.")
                 time.sleep(0.1)
@@ -164,14 +165,12 @@ def insert_data():
             else:
                 hour = -1   # 不正常就统一到 -1 sql过滤的时候不显示今天播放的小时节点
 
-            update_time = get_time(fmt="%Y-%m-%d", instance=int)  # 这里是校验今天是否有把数据库数据更新
+            update_time = get_time(fmt="%Y-%m-%d")  # 这里是校验今天是否有把数据库数据更新
 
             now_episode = input_data("当前集数(默认未开播)")
             check_insert_param(now_episode)
             if not now_episode or not now_episode.isdigit():
                 now_episode = -1
-            else:
-                now_episode = int(now_episode)
 
             all_episode = input_data("总集数(默认持续更新)")
             check_insert_param(all_episode)
@@ -182,19 +181,15 @@ def insert_data():
 
             while True:
                 week = input_data("每周几更新[1-7][*]")
-                check_insert_param(all_episode)
+                check_insert_param(week)
                 if week in ["1", "2", "3", "4", "5", "6", "7"]:
                     break
                 logger.warning("week参数错误 只能从1-7里面选")
 
-            week = int(week)
-
-            now_week = int(get_time(fmt='%W'))   # 今天是本年第几周
-
             data = {
                 "_id": _id, "platform": platform, "name": name, "date": date, "hour": hour,
-                "updateTime": update_time, "nowEpisode": now_episode, "allEpisode": all_episode,
-                "done": done, "week": week, "nowWeek": now_week
+                "updateTime": update_time, "nowEpisode": int(now_episode), "allEpisode": int(all_episode),
+                "done": done, "week": int(week), "nowWeek": int(get_time(fmt='%W'))  # 今天是本年第几周
             }
             insert_one(conn, data)
 
@@ -238,7 +233,7 @@ def struct_filed(row: tuple) -> tuple:
     platform, name, week, hour, date, update_time, now_episode, all_episode, done = row
     if hour == -1:
         hour = ""
-    if "'-1'" in date:
+    if date.strip("'") == '-1':
         date = ''
     if all_episode == -1:
         all_episode = ""
@@ -249,14 +244,14 @@ def struct_filed(row: tuple) -> tuple:
         update_time, now_episode, all_episode, done
 
 
-def show_data_tables(show_all: bool = False):
+def show_data_tables(show_all: bool = False) -> dict:
     """
     会把对象返回回去 然后那边做是否需要重新获取 还是一直打印缓存的操作
     展示表单数据 下面为啥不采用 from prettytable import from_db_cursor 的方法 因为我要做增删改查的一些操作提示 不方便直接展示源
     """
     conn = whether_create_sql_base()
     table = PrettyTable()
-    base_field = ["id", "平台", "名称", "集", "周", "时", "开播", "总集"]   # 为啥不放进PT里面 因为这里我要在show_all地方加一条
+    base_field = ["id", "平台", "名称", "当前集", "周几", "小时", "开播", "总集"]   # 为啥不放进PT里面 因为这里我要在show_all地方加一条
 
     if show_all:
         param_done = True
@@ -305,9 +300,19 @@ def show_data_tables(show_all: bool = False):
         print(table)
         time.sleep(0.1)
 
+    return update_hash
+
 
 def update_store_data():
     pass
+
+
+def delete_table_log(md5):
+    conn = whether_create_sql_base()
+    sql = base_sql.delete({"_id": md5})
+    cursor = conn.cursor()
+    cursor.execute(sql)
+    conn.commit()
 
 
 if __name__ == "__main__":
