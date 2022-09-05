@@ -17,19 +17,10 @@
         ┗━┓ ┓ ┏━━━┳ ┓ ┏━┛
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
+这个文件主要放一些 js转python的操作 比如 >>>   还有36进制等等 不过这里我还没有写 晚点弄
 """
+from lite_tools.tools.core.lib_base64 import get_b64e as btoa
+from lite_tools.tools.core.lib_base64 import get_b64d as atob
 
 
-week_hash = {1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 7: '日'}
 
-
-def input_data(msg: str = "") -> str:
-    while True:
-        try:
-            info = input(f"{msg + ' ' if msg else ''}>> ").strip()
-            if not info and '[*]' in msg and "名称" not in msg:  # 如果标题带了[*]就是必填参数
-                continue
-            return info
-        except KeyboardInterrupt:
-            print("\t")
-            break

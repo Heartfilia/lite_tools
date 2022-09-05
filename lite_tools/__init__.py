@@ -25,7 +25,10 @@ __ALL__ = [
     "math_string"
     "x_timeout",   # 这个没有弄好
     "Singleton",
-    "Buffer"
+    "Buffer",
+    # 下面的是js转python的操作 还没有写完 也没有弄完 还有 >>>  36进制转换等等操作
+    "atob",
+    "btoa",
 ]
 
 from lite_tools.tools.core.lib_base64 import get_b64d, get_b64e
@@ -41,3 +44,5 @@ from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.core.lite_string import CleanString, color_string, math_string
 from lite_tools.tools.time.httpx_timeout import x_timeout
 from lite_tools.tools.core.lite_cache import Singleton, Buffer
+
+from lite_tools.tools.js import atob, btoa

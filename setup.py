@@ -44,6 +44,7 @@ setup(
         # 'lite_tools.commands.balls',    # 还没有调整好 先不放出来
         'lite_tools.commands.weather',
         'lite_tools.tools',
+        'lite_tools.tools.js',
         'lite_tools.tools.sql',
         'lite_tools.tools.core',
         'lite_tools.tools.time',
