@@ -24,7 +24,9 @@ from loguru import logger
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.commands.anime.anime_utils import input_data
-from lite_tools.commands.anime.anime_store import show_data_tables, insert_data, check_video_exists, delete_table_log
+from lite_tools.commands.anime.anime_store import (
+    show_data_tables, insert_data, check_video_exists,  delete_table_log, update_store_data
+)
 
 
 base_sql = SqlString("video")
@@ -62,11 +64,31 @@ def update_log(tag):
     else:
         hash_table = show_data_tables()
 
+    if not hash_table:
+        return
+
+    while True:
+        _id = input_data("需要更新的id")
+        if not _id or not _id.isdigit():
+            logger.debug("已经推出了更新操作 蟹蟹您 因为有你~")
+            break
+        if _id.isdigit() and int(_id) not in hash_table:
+            logger.warning(f"您选择的id不在可以操作的范围,您可以选择的id有: {list(hash_table.keys())}")
+            time.sleep(0.1)
+            continue
+        flag = check_video_exists(hash_table[int(_id)])
+        if flag:
+            update_store_data(hash_table[int(_id)])
+        else:
+            logger.debug("你是不是写错了啊,这里可不可以操作呢~")
+
 
 @today_information.register("delete")
 def delete_log(_):
     # 对全部数据进行处理
     hash_table = show_data_tables(show_all=True)
+    if not hash_table:
+        return
     while True:
         _id = input_data("需要删除的id")
         if not _id or not _id.isdigit():
@@ -128,4 +150,4 @@ def main_animation(*args):
 
 
 if __name__ == "__main__":
-    main_animation(1, "delete")
+    main_animation(1, "update")

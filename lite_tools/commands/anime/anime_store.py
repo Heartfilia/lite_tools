@@ -52,7 +52,7 @@ def create_table(conn: sqlite3.connect):
     updateTime : integer --> 这条数据的更新时间 只记录到天的 00:00:00
     nowEpisode : integer --> 当前视频集数和本周即将更新的集数 (按周更新记录表)
     allEpisode : integer --> 视频的总集数 不写不管 只是读取时候看
-    done       : real    --> 这个视频是否完结或者不再关注了 true则不再每天输出记录
+    done       : integer --> 这个视频是否完结或者不再关注了 1 则不再每天输出记录  默认0
     week       : integer --> 视频是每个星期几播放  取值 1->7 对应星期一 -> 星期天
     nowWeek    : integer --> 当前周在全年是第几个周
     """
@@ -67,7 +67,7 @@ def create_table(conn: sqlite3.connect):
         updateTime text NOT NULL,
         nowEpisode integer,
         allEpisode integer,
-        done real,
+        done integer,
         week integer NOT NULL,
         nowWeek integer,
        PRIMARY KEY (_id)
@@ -76,7 +76,7 @@ def create_table(conn: sqlite3.connect):
     time.sleep(0.3)
 
 
-def connection() -> sqlite3.connect:
+def _check_connection() -> sqlite3.connect:
     global conn_obj
     if not conn_obj:
         conn_obj = sqlite3.connect(file_dir)
@@ -95,11 +95,11 @@ def whether_create_sql_base() -> Optional[sqlite3.connect]:
 
     if not os.path.exists(file_dir):
         # 这里为啥要把这个同样的东西写在不同的方法里面呢 因为在上面创建了 这里就会判断错误
-        conn = connection()
+        conn = _check_connection()
         create_table(conn)
     else:
         # 这里需要判断数据库结构是否是我要的 如果不是重建
-        conn = connection()
+        conn = _check_connection()
     return conn
 
 
@@ -133,6 +133,9 @@ def insert_one(conn: sqlite3.connect, video: dict):
 
 
 def insert_data():
+    """
+    插入数据总操作
+    """
     conn = whether_create_sql_base()
     logger.info("按条件输入需要录入的参数,带了[*]的是必填参数,可以在任意步骤输入(quit(), exit(),或者视频名称为空)退出录入模式")
     time.sleep(0.1)
@@ -177,7 +180,7 @@ def insert_data():
             if not all_episode:
                 all_episode = -1
 
-            done = False   # 是否看完或者不关注
+            done = 0   # 是否看完或者不关注
 
             while True:
                 week = input_data("每周几更新[1-7][*]")
@@ -197,7 +200,7 @@ def insert_data():
         pass
 
 
-def query_data(conn: sqlite3.connect, week: int = -1, done: bool = True) -> Iterator:
+def query_data(conn: sqlite3.connect, week: int = -1, done: int = 1) -> Iterator:
     """
     默认查询是查询星期几的数据 否则就是全部内容
     :param conn: 连接对象
@@ -208,22 +211,36 @@ def query_data(conn: sqlite3.connect, week: int = -1, done: bool = True) -> Iter
     base_sql_string = "SELECT "
     base_sql_string += "platform, name, week, hour, date, updateTime, nowEpisode, allEpisode, done "
     base_sql_string += "FROM video "
-    if week == -1 and done is True:
+    if week == -1 and done == 1:
         # 这里就是查询全部数据
         base_sql_string += "ORDER BY week;"
-    elif week != -1 and done is True:
+    elif week != -1 and done == 1:
         # 查询某一天的全部数据
-        base_sql_string += f"WHERE week = {week} AND done IS TRUE ORDER BY week;"
+        base_sql_string += f"WHERE week = {week} AND done = 1 ORDER BY week;"
     else:
         # 默认获取今天关注的数据
         week_today = time.localtime().tm_wday + 1
-        base_sql_string += f"WHERE week = {week_today} AND done IS FALSE ORDER BY hour;"
+        base_sql_string += f"WHERE week = {week_today} AND done = 0 ORDER BY hour;"
 
     cur = conn.cursor()
     cur.execute(base_sql_string)
     result = cur.fetchall()
     for row in result:
         yield row
+
+
+def fetch_one(md5: str) -> tuple:
+    """
+    获取单条记录
+    """
+    conn = whether_create_sql_base()
+    cursor = conn.cursor()
+    sql = "SELECT "
+    sql += "platform, name, week, hour, date, updateTime, nowEpisode, allEpisode, done FROM video "
+    sql += "WHERE "
+    sql += f"_id = '{md5}';"
+    res = cursor.execute(sql)
+    return res.fetchone()
 
 
 def struct_filed(row: tuple) -> tuple:
@@ -238,7 +255,7 @@ def struct_filed(row: tuple) -> tuple:
     if all_episode == -1:
         all_episode = ""
 
-    done = "是" if done is False else "否"  # 否就是不再关注 done is True 就是完成了 不关注了
+    done = "是" if done != 0 else "否"  # 否就是不再关注 done is True 就是完成了 不关注了
 
     return platform.strip("'"), name.strip("'"), week_hash[week], hour, date.strip("'"), \
         update_time, now_episode, all_episode, done
@@ -251,7 +268,7 @@ def show_data_tables(show_all: bool = False) -> dict:
     """
     conn = whether_create_sql_base()
     table = PrettyTable()
-    base_field = ["id", "平台", "名称", "当前集", "周几", "小时", "开播", "总集"]   # 为啥不放进PT里面 因为这里我要在show_all地方加一条
+    base_field = ["id", "平台", "名称", "当前集", "周几", "小时", "开播日期", "总集"]   # 为啥不放进PT里面 因为这里我要在show_all地方加一条
 
     if show_all:
         param_done = True
@@ -303,11 +320,72 @@ def show_data_tables(show_all: bool = False) -> dict:
     return update_hash
 
 
-def update_store_data():
-    pass
+def update_store_data(md5: str):
+    """
+    更新表总操作
+    """
+    row = fetch_one(md5)
+    table_now = PrettyTable(["序号", "名称", "原始值"])
+    rows = [
+        [0, "平台", row[0]], [1, "名称", row[1]], [2, "当前集", row[6]], [3, "周几", week_hash[row[2]]],
+        [4, "小时", row[3]], [5, "开播日期", row[4]], [6, "总集", row[7]], [7, "关注", row[8]]
+    ]
+    key_row = ("platform", "name", "nowEpisode", "week", "hour", "date", "allEpisode", "done")
+    str_id = (0, 1, 5)
+    for row in rows:
+        table_now.add_row(row)
+    print(table_now)
+
+    base_change_dict = {}  # 拼接后续需要修改的sql值域
+    while True:
+        chose_id = input_data("选择需要修改的需要")
+        if not chose_id or not chose_id.isdigit():
+            logger.debug("已经推出了修改记录模式,执行了对应的操作了~")
+            time.sleep(0.1)
+            break
+        chose_id = int(chose_id)
+        if chose_id not in (0, 1, 2, 3, 4, 5, 6, 7):
+            logger.warning("你可以选择范围为 0-7 请重新输入...")
+            continue
+        change_row = rows[chose_id]   # [0, "平台", row[0]]
+        key = key_row[chose_id]
+        while True:
+            if chose_id != 3:
+                value = input_data(f"修改[{change_row[1]}]的值: {change_row[2]} --")
+            else:
+                value = input_data(f"修改[{change_row[1]}]的值: 星期只需要写1-7即可 {change_row[2]} --")
+            if not value:
+                break
+            if chose_id not in str_id and not value.isdigit():
+                logger.warning(f"当前字段只能传入数字类型,请重试..")
+                continue
+            if chose_id in str_id:
+                base_change_dict[key] = value
+            else:
+                base_change_dict[key] = int(value)
+            break
+
+    if not base_change_dict:
+        return
+
+    update_table_log(base_change_dict, md5)
 
 
-def delete_table_log(md5):
+def update_table_log(items: dict, md5: str):
+    """
+    更新单条记录用的
+    """
+    conn = whether_create_sql_base()
+    sql = base_sql.update(items, {"_id": md5})
+    cursor = conn.cursor()
+    cursor.execute(sql)
+    conn.commit()
+
+
+def delete_table_log(md5: str):
+    """
+    删除数据用的
+    """
     conn = whether_create_sql_base()
     sql = base_sql.delete({"_id": md5})
     cursor = conn.cursor()
