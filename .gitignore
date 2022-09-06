@@ -4,4 +4,4 @@ __pycache__
 build/
 lite_tools.egg-info
 dist
-.idea
+.idea/
