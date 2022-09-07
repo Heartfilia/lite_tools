@@ -336,3 +336,12 @@ def time_count(fn):
         logger.debug(f'[{fn.__name__}] 耗时: {time.time()-t1:.3f}')
         return bk
     return inner
+
+
+if __name__ == "__main__":
+    # print(get_time(fmt="%Y%m"))
+    # print(get_time(fmt="%Y%m", cursor=-30))
+    print(get_time(unit="s", instance=float))
+    print(get_time(cursor=-30, unit="ms", instance=float))
+    print(get_time(1662521367.7629287))
+    print(get_time(1659929367762.9287))

@@ -23,8 +23,8 @@ from loguru import logger
 
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.sql.lib_mysql_string import SqlString
-from lite_tools.commands.anime.anime_utils import input_data
-from lite_tools.commands.anime.anime_store import (
+from lite_tools.commands.acg.anime_utils import input_data
+from lite_tools.commands.acg.anime_store import (
     show_data_tables, insert_data, check_video_exists,  delete_table_log, update_store_data
 )
 

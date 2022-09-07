@@ -32,9 +32,9 @@ from lite_tools.tools.core.lib_hashlib import get_md5
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.exceptions.AnimeExceptions import QuitEarly
-from lite_tools.commands.anime.anime_utils import input_data
+from lite_tools.commands.acg.anime_utils import input_data
 from lite_tools.tools.utils.lite_dir import lite_tools_dir
-from lite_tools.commands.anime.anime_utils import week_hash
+from lite_tools.commands.acg.anime_utils import week_hash
 
 base_sql = SqlString("video")
 conn_obj: sqlite3.connect = None

@@ -161,7 +161,7 @@ def handle_video_logs(_, *args):
     else:
         args = []
     try:
-        from lite_tools.commands.anime.main import main_animation
+        from lite_tools.commands.acg.main import main_animation
     except ImportError:
         sys.exit(0)
     else:
