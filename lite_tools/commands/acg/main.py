@@ -135,7 +135,7 @@ def print_tags(_):
 """
 
 
-def main_animation(*args):
+def main_animation(args: list):
     """这里是主入口
     输出数据流程:
     获取路径 --> 校验缓存 -- ---- 正确 --- --- --> 输出数据(默认输出当天数据)
@@ -156,4 +156,4 @@ def main_animation(*args):
 
 
 if __name__ == "__main__":
-    main_animation(1, "update")
+    main_animation([1, "update"])
