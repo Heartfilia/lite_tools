@@ -25,7 +25,7 @@ from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.commands.acg.anime_utils import input_data
 from lite_tools.commands.acg.anime_store import (
-    show_data_tables, insert_data, check_video_exists,  delete_table_log, update_store_data
+    show_data_tables, insert_data, check_video_exists,  delete_table_log, update_store_data, fresh_table_store
 )
 
 
@@ -39,6 +39,14 @@ def today_information(_):
     需要先读取缓存 --> 判断缓存时间 --> 展示数据  --> 否则从新查表 --> 从新生成缓存文件 --> 展示数据
     """
     show_data_tables()  # 展示今天的数据
+
+
+@today_information.register("all")
+def all_information(_):
+    """
+    展示库中全部数据信息
+    """
+    show_data_tables(show_all=True)
 
 
 @today_information.register("insert")
@@ -55,7 +63,9 @@ def fresh_cache(_):
     这里是刷新缓存文件 --> 只给日常查询数据使用意思就是把当天数据缓存下来
     这里其实也是**更新操作** 只不过是自动更新 主要更新字段为 --> updateTime  nowEpisode  nowWeek
     可以手动更新缓存和数据对齐  一般在 insert和update后会自动执行
+    # 这里是校准数据的 因为数据库里面的数据不会自动变 这里是调整上面三个的字段数据的
     """
+    fresh_table_store()
 
 
 @today_information.register_all(["update", "update_all"])
@@ -122,6 +132,8 @@ def print_tags(_):
     base_help += "Usage: lite-tools acg <command>\n"
     base_help += "Available commands:\n"
     base_help += "  -h help         获取当前信息啦\n"
+    base_help += "  all             获取全部记录\n"
+    base_help += "  <什么都不加>     获取当天记录\n"
     base_help += "  insert          插入一条信息啦\n"
     base_help += "  update          展示今天的信息并修改今天的信息\n"
     base_help += "  update_all      展示全部信息并可以修改\n"

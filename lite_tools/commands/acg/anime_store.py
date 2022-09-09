@@ -35,6 +35,7 @@ from lite_tools.exceptions.AnimeExceptions import QuitEarly
 from lite_tools.commands.acg.anime_utils import input_data
 from lite_tools.tools.utils.lite_dir import lite_tools_dir
 from lite_tools.commands.acg.anime_utils import week_hash
+from lite_tools.commands.acg.anime_cache import check_cache, print_cache
 
 base_sql = SqlString("video")
 conn_obj: sqlite3.connect = None
@@ -266,6 +267,8 @@ def show_data_tables(show_all: bool = False) -> dict:
     会把对象返回回去 然后那边做是否需要重新获取 还是一直打印缓存的操作
     展示表单数据 下面为啥不采用 from prettytable import from_db_cursor 的方法 因为我要做增删改查的一些操作提示 不方便直接展示源
     """
+    if check_cache(show_all):   # 这里是是否需要读取缓存判断
+        return print_cache(show_all)    # 这里是把缓存文件读出来并不执行下面的流程
     conn = whether_create_sql_base()
     table = PrettyTable()
     base_field = ["id", "平台", "名称", "当前集", "周几", "小时", "开播日期", "总集"]   # 为啥不放进PT里面 因为这里我要在show_all地方加一条
@@ -318,6 +321,10 @@ def show_data_tables(show_all: bool = False) -> dict:
         time.sleep(0.1)
 
     return update_hash
+
+
+def fresh_table_store():
+    pass
 
 
 def update_store_data(md5: str):
