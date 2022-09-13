@@ -364,22 +364,45 @@ def fresh_by_check_row(row: tuple, now_week: int, today_time_fmt: str):
     """
     _id_table, date_table, update_time_table, now_episode_table, all_episode_table, now_week_table = row
 
+    if update_time_table == today_time_fmt:
+        # 这里是因为已经更新过了的数据不需要再更新了
+        return
+
     change_row = {}   # 需要调整的字段改这里面去
 
-    if now_episode_table == -1 and date_table == today_time_fmt:    # 如果今天是开播日期
-        pass
-    elif now_episode_table == -1 and date_table != "-1" and date_table < today_time_fmt:   # 开播日期已经过了但是数据库没有更新数据
-        pass
-    elif now_episode_table == -1:
-        logger.debug(f"看看还有什么情况会走这里 -> {row}")
-    elif now_week_table < now_week:
-        new_episode_minus = now_week - now_week_table  # 判断当前与库中差集多少
-        if new_episode_minus > 0:
-            new_episode = now_episode_table + new_episode_minus
-            # if
-            change_row['nowEpisode'] = new_episode
+    if date_table == "-1":
+        # 如果是持续更新的，证明现在是已经在更新了的 此时 now_episode_table != -1
+        if all_episode_table == -1:
+            # 这里是持续更新的情况 这里不考虑结束 结束由手动控制
+            pass
+        else:
+            # 判断是否已经完结调整done 需要把当前集补齐后和总集数比较
+            sub_week = now_week - now_week_table
+            if sub_week < 0:
+                # 这种可能是跨年了
+                pass
+            elif sub_week == 0:
+                # 这种是已经调整了
+                pass
+            else:
+                # 这种是需要加到当前集 然后判断是否超过了总集
+                pass
+    else:
+        # 指定了开播时间 需要判断是否已经开播
+        if date_table == today_time_fmt:   # 如果今天是开播日期
+            pass
+        elif date_table < today_time_fmt:
+            # 如果已经过了开播日期 判断当前集数是否-1 来处理当前集数
+            if now_episode_table == -1:
+                # 如果当前集没有数据 但是已经开播了 所以这里需要映射到对应的集数去
+                pass
+            else:
+                # 当前集有数据 需要根据刷新数据的周数来补充集数
+                pass
 
     change_row['nowWeek'] = now_week
+    change_row['updateTime'] = today_time_fmt
+    update_table_log(change_row, _id_table)
 
 
 def update_store_data(md5: str):
