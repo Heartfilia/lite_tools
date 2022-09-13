@@ -339,9 +339,5 @@ def time_count(fn):
 
 
 if __name__ == "__main__":
-    # print(get_time(fmt="%Y%m"))
-    # print(get_time(fmt="%Y%m", cursor=-30))
-    print(get_time(unit="s", instance=float))
-    print(get_time(cursor=-30, unit="ms", instance=float))
-    print(get_time(1662521367.7629287))
-    print(get_time(1659929367762.9287))
+    print(get_time("2022-07-01", fmt="%Y-%m-%d"))
+    print(get_time(1656604800))

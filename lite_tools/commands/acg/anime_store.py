@@ -19,6 +19,7 @@
           ┗━┻━┛   ┗━┻━┛
 for db
 """
+import re
 import os
 import time
 import sqlite3
@@ -27,7 +28,7 @@ from typing import Optional, Iterator
 from loguru import logger
 from prettytable import PrettyTable
 
-from lite_tools.tools.time.lite_time import get_time
+from lite_tools.tools.time.lite_time import get_time, TimeFormatException
 from lite_tools.tools.core.lib_hashlib import get_md5
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.sql.lib_mysql_string import SqlString
@@ -159,8 +160,22 @@ def insert_data():
             platform = input_data("播放平台[*]")
             check_insert_param(platform)
 
-            date = input_data("开播日期(这里是给还未开播的视频用的,如果已经开播可以写-1)[*]")
-            check_insert_param(date)
+            while True:
+                date = input_data("开播日期(YYYY-MM-DD格式,如果已经开播可为空)")
+                date = date.strip()
+                check_insert_param(date)
+                if re.search(r"\d{4}-\d{2}-\d{2}", date):
+                    try:
+                        get_time(date, fmt="%Y-%m-%d")
+                    except TimeFormatException:
+                        logger.warning("时间格式不正确，如果输入了请按照[ 2000-01-01 ]的格式输入")
+                        continue
+                elif not date:
+                    date = "-1"
+                else:
+                    logger.warning("错误的格式请按照[ 2000-01-01 ]的格式或者不输入")
+                    continue
+                break
 
             hour = input_data("播放小时(24小时制 写0-23即可 不在范围我给你变成-1)")
             check_insert_param(hour)
@@ -328,10 +343,11 @@ def fresh_table_store(today: bool = False):
     如果处理今天的数据是比较迅速的 所以加了只查和改今天的情况
     """
     base_sql_string = "SELECT "
-    base_sql_string += "_id, updateTime, nowEpisode, allEpisode, done, nowWeek"
-    base_sql_string += "FROM video"
+    base_sql_string += "_id, date, updateTime, nowEpisode, allEpisode, nowWeek"
+    today_time_fmt = get_time(fmt="%Y-%m-%d")
+    base_sql_string += f"FROM video WHERE done = 0 AND updateTime < '{today_time_fmt}'"
 
-    base_sql_string += f" WHERE week = {time.localtime().tm_wday + 1}" if today else ";"
+    base_sql_string += f"AND week = {time.localtime().tm_wday + 1};" if today else ";"
 
     conn = whether_create_sql_base()
     cur = conn.cursor()
@@ -339,13 +355,31 @@ def fresh_table_store(today: bool = False):
 
     now_week = int(get_time(fmt='%W'))
     for row in cur.fetchall():
-        fresh_by_check_row(row, now_week)
+        fresh_by_check_row(row, now_week, today_time_fmt)
 
 
-def fresh_by_check_row(row, now_week):
+def fresh_by_check_row(row: tuple, now_week: int, today_time_fmt: str):
     """
     这里是多种模式校验每一行 判断是否需要调整字段数据
     """
+    _id_table, date_table, update_time_table, now_episode_table, all_episode_table, now_week_table = row
+
+    change_row = {}   # 需要调整的字段改这里面去
+
+    if now_episode_table == -1 and date_table == today_time_fmt:    # 如果今天是开播日期
+        pass
+    elif now_episode_table == -1 and date_table != "-1" and date_table < today_time_fmt:   # 开播日期已经过了但是数据库没有更新数据
+        pass
+    elif now_episode_table == -1:
+        logger.debug(f"看看还有什么情况会走这里 -> {row}")
+    elif now_week_table < now_week:
+        new_episode_minus = now_week - now_week_table  # 判断当前与库中差集多少
+        if new_episode_minus > 0:
+            new_episode = now_episode_table + new_episode_minus
+            # if
+            change_row['nowEpisode'] = new_episode
+
+    change_row['nowWeek'] = now_week
 
 
 def update_store_data(md5: str):
