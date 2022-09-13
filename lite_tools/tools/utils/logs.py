@@ -86,5 +86,6 @@ def get_using_line_info(limit: int = 7):
         line = "".join(re.findall(r'line (\d+)', strings))
         fl = ''.join(re.findall(r'File "(.*)"', strings))
         return line, fl
-    except Exception:
+    except Exception as err:
+        _ = err
         return "", ""

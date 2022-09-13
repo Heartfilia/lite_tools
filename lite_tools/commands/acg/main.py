@@ -22,6 +22,7 @@ import time
 from loguru import logger
 
 from lite_tools.tools.core.lite_match import match_case
+from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.commands.acg.anime_utils import input_data
 from lite_tools.commands.acg.anime_store import (
@@ -128,8 +129,8 @@ def print_tags(_):
     """
     这里是打印这里的帮助信息
     """
-    base_help = "lite-tools acg 管理番剧助手~\n\n"
-    base_help += "Usage: lite-tools acg <command>\n"
+    base_help = f"{color_string('lite-tools 管理番剧助手~', 'green')}\n\n"
+    base_help += "Usage: lite-tools acg <command>\n\n"
     base_help += "Available commands:\n"
     base_help += "  -h help         获取当前信息啦\n"
     base_help += "  all             获取全部记录\n"
@@ -138,7 +139,7 @@ def print_tags(_):
     base_help += "  update          展示今天的信息并修改今天的信息\n"
     base_help += "  update_all      展示全部信息并可以修改\n"
     base_help += "  delete          直接移除某一条数据\n"
-    base_help += "  fresh           手动刷新库中资源缓存和本地缓存文件,默认每次update/insert都会自动执行\n\n"
+    base_help += "  fresh           手动刷新库中资源缓存和本地缓存文件,默认每次update/insert都会自动执行"
     print(base_help)
 
 

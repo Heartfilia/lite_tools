@@ -27,6 +27,7 @@ __ALL__ = [
     "Singleton",
     "Buffer",
     "count_lines",   # 获取文件行数
+    "LiteLogFile",   # 日志文件记录到缓存区 --> 这里是偶尔记录一条那种(打点) 10000条内容缓冲区 超了从1开始记录 高频记录用 loguru
     # 下面的是js转python的操作 还没有写完 也没有弄完 还有 >>>  36进制转换等等操作
     "atob",
     "btoa",
@@ -45,6 +46,6 @@ from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.core.lite_string import CleanString, color_string, math_string
 from lite_tools.tools.time.httpx_timeout import x_timeout
 from lite_tools.tools.core.lite_cache import Singleton, Buffer
-from lite_tools.tools.core.lite_file import count_lines
+from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
 
 from lite_tools.tools.js import atob, btoa
