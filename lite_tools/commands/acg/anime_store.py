@@ -323,8 +323,29 @@ def show_data_tables(show_all: bool = False) -> dict:
     return update_hash
 
 
-def fresh_table_store():
-    pass
+def fresh_table_store(today: bool = False):
+    """
+    如果处理今天的数据是比较迅速的 所以加了只查和改今天的情况
+    """
+    base_sql_string = "SELECT "
+    base_sql_string += "_id, updateTime, nowEpisode, allEpisode, done, nowWeek"
+    base_sql_string += "FROM video"
+
+    base_sql_string += f" WHERE week = {time.localtime().tm_wday + 1}" if today else ";"
+
+    conn = whether_create_sql_base()
+    cur = conn.cursor()
+    cur.execute(base_sql_string)
+
+    now_week = int(get_time(fmt='%W'))
+    for row in cur.fetchall():
+        fresh_by_check_row(row, now_week)
+
+
+def fresh_by_check_row(row, now_week):
+    """
+    这里是多种模式校验每一行 判断是否需要调整字段数据
+    """
 
 
 def update_store_data(md5: str):
