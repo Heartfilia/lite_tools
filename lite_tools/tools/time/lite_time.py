@@ -150,11 +150,26 @@ def _fmt_to_timestamp(goal, fmt_str, times, instance):
 def _guess_fmt(string: str):
     """
     当默认传入的fmt为True或者False的时候，这里预测fmt的格式
-    TODO(会自动匹配时间)
+    TODO(会自动匹配时间 目前只匹配基本的模板)
     """
-    _ = string
+    if not string:
+        return ""
+
+    if re.search(r"^\d{4}$", string): return "%Y"
+    elif re.search(r"^\d{4}-\d{2}$", string): return "%Y-%m"
+    elif re.search(r"^\d{4}年\d{2}月$", string): return "%Y年%m月"
+    elif re.search(r"^\d{4}-\d{2}-\d{2}$", string): return "%Y-%m-%d"
+    elif re.search(r"^\d{4}/\d{2}/\d{2}$", string): return "%Y/%m/%d"
+    elif re.search(r"^\d{4}年\d{2}月\d{2}日$", string): return "%Y年%m月%d日"
+    elif re.search(r"^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}$", string): return "%Y年%m月%d日 %H:%M"
+    elif re.search(r"^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}:\d{2}$", string): return "%Y年%m月%d日 %H:%M:%S"
+    elif re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", string): return "%Y-%m-%d %H:%M:%S"
+    elif re.search(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}$", string): return "%Y/%m/%d %H:%M:%S"
+    elif re.search(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}$", string): return "%Y/%m/%d %H:%M"
+    elif re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$", string): return "%Y-%m-%d %H:%M"
     # from dateutil.parser import parse
     # from dateparser import parse
+
     return ""
 
 
@@ -339,5 +354,4 @@ def time_count(fn):
 
 
 if __name__ == "__main__":
-    print(get_time("2022-07-01", fmt="%Y-%m-%d"))
-    print(get_time(1656604800))
+    print(get_time("2022-07"))
