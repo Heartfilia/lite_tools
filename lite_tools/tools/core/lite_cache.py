@@ -26,7 +26,7 @@ from typing import Dict, Any
 from queue import Empty
 from functools import wraps, partial
 from multiprocessing import Queue
-from threading import Lock, current_thread
+from threading import RLock, current_thread
 
 from lite_tools.tools.utils.logs import logger
 from lite_tools.exceptions.CacheExceptions import QueueEmptyNotion
@@ -62,7 +62,7 @@ class Buffer(metaclass=Singleton):
     __queues: Dict[str, Queue] = {}       # 创建任务的时候初始化这个 取任务要是没有直接会报错..
     __task_count: Dict[str, set] = {}     # 线程情况统计
     __task_time: Dict[str, float] = {}    # 统计任务耗时
-    _lock: Lock = Lock()
+    _lock: Lock = RLock()
 
     @classmethod
     def size(cls, name: str = "default") -> int:
