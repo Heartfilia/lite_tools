@@ -65,6 +65,10 @@ class Buffer(metaclass=Singleton):
     _lock: Lock = Lock()
 
     @classmethod
+    def size(cls, name: str = "default") -> int:
+        return cls.__queues[name].qsize()
+
+    @classmethod
     def seed(cls, name: str = "default") -> Any:
         if not cls.__queues[name].empty():
             try:

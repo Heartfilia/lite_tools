@@ -97,6 +97,9 @@ class MySql:
 
     def execute(self, sql: str, batch: bool = False, log: bool = True) -> int:
         """不走智能执行的时候走这里可以执行手动输入的sql语句 这里的log不与全局self.log共享"""
+        if not sql:
+            logger.warning(f"传入了空sql语句--> sql:[ {sql} ]")
+            return 0
         assert self._secure_check(sql), '删除操作终止!!!'
         start_time = time.time()
         conn = self.connection()

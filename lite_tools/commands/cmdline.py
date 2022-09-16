@@ -18,6 +18,7 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+import os
 import re
 import sys
 
@@ -26,6 +27,7 @@ from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.commands.today.fisher_date import print_date
+from lite_tools.tools.utils.lite_dir import get_base_root
 
 
 _my_image = """
@@ -38,6 +40,7 @@ def _print_base():
     print_info = f"lite-tools {color_string(VERSION, 'cyan')}  当前版本均为测试版,等1.0修复稳定了才是正式的\n\n"
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
+    # print_info += "  flush       清理本地关于lite-tools的全部缓存(慎用)\n"   # 有这个功能但是不对外展示
     print_info += "  fish        获取摸鱼人日历\n"
     print_info += "  acg         更多详情见 -h 默认输出今日视频记录\n"
     # print_info += "  ball        获取彩票详情\n"   # 这里先不提供了 目前要学习其他的 不搞这个地方了
@@ -65,6 +68,15 @@ def get_version(_, *args):
 def get_fish_date(_, *args):
     _ = args
     print_date()
+
+
+@chose_option.register("flush")
+def flush_local(_, *args):
+    # 写一写的忧郁了要不要弄这个删除本地文件的操作
+    root = get_base_root()
+    lite_tools_dir = os.path.join(root, '.lite-tools')
+    # for root_dir, folder_name, files in os.walk(lite_tools_dir):
+    #     if folder_name:
 
 
 @chose_option.register("ball")
@@ -176,3 +188,7 @@ def execute():
 
     command = args.pop(1)
     chose_option(command, args)
+
+
+if __name__ == "__main__":
+    flush_local(1)
