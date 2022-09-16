@@ -43,7 +43,7 @@ class Singleton(type):
     # 上面的Xxx就是单例模式了
     """
     _instances = {}
-    _lock: Lock = Lock()
+    _lock: RLock = RLock()
 
     def __call__(cls, *args, **kwargs):
         with cls._lock:
@@ -62,7 +62,7 @@ class Buffer(metaclass=Singleton):
     __queues: Dict[str, Queue] = {}       # 创建任务的时候初始化这个 取任务要是没有直接会报错..
     __task_count: Dict[str, set] = {}     # 线程情况统计
     __task_time: Dict[str, float] = {}    # 统计任务耗时
-    _lock: Lock = RLock()
+    _lock: RLock = RLock()
 
     @classmethod
     def size(cls, name: str = "default") -> int:
