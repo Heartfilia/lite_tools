@@ -150,7 +150,7 @@ def _fmt_to_timestamp(goal, fmt_str, times, instance):
 def _guess_fmt(string: str):
     """
     当默认传入的fmt为True或者False的时候，这里预测fmt的格式
-    TODO(会自动匹配时间 目前只匹配基本的模板)
+    (会自动匹配时间 目前只匹配基本的模板)
     """
     if not string:
         return ""

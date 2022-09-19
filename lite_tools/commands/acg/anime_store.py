@@ -67,6 +67,7 @@ def create_table(conn: sqlite3.connect):
         date text,
         hour integer,
         updateTime text NOT NULL,
+        saveTime text NOT NULL,
         nowEpisode integer,
         allEpisode integer,
         done integer,
@@ -185,6 +186,7 @@ def insert_data():
                 hour = -1   # 不正常就统一到 -1 sql过滤的时候不显示今天播放的小时节点
 
             update_time = get_time(fmt="%Y-%m-%d")  # 这里是校验今天是否有把数据库数据更新
+            save_time = get_time(fmt=True)    # 记录第一次录入时间 后续不会改动
 
             now_episode = input_data("当前集数(默认未开播)")
             check_insert_param(now_episode)
@@ -208,7 +210,8 @@ def insert_data():
             data = {
                 "_id": _id, "platform": platform, "name": name, "date": date, "hour": hour,
                 "updateTime": update_time, "nowEpisode": int(now_episode), "allEpisode": int(all_episode),
-                "done": done, "week": int(week), "nowWeek": int(get_time(fmt='%W'))  # 今天是本年第几周
+                "done": done, "week": int(week), "nowWeek": int(get_time(fmt='%W')), "saveTime": save_time
+                #                                 # 今天是本年第几周
             }
             insert_one(conn, data)
 
