@@ -4,7 +4,7 @@
 import re
 import time
 import functools
-from typing import Union
+from typing import Union, Literal
 # from inspect import currentframe
 
 from lite_tools.tools.utils.logs import logger
@@ -29,7 +29,7 @@ def get_date(timedelta: tuple = None):
     pass
 
 
-def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = False, unit: str = "s",
+def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = False, unit: Literal["ms", "s"] = "s",
              instance: Union[None, type] = None, cursor: Union[str, int, float] = 0, **kwargs):
     """
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor

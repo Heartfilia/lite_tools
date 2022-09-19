@@ -4,12 +4,12 @@
 from base64 import (
     b16encode, b32encode, b64encode, b85encode,
     b16decode, b32decode, b64decode, b85decode)
-from typing import Union
+from typing import Union, Literal
 
 __ALL__ = ['get_b64e', 'get_b64d']
 
 
-def get_b64e(s: Union[str, bytes, int, float], mode: int = 64, encoding='utf-8', to_bin: bool = False) -> str:
+def get_b64e(s: Union[str, bytes, int, float], mode: Literal[16, 32, 64, 85] = 64, encoding='utf-8', to_bin: bool = False) -> str:
     """
     用baseXX加密字符串
     :param s: 传入的字符串
@@ -33,7 +33,7 @@ def get_b64e(s: Union[str, bytes, int, float], mode: int = 64, encoding='utf-8',
         raise Exception('SUPPORT: b16encode b32encode b64encode b85encode // only need inputting: 16 32 64 85')
 
 
-def get_b64d(s: str, mode: int = 64, encoding='utf-8') -> str:
+def get_b64d(s: str, mode: Literal[16, 32, 64, 85] = 64, encoding='utf-8') -> str:
     """
     用baseXX进行解密对应的内容
     :param s: 传入的字符串

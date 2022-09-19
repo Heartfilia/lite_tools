@@ -6,7 +6,7 @@ from hashlib import (
     sha3_224, sha3_256, sha3_384, sha3_512
 )
 
-from typing import Union
+from typing import Union, Literal
 
 from lite_tools.exceptions.StringExceptions import BadModeException
 
@@ -14,7 +14,7 @@ from lite_tools.exceptions.StringExceptions import BadModeException
 __ALL__ = ["get_md5", "get_sha", "get_sha3"]
 
 
-def get_md5(s: Union[str, bytes, int, float], mode: int = 32, up: bool = False, encoding='utf-8', **kwargs) -> str:
+def get_md5(s: Union[str, bytes, int, float], mode: Literal[16, 32] = 32, up: bool = False, encoding='utf-8', **kwargs) -> str:
     """
     利用md5加密内容
     :param s: 加密前字符串(兼容直接操作数字和浮点数转成字符串再获取md5)
@@ -45,7 +45,7 @@ def get_md5(s: Union[str, bytes, int, float], mode: int = 32, up: bool = False, 
         raise TypeError
 
 
-def get_sha(s: Union[str, bytes, int, float], mode: int = 256, encoding='utf-8') -> str:
+def get_sha(s: Union[str, bytes, int, float], mode: Literal[1, 224, 256, 384, 512] = 256, encoding='utf-8') -> str:
     """
     获取shaX的加密内容
     :param s: 加密前字符串
@@ -67,7 +67,7 @@ def get_sha(s: Union[str, bytes, int, float], mode: int = 256, encoding='utf-8')
     return sha_obj.hexdigest()
 
 
-def get_sha3(s: Union[str, bytes, int, float], mode=256, encoding='utf-8') -> str:
+def get_sha3(s: Union[str, bytes, int, float], mode: Literal[224, 256, 384, 512] = 256, encoding='utf-8') -> str:
     """
     获取sha3_X的加密内容
     :param s: 加密前字符串
