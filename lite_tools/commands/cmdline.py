@@ -72,9 +72,9 @@ def get_fish_date(_, *args):
 
 @chose_option.register("flush")
 def flush_local(_, *args):
-    # 写一写的忧郁了要不要弄这个删除本地文件的操作
+    # 写一写的忧郁了要不要弄这个删除本地文件的操作  因为我这些本来我就做了移除操作
     root = lite_tools_dir()
-    # 然后对下面的内容的文件夹进行操作  可选参数 acg  today
+    # 然后对下面的内容的文件夹进行操作  可选参数 acg  today  history
 
 
 @chose_option.register("ball")
