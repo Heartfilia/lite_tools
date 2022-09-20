@@ -43,10 +43,12 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
     params args  : 兼容不重要参数
     params kwargs: 兼容不重要参数
     """
-    if isinstance(fmt, bool):
+    if isinstance(fmt, bool) and isinstance(goal, str):
         fmt_str = _guess_fmt(goal)
         if not fmt_str:
             fmt_str = "%Y-%m-%d %H:%M:%S"
+    elif not isinstance(goal, str) and fmt is True:
+        fmt_str = "%Y-%m-%d %H:%M:%S"
     else:
         fmt_str = fmt
     times = _get_unit_times(unit)
@@ -55,8 +57,9 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
 
     if instance is not None and instance not in [int, float]:
         instance = int
-
-    if goal and isinstance(goal, str):  # 转换目标格式为 时间戳
+    if not isinstance(goal, str) and fmt is False:
+        return _cal_cursor_timestamp(goal, times, instance, cursor)
+    elif goal and isinstance(goal, str):  # 转换目标格式为 时间戳
         return _fmt_to_timestamp(goal, fmt_str, times, instance)
     elif goal and isinstance(goal, (float, int)) and cursor == 0:   # 转换时间戳为 目标时间格式
         return _timestamp_to_f_time(goal, fmt_str)
@@ -82,6 +85,27 @@ def _get_unit_times(unit):
     else:
         times = 1
     return times
+
+
+def _cal_cursor_timestamp(goal, times, instance, cursor):
+    if goal is None:
+        base_time = _default_now_time(instance, times)
+    else:
+        str_goal = str(goal).split(".")[0]   # 取整
+        this_times = 1 if len(str_goal) == 10 and times == 1 else 1000
+        base_time = goal * this_times
+
+    cursor_time = _get_offset(cursor) * times
+
+    result_temp = base_time + cursor_time
+
+    if times == 1000 and len(str(int(result_temp))) == 10:
+        result_temp = result_temp * 1000
+
+    if instance == int:
+        return int(result_temp)
+    else:
+        return result_temp
 
 
 def _default_now_time(instance, times):
@@ -354,4 +378,4 @@ def time_count(fn):
 
 
 if __name__ == "__main__":
-    print(get_time("2022-07"))
+    pass

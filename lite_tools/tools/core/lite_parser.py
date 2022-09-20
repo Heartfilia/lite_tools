@@ -7,7 +7,9 @@ import json as _json
 from typing import Any, Optional, Iterator, Union, Tuple
 
 from lite_tools.tools.utils.logs import my_logger, get_using_line_info, logger
-from lite_tools.exceptions.DictExceptions import TemplateFormatError, NotJsonException, NotGoalItemException
+from lite_tools.exceptions.DictExceptions import (
+    TemplateFormatError, NotJsonException, NotGoalItemException
+)
 
 
 __ALL__ = ['try_get', 'try_key', 'FlattenJson', 'JsJson', 'WrapJson']
@@ -66,7 +68,7 @@ def try_get(
             else:
                 origin_getter, renderer = handle_normal_situation(getter, renderer)
 
-            if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
+            if renderer == retry_bad_key:
                 continue
 
             try:
@@ -124,9 +126,9 @@ def handle_dot_situation(getter: str, renderer: dict, split_string: str) -> Tupl
         elif re.search(r"\[\*]\S+", now_getter):
             # 这里因为会改 render的结构 所以就不要单独处理了
             renderer, origin_getter = handle_reg_rule(
-                renderer, origin_getter, now_getter, "try重试１ダ_get获取２メ_fail失败３よ")
+                renderer, origin_getter, now_getter, retry_bad_key)
             # 避免本来结果就是None或者什么情况
-            if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
+            if renderer == retry_bad_key:
                 continue
         elif re.search(r"\[\d+]", now_getter):
             origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
@@ -146,9 +148,9 @@ def handle_normal_situation(each_getter: str, renderer: dict):
     origin_getter = "_"
     if re.search(r"\[\*]\S+", each_getter):
         renderer, origin_getter = handle_reg_rule(
-            renderer, origin_getter, each_getter, "try重试１ダ_get获取２メ_fail失败３よ")
+            renderer, origin_getter, each_getter, retry_bad_key)
         # 避免本来结果就是None或者什么情况
-        if renderer == "try重试１ダ_get获取２メ_fail失败３よ":
+        if renderer == retry_bad_key:
             origin_getter = "_"
     elif re.search(r"\\\[\S+]", each_getter):
         origin_getter += f"['{each_getter[1:]}']"
@@ -222,6 +224,9 @@ def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log
                 line, fl = get_using_line_info()
                 my_logger(fl, "try_get", line, e)
     return default
+
+
+retry_bad_key = "try重试１ダ-故意(yeah)传了一个特殊的不一定重复的值来做一些额外的处理-get获取２メ_fail失败３よ"
 
 
 # ==============================================================================================================
@@ -487,7 +492,7 @@ class FlattenJson(object):
 
 class JsJson(object):
     """
-    TODO(2022.2.22周二 阴历正月二十二)这里后面再做各种兼容模式 现在只兼容了 天气模块那个格式处理
+    不做这个识别操作了 (2022.2.22周二 阴历正月二十二)这里后面再做各种兼容模式 现在只兼容了 天气模块那个格式处理
     """
     def __init__(self, javascript=None, reg_rule=None):
         """

@@ -42,3 +42,11 @@ class NotGoalItemException(Exception):
 
     def __str__(self):
         return self.detail
+
+
+class RetryFailedException(Exception):
+    def __init__(self):
+        self.error = "这里是因为重试错误"
+
+    def __str__(self):
+        return self.error
