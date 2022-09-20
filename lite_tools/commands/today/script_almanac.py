@@ -34,6 +34,7 @@ from lite_tools.tools.time.lite_time import get_time
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_parser import try_get
 from lite_tools.tools.core.lite_string import color_string, CleanString
+from lite_tools.commands.today.today_utils import check_cache
 urllib3.disable_warnings()
 clean_string = CleanString(mode="s")
 
@@ -43,7 +44,7 @@ def print_today():
     """
     关于假期:如果假期是未发生的,那么将会是<黄色>标注,假如是正在假期间,将会是<绿色>标注,其次无颜色标注
     """
-    html_text = get_date_web()
+    html_text = get_date_web("almanac")
     html_obj = etree.HTML(html_text)
     print(color_string("【假期】还不到的假期显示<<yellow>黄色</yellow>>，正在假期中显示<<green>绿色</green>>，已经过了的假期<无色>"))
     parse_html_holiday(html_obj)   # 解析假期
@@ -58,7 +59,7 @@ def print_today_history():
     """
     print("数据获取中...", end="")
     time_fmt = get_time(fmt="%Y-%m-%d")
-    html_json = get_wiki_info(time_fmt)
+    html_json = get_wiki_info("history", time_fmt)
     parse_history_json(html_json, time_fmt)
 
 
@@ -81,7 +82,9 @@ def clean_html_tag(html):
     return clean_string.get("".join(obj.xpath('//text()')))
 
 
-def get_wiki_info(time_fmt: str) -> dict:
+@check_cache
+def get_wiki_info(mode: str = "history", time_fmt: str = "") -> dict:
+    _ = mode
     month = time_fmt.split('-')[1]
     resp = requests.get(
         f'https://baike.baidu.com/cms/home/eventsOnHistory/{month}.json',
@@ -90,7 +93,9 @@ def get_wiki_info(time_fmt: str) -> dict:
     return resp.json()
 
 
-def get_date_web() -> str:
+@check_cache
+def get_date_web(mode: str = "almanac") -> str:
+    _ = mode
     resp = requests.get('https://www.wannianli.cn/', headers={'user-agent': get_ua()}, verify=False)
     return resp.text
 
@@ -171,7 +176,3 @@ def _holiday_judge_range(chinese_time_range: str):
         return ""
     else:
         return ""
-
-
-if __name__ == "__main__":
-    print_today()

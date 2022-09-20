@@ -27,7 +27,7 @@ from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.commands.today.fisher_date import print_date
-from lite_tools.tools.utils.lite_dir import get_base_root
+from lite_tools.tools.utils.lite_dir import lite_tools_dir
 
 
 _my_image = """
@@ -73,10 +73,8 @@ def get_fish_date(_, *args):
 @chose_option.register("flush")
 def flush_local(_, *args):
     # 写一写的忧郁了要不要弄这个删除本地文件的操作
-    root = get_base_root()
-    lite_tools_dir = os.path.join(root, '.lite-tools')
-    # for root_dir, folder_name, files in os.walk(lite_tools_dir):
-    #     if folder_name:
+    root = lite_tools_dir()
+    # 然后对下面的内容的文件夹进行操作  可选参数 acg  today
 
 
 @chose_option.register("ball")

@@ -29,6 +29,7 @@ except ImportError:
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_string import color_string
+from lite_tools.commands.today.today_utils import check_cache
 
 
 @try_catch(log="本功能为在线功能,需要网络。如有网络不要频繁请求，[如果网页数据版式有改动,这样的话这个功能暂时就废了需要修复]")
@@ -36,12 +37,14 @@ def print_oil():
     """
     今日全国油价
     """
-    html_text = get_html_info()
+    html_text = get_html_info("oil")
     html_obj = etree.HTML(html_text)
     parse_oil_data(html_obj)
 
 
-def get_html_info():
+@check_cache
+def get_html_info(mode: str = "oil"):
+    _ = mode
     return requests.get('https://oil.usd-cny.com', headers={"user-agent": get_ua()}).content.decode('gb2312')
 
 

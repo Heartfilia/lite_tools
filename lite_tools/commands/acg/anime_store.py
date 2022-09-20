@@ -94,7 +94,10 @@ def whether_create_sql_base() -> Optional[sqlite3.connect]:
 
     if not file_dir:
         store_path = lite_tools_dir()
-        file_dir = os.path.join(store_path, "store.db")
+        folder_dir = os.path.join(store_path, "acg")
+        if not os.path.exists(folder_dir):
+            os.makedirs(folder_dir)
+        file_dir = os.path.join(folder_dir, "store.db")
 
     if not os.path.exists(file_dir):
         # 这里为啥要把这个同样的东西写在不同的方法里面呢 因为在上面创建了 这里就会判断错误

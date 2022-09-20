@@ -169,4 +169,4 @@ def main_animation(args: list):
 
 
 if __name__ == "__main__":
-    main_animation([1, "update"])
+    main_animation([1])

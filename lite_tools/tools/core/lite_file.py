@@ -106,7 +106,11 @@ class LiteLogFile(object):
         """
         base_path = lite_tools_dir()
 
-        folder_path = os.path.join(base_path, folder_name)
+        folder_path_dir = os.path.join(base_path, 'logs')
+        if not os.path.exists(folder_path_dir):
+            os.makedirs(folder_path_dir)
+
+        folder_path = os.path.join(folder_path_dir, folder_name)
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
