@@ -1,5 +1,5 @@
 import traceback
-from typing import Union, Callable
+from typing import Union, Callable, TypeVar
 from functools import wraps, partial
 from asyncio import iscoroutinefunction
 
@@ -9,8 +9,11 @@ from lite_tools.tools.utils.logs import my_logger, logger, handle_exception
 __ALL__ = ["try_catch"]
 
 
+T = TypeVar('T')
+
+
 def try_catch(func=None, *,
-              default=None, log: Union[bool, str] = True, catch: bool = False,
+              default: T = None, log: Union[bool, str] = True, catch: bool = False,
               err_callback: Callable = None, err_args: tuple = None):
     """
     异常捕获装饰器

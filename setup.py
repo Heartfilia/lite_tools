@@ -17,14 +17,11 @@ with open("README.md", "r", encoding='utf-8') as fd:
 
 # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
 base_requires = [
-    'loguru', 'urllib3', 'colorama', 'httpx', 'httpx[http2]', 'pymysql>=1.0.2', 'dbutils>=3.0.2', "func_timeout"
+    'loguru', 'urllib3', 'colorama', 'httpx', 'httpx[http2]', 'pymysql>=1.0.2', 'dbutils>=3.0.2',
+    "func_timeout", "requests", "prettytable", "datetime", "lxml"
 ]
-# 这里暂时没有用到 -- 一些完整包的情况下的功能  # rich/datetime 目前没有用到 以后会用 先给大家装着
-file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter", "numpy", "rich"]
-date_requires = ["datetime", "lxml", "requests", "prettytable"]
-
-all_requires = date_requires + file_requires
-
+# 这里暂时没有用到 -- 一些完整包的情况下的功能  # 目前很多包没有用到 以后会用 先给大家装着
+file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter", "numpy"]
 
 setup(
     name='lite-tools',
@@ -57,17 +54,14 @@ setup(
     entry_points={"console_scripts": [
         "lite-tools=lite_tools.commands.cmdline:execute",
     ]},
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     extras_require={
-        "all": all_requires,
-        "date": date_requires,
-        "file": file_requires,
+        "all": file_requires,
     },
     classifiers=[
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Natural Language :: Chinese (Simplified)',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',

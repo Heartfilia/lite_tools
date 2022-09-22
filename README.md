@@ -20,7 +20,7 @@
 ```
 ```
 python version:
-    3.6+   // 因为使用了f_string
+    3.7+   // 因为使用了f_string 和一些类型声明 不确定3.6是否可以 应该可以吧
 requirements :
     loguru
 extral_requirements:
@@ -35,9 +35,7 @@ extral_requirements:
 # 安装
 【普通版】cmd/bash >> pip install --upgrade lite-tools        # 有的人的pip是pip3 一般的功能用这些就够了
 ---------------- 下面两个还没有正式启用 --------------
-【文件版】cmd/bash >> pip install --upgrade lite-tools[file]  # 只增加了文件处理模块
-【日历版】cmd/bash >> pip install --upgrade lite-tools[date]  # 只增加了文件处理模块
-【补充版】cmd/bash >> pip install --upgrade lite-tools[all]   # 包含上面所有功能
+【完整版】cmd/bash >> pip install --upgrade lite-tools[all]   # 包含上面所有功能
 ```
 
 ### 命令行指令
