@@ -29,6 +29,46 @@ from lite_tools.tools.time.lite_time import get_time
 T = TypeVar('T')
 
 
+class BaseModel(object):
+    thread_num: int = None
+
+    def start_requests(self):
+        """
+        :return : yield Request()
+        """
+        pass
+
+    def before_request(self):
+        """
+        下载之前做的事情
+        """
+        pass
+
+    def after_request(self):
+        """
+        请求之后做的事情
+        """
+        pass
+
+    def retry_mid(self, request, response):
+        """
+        重试中间件
+        """
+        pass
+
+    def validator_mid(self, request):
+        """
+        校验中间件
+        """
+        pass
+
+    def close(self):
+        """
+        pass
+        """
+        pass
+
+
 class LiteHistory:
     status_code: int = 200
     url: str
@@ -48,7 +88,7 @@ class LiteHistory:
 class LiteResponse:
     status_code: int = 200
     url: str
-    request_time: float      # ms 单位
+    response_time: float      # ms 单位  获得响应的时间
     body: ...
     decode: str   # 这里还不确定怎么弄
     request_mode: str = 'requests'
@@ -57,9 +97,12 @@ class LiteResponse:
     history: LiteHistory
 
     def __new__(cls):
-        cls.request_time = get_time(instance=float)
+        cls.response_time = get_time(instance=float)
 
     def __str__(self):
+        return f"<Response [{self.status_code}]>"
+
+    def __repr__(self):
         return f"<Response [{self.status_code}]>"
 
     def __setattr__(self, key, value):
@@ -69,9 +112,14 @@ class LiteResponse:
         return self.__dict__[item]
 
 
-class LiteRequest(object):
-    def __init__(self, retry: int = 5):
-        self.retry = retry
+class LiteRequest(BaseModel):
+    request_time: float  # ms 单位 请求开始的时间
+
+    def __new__(cls):
+        cls.request_time = get_time(instance=float)
+
+    def __init__(self):
+        self._progress_list = []
 
     def send(self, url,
              *,
@@ -126,3 +174,22 @@ class LiteRequest(object):
 
     async def _async_cal_ret(self, resp, ret):
         pass
+
+    def _request_each(self):
+        """
+        这里是单个程序运行的地方
+        """
+
+    def in_progress(self):
+        """
+        程序主要核心运行部分
+        """
+        if not self.thread_num or self.thread_num == 1:
+            pass
+        else:
+            pass
+
+    def run(self):
+        self.before_request()
+        self.in_progress()
+        self.after_request()

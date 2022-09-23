@@ -19,6 +19,7 @@ numpy = "*"
 lxml = "*"
 datetime = "*"
 prettytable = "*"
+redis = "*"
 
 [dev-packages]
 

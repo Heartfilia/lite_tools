@@ -20,12 +20,12 @@
 """
 import re
 import time
-from loguru import logger
 from typing import Iterator, Union
 
 import pymysql
 from dbutils.pooled_db import PooledDB
 
+from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.sql.config import Config
 from lite_tools.tools.sql.SqlLog import log_level

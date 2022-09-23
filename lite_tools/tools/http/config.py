@@ -18,30 +18,9 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-from threading import Thread
-from lite_tools.tools.http.models import LiteRequest
+from typing import Union
 
 
-class LiteSpider(LiteRequest, Thread):
-
-    spider_name: str = "Spider"
-
-    def __init__(self, thread_num: int = 1):
-        super(LiteSpider, self).__init__()
-        assert isinstance(thread_num, int), TypeError
-        self.thread_num = thread_num
-
-    def _buffer_task(self):
-        pass
-
-    def run(self):
-        """
-        class SpiderName(LiteSpider):
-            pass
-        启动程序流程是:
-        spider = SpiderName(10)
-        spider.run()
-        """
-        pass
-
-
+class LiteConfig:
+    retry: int = 5
+    timeout: Union[int, float] = 3

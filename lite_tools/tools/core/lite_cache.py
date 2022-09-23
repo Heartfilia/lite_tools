@@ -25,7 +25,7 @@ import time
 from typing import Dict, Any
 from queue import Empty
 from functools import wraps, partial
-from multiprocessing import Queue
+from queue import Queue
 from threading import RLock, current_thread
 
 from lite_tools.tools.utils.logs import logger

@@ -19,7 +19,7 @@
           ┗━┻━┛   ┗━┻━┛
 """
 import sys
-from loguru import logger
+from lite_tools.tools.utils.logs import logger
 
 try:
     from lite_tools.tools.utils.RequestsAdapter import ssl_gen as sync_ja3

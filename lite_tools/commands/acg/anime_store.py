@@ -25,9 +25,9 @@ import time
 import sqlite3
 from typing import Optional, Iterator
 
-from loguru import logger
 from prettytable import PrettyTable
 
+from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.time.lite_time import get_time, TimeFormatException
 from lite_tools.tools.core.lib_hashlib import get_md5
 from lite_tools.tools.core.lite_string import color_string
