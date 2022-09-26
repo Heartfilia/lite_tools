@@ -7,16 +7,18 @@ from lite_tools import get_time, time_count
 print(get_time())                                              # 1617702062
 # cursor 支持年月日时分秒的设置方式 但是同时设置多个只会最大范围的那个起效过 如 cursor="-2Y3m" 只会-2Y 有效果 两年前的意思
 print(get_time(cursor=-10))                                    # 1616838062
-print(get_time(cursor=7, double=True))                         # 1618306862.682278
+print(get_time(cursor=7, instance=float))                      # 1618306862.682278
 print(get_time(cursor=7, fmt=True))                            # 2021-04-13 17:41:02
-print(get_time(double=True))                                   # 1617701814.704276
+print(get_time(instance=float))                                # 1617701814.704276
 print(get_time(fmt=True))                                      # 2021-04-06 17:36:54
 print(get_time(fmt="%Y::%m::%d::"))                            # 2021::04::06::
-print(get_time(1617701814))                                    # 2021-04-06 17:36:54   
-print(get_time("2021-04-06 17:36", double=True, fmt="%Y-%m-%d %H:%M"))  # 1617701760.0  时间格式需要用fmt_str来对应 默认样式无须再写
+print(get_time(1617701814))                                    # 没有任何效果
+print(get_time("1617701814"))                                  # 没有任何效果 其实是返回了数字类型
+print(get_time("2021-04-06 17:36"))                            # 1617701760  时间格式基础类型fmt不用写
+print(get_time("2021-04-06 17:36", unit='ms'))                 # 1617701760000  时间格式基础类型fmt不用写
 print(get_time("2021-04-06 17:36:54", double=True))            # 1617701814.0
-print(get_time("1617701814"))                                  # 2021-04-06 17:36:54   support string too
-print(get_time(1617701814, fmt="%Y::%m::%d::%H~%M~%S"))    # 2021::04::06::17~36~54
+print(get_time(1617701814, fmt="%Y::%m::%d::%H~%M~%S"))        # 2021::04::06::17~36~54
+print(get_time(1617701814, fmt=True))                          # 2021-04-06 17:36:54
 # time_count 是一个装饰器 只用于统计被装饰的函数耗时 日志等级为 debug
 
 

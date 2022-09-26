@@ -59,7 +59,7 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
         instance = int
     if not isinstance(goal, str) and fmt is False:
         return _cal_cursor_timestamp(goal, times, instance, cursor)
-    elif goal and isinstance(goal, str):  # 转换目标格式为 时间戳
+    elif goal and isinstance(goal, str) and not goal.replace(".", "").isdigit():  # 转换目标格式为 时间戳
         return _fmt_to_timestamp(goal, fmt_str, times, instance)
     elif goal and isinstance(goal, (float, int)) and cursor == 0:   # 转换时间戳为 目标时间格式
         return _timestamp_to_f_time(goal, fmt_str)
@@ -378,4 +378,4 @@ def time_count(fn):
 
 
 if __name__ == "__main__":
-    pass
+    print(get_time("2021-04-06 17:36"))
