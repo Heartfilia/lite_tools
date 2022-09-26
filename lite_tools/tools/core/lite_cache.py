@@ -22,10 +22,12 @@
 >> 第一版先只兼容同步的函数   **异步没有兼容** <<
 """
 import time
+import asyncio
 from typing import Dict, Any
 from queue import Empty
 from functools import wraps, partial
 from queue import Queue
+from asyncio import iscoroutinefunction
 from threading import RLock, current_thread
 
 from lite_tools.tools.utils.logs import logger
@@ -62,6 +64,7 @@ class Buffer(metaclass=Singleton):
     __queues: Dict[str, Queue] = {}       # 创建任务的时候初始化这个 取任务要是没有直接会报错..
     __task_count: Dict[str, set] = {}     # 线程情况统计
     __task_time: Dict[str, float] = {}    # 统计任务耗时
+    __async_out: bool = True              # 异步日志
     _lock: RLock = RLock()
 
     @classmethod
@@ -120,7 +123,7 @@ class Buffer(metaclass=Singleton):
                             )
                     break
                 if cls.__queues[name].empty():
-                    time.sleep(1)
+                    time.sleep(.5)
                     continue
 
                 try:
@@ -128,17 +131,41 @@ class Buffer(metaclass=Singleton):
                 except QueueEmptyNotion:
                     pass
 
-        return wrapper
+        @wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            with cls._lock:
+                cls.__task_count[name].add("AsyncTask")
+            while True:
+                if not cls.__task_flag.get(name, False) and cls.__queues[name].empty():
+                    with cls._lock:
+                        if cls.__async_out:
+                            logger.debug(
+                                f"[{name}] 队列任务种子消耗完毕,worker结束.耗时:{time.time() - cls.__task_time[name]:.3f} s"
+                            )
+
+                        if cls.__task_count[name]:
+                            cls.__task_count[name].pop()
+                            cls.__async_out = False
+                    break
+                if cls.__queues[name].empty():
+                    await asyncio.sleep(.5)
+                    continue
+
+                try:
+                    await func(*args, **kwargs)
+                except QueueEmptyNotion:
+                    pass
+
+        return async_wrapper if iscoroutinefunction(func) else wrapper
 
     @classmethod
     def __init__queue__(cls, name):
-        cls._lock.acquire()
-        if name not in cls.__queues:
-            cls.__queues[name] = Queue(10000)
-        if name not in cls.__task_count:
-            cls.__task_count[name] = set()
-        if name not in cls.__task_flag:
-            cls.__task_flag[name] = True
-        if name not in cls.__task_time:
-            cls.__task_time[name] = time.time()
-        cls._lock.release()
+        with cls._lock:
+            if name not in cls.__queues:
+                cls.__queues[name] = Queue(10000)
+            if name not in cls.__task_count:
+                cls.__task_count[name] = set()
+            if name not in cls.__task_flag:
+                cls.__task_flag[name] = True
+            if name not in cls.__task_time:
+                cls.__task_time[name] = time.time()
