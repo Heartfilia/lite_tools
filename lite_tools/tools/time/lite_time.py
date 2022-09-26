@@ -378,4 +378,4 @@ def time_count(fn):
 
 
 if __name__ == "__main__":
-    print(get_time("2021-04-06 17:36"))
+    print(get_time("2021-04-06"))
