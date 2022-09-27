@@ -65,7 +65,7 @@ class SqlString(object):
             for item in key:
                 for k, v in item.items():
                     if isinstance(v, str):
-                        v = self._handle_value(v)
+                        v = self._handle_value(v, decorate=False)
                     if k not in result_dict:
                         result_dict[k] = [v]
                     else:
@@ -91,7 +91,7 @@ class SqlString(object):
                 # 这里只是兼容另外一种格式而已 推荐的还是字典
                 values = '('
                 for each_value in value:
-                    each_value = self._handle_value(each_value)
+                    each_value = self._handle_value(each_value, decorate=False)
                     values += each_value + ', '
                 values = values.rstrip(', ') + ')'
             return f"{tuple(keys)}", values
@@ -120,7 +120,12 @@ class SqlString(object):
             base_update = base_update + self._handle_where_dict(where)
         elif isinstance(where, (list, tuple)):
             for value in where:
-                base_update += f"{value} AND "
+                if isinstance(value, dict):
+                    for w_k, w_v in value.items():
+                        base_update += f'{w_k if w_k.upper() not in MysqlKeywordsList else f"`{w_k}`"} = ' \
+                                       f'{w_v if isinstance(w_v, (int, float, bool)) or w_v is None else self._handle_value(w_v)} AND '
+                else:
+                    base_update += f"{value} AND "
             base_update = base_update.rstrip(' AND ') + ";"
         elif isinstance(where, str):
             base_update += where + ";"
@@ -212,7 +217,7 @@ class SqlString(object):
         return key_string
 
     @staticmethod
-    def _handle_value(item: Union[str, list, tuple, dict, set]):
+    def _handle_value(item: Union[str, list, tuple, dict, set], *, decorate: bool = True):
         if not isinstance(item, str):
             item = str(item)
 
@@ -225,7 +230,11 @@ class SqlString(object):
                 word = "\\'"
             base_string += word
             last_word = word
-        return "'" + base_string + "'"
+
+        if not decorate:
+            return base_string
+        else:
+            return repr(base_string)  # 这里好像是sqlite需要的格式
 
     def _handle_where_dict(self, where: dict) -> str:
         base_string = ""
@@ -235,3 +244,17 @@ class SqlString(object):
                            f'AND '
         base_string = base_string.rstrip(' AND ') + ";"
         return base_string
+
+
+# if __name__ == "__main__":
+#     base = SqlString("b_longtail")
+#     print(base.insert({"word": "测试I'm Your \"Betst\"Friend", "query": 123}))
+#     print(base.insert(("word", "query"), [("测试I'm Your \"Betst\"Friend", 123)]))
+#     print(base.insert(("word", "query"), [("测试I'm Your \"Betst\"Friend", 123), ("测试", "测试")]))
+#     print(base.insert([{"word": "测试I'm Your \"Betst\"Friend", "query": 123}, {"word": "测22试", "query": "11123"}]))
+#     print(base.update({"word": "测试I'm Your \"Betst\"Friend"}, {"query": "测试"}))
+#     print(base.update({"word": "测试I'm Your \"Betst\"Friend", "query": "test"}, {"query": "测试"}))
+#     print(base.update({"word": "测试I'm Your \"Betst\"Friend"}, [{"query": "测试"}, {"word": "哈哈哈"}]))
+#     print(base.update({"word": "测试I'm Your \"Betst\"Friend"}, ["`query` = '测试'", "`query` = '你好'"]))
+#     print(base.update({"word": "测试I'm Your \"Betst\"Friend"}, "`query` = '测试'"))
+#     print(base.delete({"query": "测试I'm Your \"Betst\"Friend"}))

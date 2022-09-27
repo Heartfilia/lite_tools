@@ -147,7 +147,7 @@ def insert_data():
     time.sleep(0.1)
     try:
         while True:
-            name = input_data("视频名称[*]")  # 这里为空停止录入
+            name = input_data("视频名称[*]", pos=35)  # 这里为空停止录入
             if not name:
                 logger.debug("退出了录入数据模式.")
                 break
@@ -161,11 +161,11 @@ def insert_data():
                 time.sleep(0.1)
                 continue
 
-            platform = input_data("播放平台[*]")
+            platform = input_data("播放平台[*]", pos=35)
             check_insert_param(platform)
 
             while True:
-                date = input_data("开播日期(YYYY-MM-DD格式,如果已经开播可为空)")
+                date = input_data("开播日期(YYYY-MM-DD格式,如果已经开播可为空)", pos=6)
                 date = date.strip()
                 check_insert_param(date)
                 if re.search(r"\d{4}-\d{2}-\d{2}", date):
@@ -178,6 +178,7 @@ def insert_data():
                     date = "-1"
                 else:
                     logger.warning("错误的格式请按照[ 2000-01-01 ]的格式或者不输入")
+                    time.sleep(.2)
                     continue
                 break
 
@@ -191,12 +192,12 @@ def insert_data():
             update_time = get_time(fmt="%Y-%m-%d")  # 这里是校验今天是否有把数据库数据更新
             save_time = get_time(fmt=True)    # 记录第一次录入时间 后续不会改动
 
-            now_episode = input_data("当前集数(默认未开播)")
+            now_episode = input_data("当前集数(默认未开播)", pos=27)
             check_insert_param(now_episode)
             if not now_episode or not now_episode.isdigit():
                 now_episode = -1
 
-            all_episode = input_data("总集数(默认持续更新)")
+            all_episode = input_data("总集数(默认持续更新)", pos=27)
             check_insert_param(all_episode)
             if not all_episode:
                 all_episode = -1
@@ -204,7 +205,7 @@ def insert_data():
             done = 0   # 是否看完或者不关注
 
             while True:
-                week = input_data("每周几更新[1-7][*]")
+                week = input_data("每周几更新[1-7][*]", pos=28)
                 check_insert_param(week)
                 if week in ["1", "2", "3", "4", "5", "6", "7"]:
                     break

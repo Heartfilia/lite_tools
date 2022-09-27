@@ -17,8 +17,8 @@ with open("README.md", "r", encoding='utf-8') as fd:
 
 # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
 base_requires = [
-    'loguru', 'urllib3', 'colorama', 'httpx', 'httpx[http2]', 'pymysql>=1.0.2', 'dbutils>=3.0.2',
-    "func_timeout", "requests", "prettytable", "datetime", "lxml"
+    'loguru', 'urllib3', 'colorama', 'httpx[http2]', 'pymysql>=1.0.2', 'dbutils>=3.0.2',
+    "func_timeout", "requests", "prettytable", "datetime", "lxml", "redis"
 ]
 # 这里暂时没有用到 -- 一些完整包的情况下的功能  # 目前很多包没有用到 以后会用 先给大家装着
 file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter", "numpy"]
