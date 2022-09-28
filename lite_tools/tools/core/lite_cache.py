@@ -65,11 +65,19 @@ class Buffer(metaclass=Singleton):
     __task_count: Dict[str, set] = {}     # 线程情况统计
     __task_time: Dict[str, float] = {}    # 统计任务耗时
     __async_out: bool = True              # 异步日志
+    _get_count: Dict[str, int] = {}       # 从seed中拿的种子数量
     _lock: RLock = RLock()
 
     @classmethod
     def size(cls, name: str = "default") -> int:
         return cls.__queues[name].qsize()
+
+    @classmethod
+    def count(cls, name: str = "default") -> int:
+        """
+        每次调用seed后会+1 这里返回次数
+        """
+        return cls._get_count[name]
 
     @classmethod
     def seed(cls, name: str = "default") -> Any:
@@ -78,6 +86,9 @@ class Buffer(metaclass=Singleton):
                 return cls.__queues[name].get(timeout=3)
             except Empty:
                 raise QueueEmptyNotion
+            finally:
+                with cls._lock:
+                    cls._get_count[name] += 1
         else:
             raise QueueEmptyNotion
 
@@ -169,3 +180,5 @@ class Buffer(metaclass=Singleton):
                 cls.__task_flag[name] = True
             if name not in cls.__task_time:
                 cls.__task_time[name] = time.time()
+            if name not in cls._get_count:
+                cls._get_count[name] = 0
