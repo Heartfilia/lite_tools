@@ -22,6 +22,16 @@ from threading import Thread
 from lite_tools.tools.http.models import LiteRequest
 
 
+"""
+最小单元轻量级小爬虫
+请求
+重试
+解析
+校验
+信息统计
+"""
+
+
 class LiteSpider(LiteRequest, Thread):
 
     spider_name: str = "Spider"
