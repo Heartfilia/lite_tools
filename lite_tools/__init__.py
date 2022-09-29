@@ -14,7 +14,7 @@ __ALL__ = [
     "try_get",
     "try_key",
     "MySql",
-    "Config",      # mysql -- 专属配置
+    "MySqlConfig",      # mysql -- 专属配置
     "FlattenJson",
     "JsJson",
     "WrapJson",
@@ -43,7 +43,7 @@ from lite_tools.tools.time.lite_time import get_time, time_count  # get_date 后
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.sql.mysql import MySql
-from lite_tools.tools.sql.config import Config
+from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.core.lite_string import CleanString, color_string, math_string

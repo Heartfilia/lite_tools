@@ -20,7 +20,7 @@
 """
 
 
-class Config:
+class MySqlConfig:
     def __init__(
         self,
         database: str,

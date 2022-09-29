@@ -24,9 +24,8 @@
 import time
 import asyncio
 from typing import Dict, Any
-from queue import Empty
 from functools import wraps, partial
-from queue import Queue
+from queue import Queue, Empty
 from asyncio import iscoroutinefunction
 from threading import RLock, current_thread
 
@@ -67,6 +66,7 @@ class Buffer(metaclass=Singleton):
     __async_out: bool = True              # 异步日志
     _get_count: Dict[str, int] = {}       # 从seed中拿的种子数量
     _lock: RLock = RLock()
+    _task_done: bool = False              # 任务是否终止
 
     @classmethod
     def size(cls, name: str = "default") -> int:
@@ -128,10 +128,12 @@ class Buffer(metaclass=Singleton):
                     with cls._lock:
                         if current_thread().name in cls.__task_count[name]:
                             cls.__task_count[name].remove(current_thread().name)
-                        if not cls.__task_count[name]:
-                            logger.debug(
-                                f"[{name}] 队列任务种子消耗完毕,worker结束.耗时:{time.time() - cls.__task_time[name]:.3f} s"
-                            )
+                        with cls._lock:
+                            if not cls.__task_count[name] and not cls._task_done:
+                                logger.debug(
+                                    f"[{name}] 队列任务种子消耗完毕,worker结束.耗时:{time.time() - cls.__task_time[name]:.3f} s"
+                                )
+                                cls._task_done = True
                     break
                 if cls.__queues[name].empty():
                     time.sleep(.5)
@@ -149,10 +151,11 @@ class Buffer(metaclass=Singleton):
             while True:
                 if not cls.__task_flag.get(name, False) and cls.__queues[name].empty():
                     with cls._lock:
-                        if cls.__async_out:
+                        if cls.__async_out and not cls._task_done:
                             logger.debug(
                                 f"[{name}] 队列任务种子消耗完毕,worker结束.耗时:{time.time() - cls.__task_time[name]:.3f} s"
                             )
+                            cls._task_done = True
 
                         if cls.__task_count[name]:
                             cls.__task_count[name].pop()
@@ -171,14 +174,30 @@ class Buffer(metaclass=Singleton):
 
     @classmethod
     def __init__queue__(cls, name):
-        with cls._lock:
-            if name not in cls.__queues:
-                cls.__queues[name] = Queue(10000)
-            if name not in cls.__task_count:
-                cls.__task_count[name] = set()
-            if name not in cls.__task_flag:
-                cls.__task_flag[name] = True
-            if name not in cls.__task_time:
-                cls.__task_time[name] = time.time()
-            if name not in cls._get_count:
-                cls._get_count[name] = 0
+        """
+        下面尽可能的划细一点 提升效率 不用每次都要进来加锁判断一下
+        """
+        if name not in cls.__queues:
+            with cls._lock:
+                if name not in cls.__queues:
+                    cls.__queues[name] = Queue(10000)
+
+        if name not in cls.__task_count:
+            with cls._lock:
+                if name not in cls.__task_count:
+                    cls.__task_count[name] = set()
+
+        if name not in cls.__task_flag:
+            with cls._lock:
+                if name not in cls.__task_flag:
+                    cls.__task_flag[name] = True
+
+        if name not in cls.__task_time:
+            with cls._lock:
+                if name not in cls.__task_time:
+                    cls.__task_time[name] = time.time()
+
+        if name not in cls._get_count:
+            with cls._lock:
+                if name not in cls._get_count:
+                    cls._get_count[name] = 0

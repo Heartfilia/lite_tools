@@ -20,6 +20,7 @@
 """
 import re
 import time
+from threading import RLock
 from typing import Iterator, Union
 
 import pymysql
@@ -27,7 +28,7 @@ from dbutils.pooled_db import PooledDB
 
 from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.sql.lib_mysql_string import SqlString
-from lite_tools.tools.sql.config import Config
+from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.SqlLog import log_level
 from lite_tools.exceptions.SqlExceptions import DuplicateEntryException, IterNotNeedRun
 
@@ -37,7 +38,7 @@ class MySql:
             self,
             pool: PooledDB = None,
             *,
-            config: Config = None,
+            config: MySqlConfig = None,
             table_name: str = None
     ):
         """
@@ -58,7 +59,7 @@ class MySql:
             self.log = True   # 默认肯定是要打印日志的啦
             self.pool = pool
             self.table_name = table_name
-        elif not pool and config and isinstance(config, Config):
+        elif not pool and config and isinstance(config, MySqlConfig):
             self.pool = None
             self.config = config
             self.table_name = self.config.table_name
@@ -74,6 +75,18 @@ class MySql:
             self.sql_base = SqlString(self.table_name)
         else:
             self.sql_base = None
+        # 以下统计均是 统计一个实例运行周期的操作
+        self.change_line = {
+            "insert": 0,
+            "update": 0,
+            "delete": 0
+        }   # 记录一下改变的行数
+        self.not_change_line = {
+            "insert": 0,
+            "update": 0,
+            "delete": 0
+        }   # 操作了 但是没有改变的行数
+        self.lock = RLock()
 
     def _init_mysql(self, database, maxconnections, host, port, user, password, charset):
         if self.pool is None:
@@ -95,7 +108,7 @@ class MySql:
                 charset=charset
             )
 
-    def execute(self, sql: str, batch: bool = False, log: bool = True) -> int:
+    def execute(self, sql: str, batch: bool = False, log: bool = True, mode: str = None) -> int:
         """不走智能执行的时候走这里可以执行手动输入的sql语句 这里的log不与全局self.log共享"""
         if not sql:
             logger.warning(f"传入了空sql语句--> sql:[ {sql} ]")
@@ -108,13 +121,23 @@ class MySql:
                 result = cursor.execute(sql)
             conn.commit()
             end_time = time.time()
-            self._my_logger(f"耗时: {end_time-start_time:.3f}s 影响行数: [{result}]", "", "success")
+            if mode is not None:
+                with self.lock:
+                    if result == 0:
+                        self.not_change_line[mode] += 1
+                    else:
+                        self.change_line[mode] += result
+            if mode is not None:
+                other_log = f"-->总影响行数={self.change_line[mode]}; 总未影响行={self.not_change_line[mode]}"
+            else:
+                other_log = ""
+            self.sql_log(f"模式:[{mode}]{other_log} 本次耗时:{end_time-start_time:.3f}s 影响行={result}", "", "success")
             return result
         except Exception as err:
             if str(err).find("Duplicate entry") != -1 and log is False:
                 return 0
             end_time = time.time()
-            self._my_logger(f"耗时: {end_time-start_time:.3f}s 异常原因: [{err}]", sql, "error")
+            self.sql_log(f"耗时: {end_time-start_time:.3f}s 异常原因: [{err}]", sql, "error")
             conn.rollback()
             if str(err).find("Duplicate entry") != -1 and batch is True:
                 logger.warning(f"批量操作异常 --> 现在转入单条操作... 重复的字段内容日志将不会再打印")
@@ -141,7 +164,7 @@ class MySql:
         end_time = time.time()
         all_num = len(items)
         if query_log is True:
-            self._my_logger(f"耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
+            self.sql_log(f"SELECT-耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
         if all_num == 0:
             if kwargs.get("_function_use") is True:
                 raise IterNotNeedRun
@@ -209,16 +232,16 @@ class MySql:
             batch = False
         sql = self.sql_base.insert(items, values, ignore=ignore)
         try:
-            self.execute(sql, batch)
+            self.execute(sql, batch, mode="insert")
         except DuplicateEntryException:
             if values is None and isinstance(items, (list, tuple)):
                 for each_key in items:
                     new_sql = self.sql_base.insert(each_key, values, ignore)
-                    self.execute(new_sql, log=False)
+                    self.execute(new_sql, log=False, mode="insert")
             elif values is not None and isinstance(values, (list, tuple)):
                 for each_value in values:
                     new_sql = self.sql_base.insert(items, each_value, ignore)
-                    self.execute(new_sql, log=False)
+                    self.execute(new_sql, log=False, mode="insert")
 
     def replace(self, items: Union[dict, list, tuple], values: list = None) -> None:
         """
@@ -232,7 +255,7 @@ class MySql:
             batch = False
         sql = self.sql_base.replace(items, values)
         try:
-            self.execute(sql, batch)
+            self.execute(sql, batch, mode="insert")
         except Exception as err:
             logger.error(f"执行异常--> {sql} : {err}")
 
@@ -244,7 +267,7 @@ class MySql:
         """
         self._check_table()
         sql = self.sql_base.update(items, where)
-        self.execute(sql)
+        self.execute(sql, mode="update")
 
     def delete(self, where: Union[dict, str]) -> None:
         """
@@ -253,7 +276,7 @@ class MySql:
         """
         self._check_table()
         sql = self.sql_base.delete(where)
-        self.execute(sql)
+        self.execute(sql, mode="delete")
 
     def connection(self):
         """获取链接对象"""
@@ -262,7 +285,7 @@ class MySql:
 
     def _check_table(self):
         if not self.table_name:
-            self._my_logger("你现在执行的操作是需要传入 table 的名字 mysql = MySql(table_name='xxx')", "", "error")
+            self.sql_log("你现在执行的操作是需要传入 table 的名字 mysql = MySql(table_name='xxx')", "", "error")
             raise ValueError
 
     def _secure_check(self, string: str) -> bool:
@@ -270,14 +293,14 @@ class MySql:
         安全检查-->程序里面不给你操作drop操作的
         """
         if string.upper().startswith("DROP"):
-            self._my_logger(f"SQL: {string}  确定要删除操作吗? Y/N", "", "warning")
+            self.sql_log(f"SQL: {string}  确定要删除操作吗? Y/N", "", "warning")
             flag = input(">>> ")
             if flag.upper() == "Y":
-                self._my_logger(f"哈哈哈 这里是唬你的 程序里面不给你--DROP--操作的 我肯定直接报错啦 ( •̀ ω •́ )y", "", "success")
+                self.sql_log(f"哈哈哈 这里是唬你的 程序里面不给你--DROP--操作的 我肯定直接报错啦 ( •̀ ω •́ )y", "", "success")
                 return False
         return True
 
-    def _my_logger(self, string: str, sql_string: str, string_level: str) -> None:
+    def sql_log(self, string: str, sql_string: str, string_level: str) -> None:
         """
         level: (error > warning > info > success > debug)  目前只管是否要打日志 没有弄等级处理
         :param string: 需要提示的信息
