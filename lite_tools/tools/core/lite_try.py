@@ -1,7 +1,7 @@
 import time
 import asyncio
 import traceback
-from typing import Callable, TypeVar, List, Union
+from typing import Callable, TypeVar, List, Union, Sequence
 from functools import wraps, partial
 from asyncio import iscoroutinefunction
 
@@ -21,7 +21,7 @@ class BaseRetryException(Exception):
 
 def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception], Exception, type] = BaseRetryException,
               default: T = None, log: Union[bool, str] = True, catch: bool = False, timeout: Union[int, float] = None,
-              err_callback: Callable = None, err_args: tuple = None):
+              err_callback: Callable = None, err_args: Sequence = None):
     """
     异常捕获装饰器
     -->不加参数 就是把异常捕获了 返回None
@@ -34,7 +34,7 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
     :param log         : 是否打印报错信息,默认是打印的(如果传入指定的内容 那么就会报错指定内容)
     :param catch       : 按栈方式捕获异常
     :param err_callback: 当出现错误的时候调用的回调函数,只需要传入方法名即可
-    :param err_args    : 如果有参数请用元组方式传进来 这里需要结合你自己的err_callback 参考见demo
+    :param err_args    : 如果有参数请用序列方式传入,要结合你自己的err_callback参数,无参数也可以 参考见demo
     """
     if func is None:
         return partial(
@@ -55,7 +55,7 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
         line, fl, exception_type, exception_detail = handle_exception(traceback.format_exc(), func.__name__)
         if err_callback is not None:
             try:
-                if isinstance(err_args, tuple):
+                if isinstance(err_args, (tuple, list, set, dict)):
                     err_callback(*err_args)
                 else:
                     err_callback()
