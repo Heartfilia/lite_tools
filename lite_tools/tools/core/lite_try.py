@@ -38,7 +38,7 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
     """
     if func is None:
         return partial(
-            try_catch, retry=retry, except_retry=except_retry, default=default, log=log, catch=catch,
+            try_catch, retry=retry, except_retry=except_retry, default=default, log=log, catch=catch, timeout=timeout,
             err_callback=err_callback, err_args=err_args
         )
 
