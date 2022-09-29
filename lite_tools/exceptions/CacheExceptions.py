@@ -26,3 +26,11 @@ class QueueEmptyNotion(Exception):
 
     def __str__(self):
         return "队列为空 不可再取值"
+
+
+class FileNotFount(Exception):
+    def __init__(self, path: str):
+        self.error = f"未能找到该文件-> {path}"
+
+    def __str__(self):
+        return self.error

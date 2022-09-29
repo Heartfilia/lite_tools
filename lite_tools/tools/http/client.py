@@ -18,6 +18,7 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+import json
 import time
 import random
 from typing import Union, Literal, Sequence
@@ -25,6 +26,7 @@ from typing import Union, Literal, Sequence
 import redis
 
 from lite_tools.tools.utils.logs import logger
+from lite_tools.exceptions.CacheExceptions import FileNotFount
 
 
 class LiteProxy:
@@ -85,21 +87,36 @@ class LiteProxy:
             }
 
 
+# 下面功能虽然没啥用 是因为只是一个雏形 以后会加入读取配置文件 这样每次只需要去读指定位置的配置文件就好了如
+# rd = LiteRedis("/root/config.yaml")
+# rd = LiteRedis("/root/config.json")
 class LiteRedis:
     def __init__(
             self,
+            path: str = None,
+            db: int = 0,
+            *,
             host: str = "localhost",
             port: int = 6379,
-            db: int = 0,
             password: str = None,
             decode_responses: bool = True,
             **kwargs):
-        self.host = host
-        self.port = port
+        if path:
+            if path.endswith(".yaml"):
+                pass
+            elif path.endswith(".json"):
+                self.read_json(path)
+            else:
+                logger.warning("path只支持 json/yaml 格式文件")
+                exit(0)
+        else:
+            self.host = host
+            self.port = port
+            self.password = password
+            self.decode = decode_responses
+            self.kwargs = kwargs
+
         self.db = db
-        self.password = password
-        self.decode = decode_responses
-        self.kwargs = kwargs
         self.rd = None
 
     @property
@@ -114,3 +131,20 @@ class LiteRedis:
                 **self.kwargs
             )
         return self.rd
+
+    def read_yaml(self, path: str):
+        pass
+
+    def read_json(self, path: str):
+        try:
+            with open(path, 'r', encoding='utf-8') as fp:
+                config = json.load(fp)
+        except (FileNotFoundError, FileExistsError):
+            raise FileNotFount(path)
+        else:
+            self.host = config.get("host", "localhost")
+            self.port = config.get("port", 6379)
+            self.password = config.get("password")
+            self.decode = config.get("decode", True)
+            self.kwargs = config.get("kwargs", {})
+
