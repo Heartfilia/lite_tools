@@ -54,7 +54,7 @@ def my_logger(file_root, log_function, log_line, message, log_level="error"):
     except Exception:
         pass
     finally:
-        logger.add(sys.stderr)
+        logger.add(sys.stderr)   # stderr 直接输出  stdout遇到换行才输出 有个缓冲区
 
 
 def handle_exception(traceback_format_info: str, function_name: str):

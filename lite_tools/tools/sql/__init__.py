@@ -18,4 +18,4 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-from lite_tools.tools.sql.config import Config
+from lite_tools.tools.sql.config import MySqlConfig
