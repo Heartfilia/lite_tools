@@ -18,13 +18,9 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-try:
-    import urllib3
-    import requests
-    from lxml import etree
-    from prettytable import PrettyTable
-except ImportError:
-    raise ImportError
+import requests
+from lxml import etree
+from prettytable import PrettyTable
 
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.core.lite_try import try_catch

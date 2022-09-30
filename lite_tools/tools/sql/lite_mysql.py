@@ -23,10 +23,14 @@ import time
 from threading import RLock
 from typing import Iterator, Union
 
-import pymysql
-from dbutils.pooled_db import PooledDB
-
 from lite_tools.tools.utils.logs import logger
+try:
+    import pymysql
+    from dbutils.pooled_db import PooledDB
+except ImportError:
+    logger.error("这里需要[pymysql][dbutils]这两个包: 可以尝试安装--> pip install lite-tools[plus]")
+    exit(0)
+
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.SqlLog import log_level

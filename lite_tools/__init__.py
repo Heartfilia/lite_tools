@@ -32,8 +32,8 @@ __ALL__ = [
     "atob",
     "btoa",
     # 下面是一些可以对外使用的一些redis操作 等http包第一版能用的时候再放出来
-    # "LiteRedis",
-    # "LiteProxy"
+    "LiteRedis",
+    "LiteProxy"
 ]
 
 from lite_tools.tools.core.lib_base64 import get_b64d, get_b64e
@@ -42,7 +42,8 @@ from lite_tools.tools.core.lib_hashlib import get_md5, get_sha, get_sha3
 from lite_tools.tools.time.lite_time import get_time, time_count  # get_date 后续放出
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_ua import get_ua
-from lite_tools.tools.sql.mysql import MySql
+from lite_tools.tools.sql.lite_mysql import MySql
+from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy
 from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.core.lite_match import match_case
@@ -53,4 +54,3 @@ from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
 
 from lite_tools.tools.js import atob, btoa
 
-# from lite_tools.tools.http.client import LiteRedis, LiteProxy

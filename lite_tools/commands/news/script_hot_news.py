@@ -18,15 +18,10 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-
-try:
-    import urllib3
-    import requests
-    from lxml import etree
-    from typing import Tuple, Union
-    from prettytable import PrettyTable
-except ImportError:
-    raise ImportError
+import urllib3
+import requests
+from lxml import etree
+from prettytable import PrettyTable
 
 from lite_tools.tools.core.lite_ua import get_ua, lite_ua
 from lite_tools.tools.time.lite_time import get_time

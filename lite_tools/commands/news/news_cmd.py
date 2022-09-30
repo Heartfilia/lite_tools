@@ -18,13 +18,10 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-try:
-    from prettytable import PrettyTable
-    from lite_tools.commands.news.script_hot_news import print_hot_news
-    from lite_tools.commands.news.get_blog_rank import blog_rank
-    from lite_tools.commands.news.get_global_news import get_china_news, get_world_news
-except ImportError:
-    raise ImportError
+from prettytable import PrettyTable
+from lite_tools.commands.news.script_hot_news import print_hot_news
+from lite_tools.commands.news.get_blog_rank import blog_rank
+from lite_tools.commands.news.get_global_news import get_china_news, get_world_news
 
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.core.lite_string import color_string

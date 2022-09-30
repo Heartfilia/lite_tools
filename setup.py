@@ -14,14 +14,30 @@ if version_info < (3, 6, 0):
 with open("README.md", "r", encoding='utf-8') as fd:
     long_description = fd.read()
 
-
-# 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
 base_requires = [
-    'loguru', 'urllib3', 'colorama', 'httpx[http2]', 'pymysql>=1.0.2', 'dbutils>=3.0.2',
-    "func_timeout", "requests", "prettytable", "datetime", "lxml", "redis"
+    'loguru',          # 基本的日志打印相关的调用
+    "requests",        # 请求模块，本来不想安装那么多东西的，现在谁没有一个requests啊
+    'urllib3',         # 安装requests自动装的,主要是有个地方用到了它里面的解析模块,不写这里ide会提示
+    'colorama',        # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
+    "prettytable",     # 基本的展示一些操作的模块
+    "datetime",        # 谁没有一个datetime模块啊
+    "lxml",            # 提取一些静态页面内容的时候要用这个
+    "redis",           # redis 的一个东西需要用这个
+    "yaml",            # redis 那里读取配置文件要用这个
+    'pymysql>=1.0.2',  # mysql包全靠它 如果对版本介意 可以不管我这个
+    'dbutils>=3.0.2',  # MySQL池需要用
+    "func_timeout",    # 用一个try上面 但是这个包没有封装好
+    'httpx[http2]',    # 封装一个更加方便的请求模块的时候兼容h2 所以这里被迫装了一个
 ]
-# 这里暂时没有用到 -- 一些完整包的情况下的功能  # 目前很多包没有用到 以后会用 先给大家装着
-file_requires = ["reportlab", "Pillow", "pandas", "xlsxwriter", "numpy"]
+
+# 这里暂时没有用到 等以后搞文件操作的时候再完善这里
+file_requires = [
+    "reportlab",    # 这个是生成pdf的
+    "Pillow",       # 这个是图像处理的
+    # "pandas",       # 这东西没有用到
+    # "xlsxwriter",   # 这东西也是只有pandas用到的时候才会用到
+    # "numpy"         # 也米有用到
+]
 
 setup(
     name='lite-tools',

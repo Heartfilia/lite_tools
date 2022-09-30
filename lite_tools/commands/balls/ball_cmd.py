@@ -18,13 +18,8 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-try:
-    import requests
-    from prettytable import PrettyTable
-    from lite_tools.commands.balls.fuli import get_fuli
-    from lite_tools.commands.balls.tiyu import get_tiyu
-except ImportError:
-    raise ImportError
+from lite_tools.commands.balls.fuli import get_fuli
+from lite_tools.commands.balls.tiyu import get_tiyu
 
 from lite_tools.tools.core.lite_match import match_case
 

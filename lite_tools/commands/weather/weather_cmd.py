@@ -18,11 +18,7 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-try:
-    from prettytable import PrettyTable
-    from lite_tools.commands.weather.weather_main import get_weather
-except ImportError:
-    raise ImportError
+from lite_tools.commands.weather.weather_main import get_weather
 
 
 def _print_weather_base():

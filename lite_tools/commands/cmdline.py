@@ -78,21 +78,14 @@ def flush_local(_, *args):
 
 @chose_option.register("ball")
 def get_ball(_, *args):
-    try:
-        from lite_tools.commands.balls.ball_cmd import ball_cmdline
-    except ImportError:
-        logger.warning("ball 为进阶版功能 请安装>> 完整版: lite-tools[all]")
-        sys.exit(0)
+    from lite_tools.commands.balls.ball_cmd import ball_cmdline
     ball_cmdline(args[0])
 
 
 @chose_option.register("weather")
 def get_weather(_, *args):
-    try:
-        from lite_tools.commands.weather.weather_cmd import weather_cmdline
-    except ImportError:
-        logger.warning("weather 为进阶版功能 请安装>> 完整版: lite-tools[all]")
-        sys.exit(0)
+
+    from lite_tools.commands.weather.weather_cmd import weather_cmdline
     weather_cmdline(args[0])
 
 
@@ -100,21 +93,18 @@ def get_weather(_, *args):
 def get_today_info(_, *args):
     if len(args) > 0:
         args = args[0]
-    try:
-        from lite_tools.commands.today.oil_price import print_oil
-        from lite_tools.commands.today.script_almanac import print_today, print_today_history
-    except ImportError:
-        logger.warning("today 为进阶版功能 请安装>> 完整版: lite-tools[all]")
-        sys.exit(0)
+
+    from lite_tools.commands.today.oil_price import print_oil
+    from lite_tools.commands.today.script_almanac import print_today, print_today_history
+
+    if len(args) < 2:
+        print_today()
+    elif "history" in args:
+        print_today_history()
+    elif "oil" in args:
+        print_oil()
     else:
-        if len(args) < 2:
-            print_today()
-        elif "history" in args:
-            print_today_history()
-        elif "oil" in args:
-            print_oil()
-        else:
-            print_today()
+        print_today()
 
 
 @chose_option.register("trans")
@@ -127,7 +117,7 @@ def trans_files(_, *args):
         from lite_tools.commands.trans.pic import pic_run
         from lite_tools.commands.trans.word import word_run
     except ImportError:
-        logger.warning("trans 为进阶版功能 请安装>> 完整版: lite-tools[all]")
+        logger.warning("trans 需要一些额外的包[reportlab][Pillow] 也可以使用安装>> lite-tools[all]")
         sys.exit(0)
     else:
         mode_args = re.search(r"-m\s+(pdf)", " ".join(args)) or re.search(r"--mode\s+(pdf)", " ".join(args))
@@ -151,13 +141,9 @@ def get_hot_news(_, *args):
         args = args[0]
     else:
         args = []
-    try:
-        from lite_tools.commands.news.news_cmd import news_cmdline
-    except ImportError:
-        logger.warning("news 为进阶版功能 请安装>> 完整版: lite-tools[all]")
-        sys.exit(0)
-    else:
-        news_cmdline(args)
+
+    from lite_tools.commands.news.news_cmd import news_cmdline
+    news_cmdline(args)
 
 
 @chose_option.register("acg")

@@ -23,9 +23,15 @@ import time
 import random
 from typing import Union, Literal, Sequence
 
-import redis
-
 from lite_tools.tools.utils.logs import logger
+
+try:
+    import yaml
+    import redis
+except ImportError:
+    logger.error("这里需要[pyyaml][redis]这两个包: 也可以尝试安装--> pip install lite-tools[plus]")
+    exit(0)
+
 from lite_tools.exceptions.CacheExceptions import FileNotFount
 
 
@@ -102,8 +108,8 @@ class LiteRedis:
             decode_responses: bool = True,
             **kwargs):
         if path:
-            if path.endswith(".yaml"):
-                pass
+            if path.endswith(".yaml") or path.endswith(".yml"):
+                self.read_yaml(path)
             elif path.endswith(".json"):
                 self.read_json(path)
             else:
@@ -119,6 +125,30 @@ class LiteRedis:
         self.db = db
         self.rd = None
 
+    @staticmethod
+    def help():
+        """
+        这里主要是提示 json文件或者 yaml文件怎么写的
+        """
+        logger.info("""下面是展示文件的字段怎么写的 后面我写了具体值的就是默认参数 写了~的就是没有设置默认参数 可以只写最基础的字段
+        如: myConf.json
+        {"host": "xxx", "password": "yyy"}
+不传入path参数的话:默认就是走localhost:6379    也可以直接这里面传入参数,但这个就很麻烦  我没有兼容**url格式**的redis链接 没必要
+        
+JSON示例: 文件名.json
+{"host": "localhost", "port": 6379, "password": ~, "decode": True, "kwargs": {其它配置用字典传这里}}
+
+YAML示例: 文件名.yaml/文件名.yml
+host: "localhost"  # YAML文件字符串有没有双引号都可以
+port: 6379
+password: ~
+decode: True
+kwargs: 
+  xxx: ~
+  yyy: ~
+  zzz: ~      
+        """)
+
     @property
     def client(self):
         if not self.rd:
@@ -130,10 +160,24 @@ class LiteRedis:
                 db=self.db,
                 **self.kwargs
             )
+            logger.success("redis-链接成功")
         return self.rd
 
+    def set_param(self, config: dict):
+        self.host = config.get("host", "localhost")
+        self.port = config.get("port", 6379)
+        self.password = config.get("password")
+        self.decode = config.get("decode", True)
+        self.kwargs = config.get("kwargs", {})
+
     def read_yaml(self, path: str):
-        pass
+        try:
+            with open(path, 'r', encoding='utf-8') as fp:
+                config = yaml.load(fp.read(), Loader=yaml.Loader)
+        except (FileNotFoundError, FileExistsError):
+            raise FileNotFount(path)
+        else:
+            self.set_param(config)
 
     def read_json(self, path: str):
         try:
@@ -142,9 +186,4 @@ class LiteRedis:
         except (FileNotFoundError, FileExistsError):
             raise FileNotFount(path)
         else:
-            self.host = config.get("host", "localhost")
-            self.port = config.get("port", 6379)
-            self.password = config.get("password")
-            self.decode = config.get("decode", True)
-            self.kwargs = config.get("kwargs", {})
-
+            self.set_param(config)
