@@ -23,7 +23,7 @@ base_requires = [
     "datetime",        # 谁没有一个datetime模块啊
     "lxml",            # 提取一些静态页面内容的时候要用这个
     "redis",           # redis 的一个东西需要用这个
-    "yaml",            # redis 那里读取配置文件要用这个
+    "pyyaml",            # redis 那里读取配置文件要用这个
     'pymysql>=1.0.2',  # mysql包全靠它 如果对版本介意 可以不管我这个
     'dbutils>=3.0.2',  # MySQL池需要用
     "func_timeout",    # 用一个try上面 但是这个包没有封装好
