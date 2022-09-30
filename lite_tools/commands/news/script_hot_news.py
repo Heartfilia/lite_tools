@@ -29,7 +29,6 @@ from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_parser import try_get
 from lite_tools.commands.news.z_sfg import my_temp_host as mh
 from lite_tools.commands.news.get_global_news import get_china_news
-urllib3.disable_warnings()
 
 
 def print_hot_news():
@@ -88,7 +87,7 @@ def get_html_from_paper():
     """
     这里是一直有数据的 但是数据量较少 作为最后方案
     """
-    resp = requests.get('https://www.thepaper.cn/', headers={"user-agent": get_ua()}, verify=False)
+    resp = requests.get('https://www.thepaper.cn/', headers={"user-agent": get_ua()})
     return resp.text
 
 

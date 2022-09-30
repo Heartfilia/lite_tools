@@ -18,6 +18,8 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+from typing import List
+
 from prettytable import PrettyTable
 from lite_tools.commands.news.script_hot_news import print_hot_news
 from lite_tools.commands.news.get_blog_rank import blog_rank
@@ -52,7 +54,7 @@ def _print_news_option():
     base_info += "shell         进入shell控制终端查询新闻模式--包含下面所有单独的操作\n  "
     base_info += "不跟任何选择  默认就是打印 -- 每日简报\n  "
     base_info += "weibo         获取微博热榜\n  "
-    base_info += "china         获取国内新闻\n  "
+    base_info += "China         获取国内新闻\n  "
     base_info += "world         获取国际新闻"
     print(base_info)
 
@@ -82,7 +84,7 @@ def get_blog_rank(option):
         input_option(mode="news")
 
 
-@chose_now.register_all(["3", "china"])
+@chose_now.register_all(["3", "china", "China"])
 def from_global_china(option):
     """
     获取国内新闻
@@ -102,12 +104,12 @@ def from_global_world(option):
         input_option(mode="news")
 
 
-def news_cmdline(args: list):
+def news_cmdline(args: List[str]):
     if len(args) <= 1:
         print_hot_news()
     elif args[1] in ["-h", "--help"]:
         _print_news_option()
-    elif args[1] in ["weibo", "china", "world"]:
+    elif args[1].lower() in ["weibo", "china", "world"]:
         chose_now(args[1])
     elif args[1] == "shell":
         circle_cmd(menu_tab, chose_now)
