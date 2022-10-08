@@ -23,7 +23,7 @@
 """
 import time
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, NoReturn
 from functools import wraps, partial
 from queue import Queue, Empty
 from asyncio import iscoroutinefunction
@@ -80,7 +80,18 @@ class Buffer(metaclass=Singleton):
         return cls._get_count[name]
 
     @classmethod
+    def sow(cls, job, name: str = "default") -> NoReturn:
+        """
+        这里是种种子 相当于 queue.put(xxx)
+        """
+        cls.__queues[name].put(job)
+
+
+    @classmethod
     def seed(cls, name: str = "default") -> Any:
+        """
+        这里是拿种子 相当于 queue.get()
+        """
         if not cls.__queues[name].empty():
             try:
                 return cls.__queues[name].get(timeout=3)
