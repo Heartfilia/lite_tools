@@ -28,7 +28,7 @@ try:
     import pymysql
     from dbutils.pooled_db import PooledDB
 except ImportError:
-    logger.error("这里需要[pymysql][dbutils]这两个包: 可以尝试安装--> pip install lite-tools[plus]")
+    logger.error("这里需要[pymysql][dbutils]这两个包: 可以尝试安装--> pip install lite-tools[all]")
     exit(0)
 
 from lite_tools.tools.sql.lib_mysql_string import SqlString
@@ -169,7 +169,7 @@ class MySql:
         all_num = len(items)
         if query_log is True:
             self.sql_log(f"SELECT-耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
-        if all_num == 0:
+        if all_num == 0:  # 如果这次结果是 0 那就是没有数据了
             if kwargs.get("_function_use") is True:
                 raise IterNotNeedRun
             return
@@ -179,6 +179,9 @@ class MySql:
             else:
                 yield all_num, row[0] if len(row) == 1 else row
                 all_num -= 1
+
+        if all_num < kwargs.get("_limit_num", 0):   # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
+            raise IterNotNeedRun
 
     def select_iter(self, sql: str, limit: int) -> Iterator:
         """
@@ -194,7 +197,7 @@ class MySql:
         while True:
             new_sql = f"{sql} LIMIT {cursor}, {limit};"
             try:
-                yield from self.select(new_sql, _function_use=True)
+                yield from self.select(new_sql, _function_use=True, _limit_num=limit)
             except IterNotNeedRun:
                 break
             cursor += limit

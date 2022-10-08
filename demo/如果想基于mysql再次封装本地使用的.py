@@ -21,7 +21,7 @@
 import time
 from typing import Iterator, Union
 
-from lite_tools import SqlString
+from lite_tools import MySqlConfig
 from lite_tools import MySql as LiteMySql
 from lite_tools.exceptions.SqlExceptions import IterNotNeedRun
 
@@ -53,17 +53,18 @@ class MySql(LiteMySql):
         for row in mysql.select("SELECT * FROM xxxxxx;"):
             print(row)
         """
-        self.log = log
-        self.pool = None
-        self.table_name = table_name
-        if table_name is not None:
-            self.sql_base = SqlString(table_name)
-        else:
-            self.sql_base = None
-        self._init_mysql(database, maxconnections, host, port, user, password, charset)
+        super(MySql, self).__init__(pool=None, config=MySqlConfig(
+            database=database,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+            charset=charset,
+            maxconnections=maxconnections,
+            table_name=table_name,
+            log=log))
 
     def select(self, sql: str, count: bool = False, *, query_log: bool = True, **kwargs) -> Iterator:
-        # NOTE(这里不能继承 否则会导致select_iter 迭代时候退不出去)
         start_time = time.time()
         conn = self.connection()
         with conn.cursor() as cursor:  # 这里是有结果返回的
@@ -74,7 +75,7 @@ class MySql(LiteMySql):
         end_time = time.time()
         all_num = len(items)
         if query_log is True:
-            self._my_logger(f"耗时: {end_time - start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
+            self.sql_log(f"耗时: {end_time - start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
         if all_num == 0:
             if kwargs.get("_function_use") is True:
                 raise IterNotNeedRun
@@ -86,7 +87,10 @@ class MySql(LiteMySql):
                 yield all_num, row[0] if len(row) == 1 else row
                 all_num -= 1
 
-    def select_iter(self, sql: str, limit: int) -> Iterator:
+        if all_num < kwargs.get("_limit_num", 0):  # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
+            raise IterNotNeedRun
+
+    def select_iter(self, sql: str, limit: int = 1000) -> Iterator:
         yield from super().select_iter(sql, limit)
 
     def count(self, where: Union[dict, str] = None) -> int:
