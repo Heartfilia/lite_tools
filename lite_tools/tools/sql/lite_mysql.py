@@ -23,17 +23,13 @@ import time
 from threading import RLock
 from typing import Iterator, Union
 
-from lite_tools.tools.utils.logs import logger
-try:
-    import pymysql
-    from dbutils.pooled_db import PooledDB
-except ImportError:
-    logger.error("这里需要[pymysql][dbutils]这两个包: 可以尝试安装--> pip install lite-tools[all]")
-    exit(0)
+import pymysql
+from dbutils.pooled_db import PooledDB
 
-from lite_tools.tools.sql.lib_mysql_string import SqlString
+from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.SqlLog import log_level
+from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.exceptions.SqlExceptions import DuplicateEntryException, IterNotNeedRun
 
 
@@ -46,7 +42,7 @@ class MySql:
             table_name: str = None
     ):
         """
-        这里打印的日志不可关闭  --->  除非你改我源码
+        TODO(需要把日志打印模式调整一下,不要每一条都打印,改成批量打印,每隔一段时间或者一定条数打印一下然后结束的时候有个汇总打印)
         pool: 如果用的自己构建的连接池 那么就传自己构建好了的进来，但是如果要用insert,update,delete等方法就还需要额外传入table_name
             | from dbutils.pooled_db import PooledDB 需要这个pool
         config: from lite_tools import Config --> 然后构建一个 config 对象 传入即可,这个配置文件不需要传table_name,包含了的
@@ -183,11 +179,11 @@ class MySql:
         if all_num < kwargs.get("_limit_num", 0):   # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
             raise IterNotNeedRun
 
-    def select_iter(self, sql: str, limit: int) -> Iterator:
+    def select_iter(self, sql: str, limit: int = 1000) -> Iterator:
         """
         通过批量的迭代获取数据
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
-        :param limit : 这里交给我来自动管理
+        :param limit : 这里交给我来自动管理 默认我给了1000
         return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数w2  Q12
         """
         sql = sql.rstrip('; ')  # 剔除右边的符号

@@ -23,15 +23,10 @@ import time
 import random
 from typing import Union, Literal, Sequence
 
+import yaml
+import redis
+
 from lite_tools.tools.utils.logs import logger
-
-try:
-    import yaml
-    import redis
-except ImportError:
-    logger.error("这里需要[pyyaml][redis]这两个包: 也可以尝试安装--> pip install lite-tools[plus]")
-    exit(0)
-
 from lite_tools.exceptions.CacheExceptions import FileNotFount
 
 
