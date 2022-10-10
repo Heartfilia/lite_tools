@@ -141,8 +141,10 @@ class Buffer(metaclass=Singleton):
                             cls.__task_count[name].remove(current_thread().name)
                         with cls._lock:
                             if not cls.__task_count[name] and not cls._task_done:
+                                cost_time = round(time.time() - cls.__task_time[name], 3)
                                 logger.debug(
-                                    f"[{name}] 队列任务种子消耗完毕,worker结束.耗时:{time.time() - cls.__task_time[name]:.3f} s"
+                                    f"[{name}] 队列任务种子消耗完毕,worker结束.总耗时:{cost_time}s; "
+                                    f"总调用任务种子:{cls.count(name)}条; 效率:{round(cls.count(name)/cost_time, 3)} seed/s"
                                 )
                                 cls._task_done = True
                     break

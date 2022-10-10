@@ -3,14 +3,15 @@
 # @Author : Lodge
 import re
 import time
+import calendar
 import functools
-from typing import Union, Literal
+from typing import Union, Literal, Tuple
 # from inspect import currentframe
 
 from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.utils.u_re_time import DATETIME_PATTERN
-from lite_tools.exceptions.TimeExceptions import TimeFormatException
+from lite_tools.exceptions.TimeExceptions import TimeFormatException, ErrorTimeRange
 
 """
 这里可以用 但是比较臃肿 暂时不支持 年月日通过游标操作获得年月日 可以实现 但是不知道参数取名和其他的冲突问题
@@ -275,98 +276,6 @@ def _get_time_block(cursor):
     return time.time() + offset
 
 
-class TimeMaker(object):
-    def __init__(self):
-        """
-        TODO 将会在这里处理时间的模式 第一版先提供给`get_time`使用 后续做成通用模块  当前主要是转换成时间戳
-        """
-        self.base_time: str = ""
-        self.base_template: str = "1970-01-01 00:00:00"
-        self.little_day_info = [("一", 1), ("二", 2), ("三", 3), ("四", 4), ("五", 5),
-                                ("六", 6), ("七", 7), ("八", 8), ("九", 9), ("十", 10)]
-        # 下面这个主要是记录月份的特殊情况 只弄了 中英法德俄 语言
-        self.month_info = {
-            "01": ("Jan", "January", "一月", "janvier", "Januar", "январь"),
-            "02": ("Feb", "February", "二月", "février", "Februar", "февраль"),
-            "03": ("Mar", "March", "三月", "mars", "Marsch", "Март"),
-            "04": ("Apr", "April", "四月", "avril", "April", "апреля"),
-            "05": ("May", "May", "五月", "Mai", "Dürfen", "май"),
-            "06": ("Jun", "June", "六月", "juin", "Juni", "июнь"),
-            "07": ("Jul", "July", "七月", "juillet", "Juli", "июль"),
-            "08": ("Aug", "August", "八月", "août", "August", "август"),
-            "09": ("Sep", "September", "九月", "septembre", "September", "сентябрь"),
-            "10": ("Oct", "October", "十月", "octobre", "Oktober", "Октябрь"),
-            "11": ("Nov", "November", "十一月", "novembre", "November", "ноябрь"),
-            "12": ("Dec", "December", "十二月", "décembre", "Dezember", "Декабрь"),
-        }
-
-    def make(self, fmt_time: str = None) -> Union[int, float]:
-        """
-        传入需要转换的时间格式
-        :param fmt_time:
-        :return:
-        """
-        if fmt_time is None or not fmt_time or not isinstance(fmt_time, str):
-            logger.warning("因为没有传入规定格式化时间,现在返回的结果是 --> 0")
-            return 0
-        self.base_time = fmt_time
-
-        cursor_time = self._handle_chinese_cursor_time()
-        if cursor_time is False:
-            info = self._handle_chinese_format_time()
-            return info
-
-    def _handle_chinese_format_time(self):
-        for pattern, result_rules in DATETIME_PATTERN.items():
-            aim_at = re.search(pattern, self.base_time)
-            if aim_at:
-                rule_len = len(result_rules)
-                print(rule_len)
-                print(aim_at)
-                result = aim_at.group(1)
-                return result
-        return False
-
-    def _handle_chinese_cursor_time(self):
-        # 处理中文的位移量的时间形式 不搞英文的 因为英文的太难写了
-        if "前" in self.base_time:
-            self.base_time = self.base_time.replace('日', '天').replace('/', '-').replace('星期', "周").replace('.', '-')
-            if "秒" in self.base_time:
-                wait = re.search(r"(\d+)\s*秒", self.base_time)
-                cursor = 1
-            elif "分" in self.base_time:
-                wait = re.search(r"(\d+)\s*分", self.base_time)
-                cursor = 60
-            elif "时" in self.base_time:
-                wait = re.search(r"(\d+)\s*个?小时", self.base_time)
-                cursor = 3600
-            elif "周" in self.base_time:
-                wait = re.search(r"(\d+)\s*周", self.base_time)
-                cursor = 3600 * 7
-            elif "天" in self.base_time:
-                # 处理十天内的中文字符问题
-                for chn_char, num_char in self.little_day_info:
-                    if chn_char in self.base_time:
-                        self.base_time.replace(chn_char, str(num_char))
-                        break
-
-                wait = re.search(r"(\d+)\s*天", self.base_time)
-                cursor = 86400
-            elif "月" in self.base_time:
-                wait = re.search(r"(\d+)[\s个]*月", self.base_time)
-                cursor = 86400 * 30
-            elif "年" in self.base_time:
-                wait = re.search(r"(\d+)\s*年", self.base_time)
-                cursor = 86400 * 365
-            else:
-                return False
-
-            if wait:
-                return time.time() - int(wait.group(1)) * cursor
-
-        return False
-
-
 def time_count(fn):
     @functools.wraps(fn)
     def inner(*args, **kwargs):
@@ -377,5 +286,73 @@ def time_count(fn):
     return inner
 
 
+def time_range(start_time: tuple, end_time: tuple, unit: Literal['s', 'ms'] = 's') -> Tuple[int, int]:
+    """
+    获取一段时间的范围  目前只支持元组范围的 如果要其它格式操作啥的 可以用 datetime 模块 那里也有现成的
+    :param start_time: 开始的时间 格式 -> (年, 月, 日, 时, 分, 秒)   里面的都是==>整数/字符串   不用全部写完 如  (年,)  (年,月)
+    :param end_time  : 截至的时间 格式同上 不写的默认为最小值 如 月日不写就是1  时分秒不写就是 0  但是年要写 ·4位· 那个
+    :param unit      : 返回的结果的单位  s --> 返回秒  |   ms --> 返回毫秒
+    """
+    start_time_fmt = _get_fmt_time(start_time)
+    end_time_fmt = _get_fmt_time(end_time)
+
+    if start_time_fmt > end_time_fmt:
+        raise ErrorTimeRange("错误的时间范围,请保证时间线: 开始时间 < 结束时间")
+
+    if start_time_fmt == end_time_fmt:
+        logger.warning(f"开始时间: {start_time} 和结束时间: {end_time} 数据值一样了,不报错,但需要留意")
+
+    return get_time(start_time_fmt, unit=unit), get_time(end_time_fmt, unit=unit)
+
+
+def _get_fmt_time(time_limit: tuple):
+    """
+    因为最差都会有一个年
+    """
+    year = time_limit[0]
+    assert (isinstance(year, int) and 1970 <= year
+            ) or (
+            isinstance(year, str) and year.isdigit() and len(year) >= 4 and "1970" <= year
+    ), ErrorTimeRange("`年`只可以为大于等于1970年的数字字面量,并且是4位数的值")
+
+    month = time_limit[1] if len(time_limit) >= 2 else 1
+    assert (isinstance(month, int) and 1 <= month <= 12
+            ) or (
+            isinstance(month, str) and month.isdigit() and 1 <= int(month) <= 12
+    ), ErrorTimeRange(f"月只可以为是 1-12 整型, 你写的`月`是: [{month}]")
+
+    day = time_limit[2] if len(time_limit) >= 3 else 1
+    this_month_max_day = _check_month_day_max(int(year), int(month))
+    assert (isinstance(day, int) and 1 <= day <= this_month_max_day
+            ) or (
+            isinstance(day, str) and day.isdigit() and 1 <= int(day) <= this_month_max_day
+    ), ErrorTimeRange(f"{year}年{month}月这个月的日只可以为是 1-{this_month_max_day} 整型, 你写的`日`是: [{day}]")
+
+    hour = time_limit[3] if len(time_limit) >= 4 else 0
+    assert (isinstance(hour, int) and 0 <= hour <= 23
+            ) or (
+            isinstance(hour, str) and hour.isdigit() and 0 <= int(hour) <= 23
+    ), ErrorTimeRange(f"时只可以为是 0-23 整型, 你写的`时`是: [{hour}]")
+
+    minute = time_limit[4] if len(time_limit) >= 5 else 0
+    assert (isinstance(minute, int) and 0 <= minute <= 59
+            ) or (
+            isinstance(minute, str) and minute.isdigit() and 0 <= int(minute) <= 59
+    ), ErrorTimeRange(f"分只可以为是 0-59 整型, 你写的`分`是: [{minute}]")
+
+    second = time_limit[5] if len(time_limit) == 6 else 0
+    assert (isinstance(second, int) and 0 <= second <= 59
+            ) or (
+            isinstance(second, str) and second.isdigit() and 0 <= int(second) <= 59
+    ), ErrorTimeRange(f"秒只可以为是 0-59 整型, 你写的`秒`是: [{second}]")
+
+    return f"{year}-{month:>02}-{day:>02} {hour:>02}:{minute:>02}:{second:>02}"
+
+
+def _check_month_day_max(year: int, month: int) -> int:
+    _, max_day = calendar.monthrange(year, month)  # 第一个参数表示这个月第一天是周几 0->周一  6->周日
+    return max_day
+
+
 if __name__ == "__main__":
-    print(get_time("2021-04-06"))
+    pass

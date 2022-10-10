@@ -32,8 +32,6 @@ from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.utils.lite_table import print_head
 from lite_tools.tools.core.lite_string import color_string
 
-# TODO(这里不知道为啥就第一次可以请求到数据 后面的就拿不到了 当然加上代理就随时能拿到数据 可是网页还是能正常访问的)
-
 
 # @try_catch(log="需要网络,可以重试,也可能网站数据源变更--短时间内重复请求会没有数据的哦 请求了要等好一会才能重新请求")
 def get_fuli():

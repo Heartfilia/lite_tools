@@ -42,10 +42,9 @@ class MySql:
             table_name: str = None
     ):
         """
-        TODO(需要把日志打印模式调整一下,不要每一条都打印,改成批量打印,每隔一段时间或者一定条数打印一下然后结束的时候有个汇总打印)
         pool: 如果用的自己构建的连接池 那么就传自己构建好了的进来，但是如果要用insert,update,delete等方法就还需要额外传入table_name
             | from dbutils.pooled_db import PooledDB 需要这个pool
-        config: from lite_tools import Config --> 然后构建一个 config 对象 传入即可,这个配置文件不需要传table_name,包含了的
+        config: from lite_tools import MySqlConfig --> 然后构建一个 config 对象 传入即可,这个配置文件不需要传table_name
             |默认参数--> database: str,
                         host: str,
                         user: str,
@@ -54,6 +53,7 @@ class MySql:
                         charset: str = "utf8mb4",
                         maxconnections: int = 20,
                         table_name: str = None,
+        table_name: 如果是自己传入pool 那么就需要传入这个参数
         """
         if pool:
             self.log = True   # 默认肯定是要打印日志的啦
@@ -87,6 +87,7 @@ class MySql:
             "delete": 0
         }   # 操作了 但是没有改变的行数
         self.lock = RLock()
+        self.start_time = time.time()
 
     def _init_mysql(self, database, maxconnections, host, port, user, password, charset):
         if self.pool is None:
@@ -127,11 +128,11 @@ class MySql:
                         self.not_change_line[mode] += 1
                     else:
                         self.change_line[mode] += result
-            if mode is not None:
-                other_log = f"-->总影响行数={self.change_line[mode]}; 总未影响行={self.not_change_line[mode]}"
-            else:
-                other_log = ""
-            self.sql_log(f"模式:[{mode}]{other_log} 本次耗时:{end_time-start_time:.3f}s 影响行={result}", "", "success")
+
+            # 增删改查  这里mode不会碰到查的  # 如果总改动行数为50的倍数就可以打印一下
+            change_line_all = sum(self.change_line.values(), sum(self.not_change_line.values()))
+            if change_line_all % 50 == 0 or int(time.time() - self.start_time) % 60 == 0:    # 改变行和时间都可作打印依据
+                self._print_rate(mode, end_time, start_time, result)
             return result
         except Exception as err:
             if str(err).find("Duplicate entry") != -1 and log is False:
@@ -303,14 +304,23 @@ class MySql:
                 return False
         return True
 
-    def sql_log(self, string: str, sql_string: str, string_level: str) -> None:
+    def _print_rate(self, mode: str, end_time, start_time, result):
+        all_line = self.change_line[mode] + self.not_change_line[mode]
+        rate = round(all_line / (time.time() - self.start_time), 3)  # 平均每秒改变行
+        other_log = f"-->总影响行数={self.change_line[mode]}; 总未影响行={self.not_change_line[mode]}; 效率={rate} line/s;"
+        self.sql_log(
+            f"模式:[{mode}]{other_log} 本条耗时:{end_time - start_time:.3f}s 本次影响行={result}", "", "success", True
+        )
+
+    def sql_log(self, string: str, sql_string: str, string_level: str, output: bool = False) -> None:
         """
         level: (error > warning > info > success > debug)  目前只管是否要打日志 没有弄等级处理
         :param string: 需要提示的信息
         :param sql_string: 执行的sql语句
         :param string_level: 传入过来的等级
+        :param output      : 默认不打印 弄这个参数主要是控制什么时候打印内容 不要一直打印 要分块打印输出数据
         """
-        if not self.log:
+        if not self.log or not output:
             return
 
         level_rate, log_func = log_level.get(string_level.lower(), (0, None))

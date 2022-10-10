@@ -31,16 +31,19 @@ from lite_tools.exceptions.CacheExceptions import FileNotFount
 
 
 class LiteProxy:
-    def __init__(self, redis_client: redis.Redis, redis_name: Union[str, Sequence], retry: int = 5):
+    def __init__(self, redis_client: redis.Redis, redis_name: Union[str, Sequence], retry: int = 5,
+                 mode: Literal['set', 'list'] = 'set'):
         """
-        基于redis设计的代理池 --> 模式是 set 类型: 方便随机弹出
+        基于redis设计的代理池 --> 默认模式是 set 类型: 方便随机弹出  也可以list,滚动提取
         :param redis_client: 构造好的 redis 链接对象
         :param redis_name  : 代理放的位置(名字) 也可以放多个名字用 list  tuple  set 都可以 会随机取这里的值
         :param retry       : 重试获取代理的次数-->如果获取到代理为空的重试次数 如果最后也拿不到 返回 None  <-- 不会报错注意捕获
+        :param mode        : 代理默认存储是set模式,也可以使用list模式
         """
         self.redis = redis_client
         self.redis_name = redis_name
         self.retry = retry
+        self.mode = mode
 
     def get(self, t: Literal['default', 'httpx', 'string'] = 'default') -> Union[dict, str, None]:
         """
@@ -56,7 +59,7 @@ class LiteProxy:
                     redis_name = self.redis_name
                 else:
                     redis_name = random.choice(self.redis_name)
-                proxy = self.redis.srandmember(redis_name)
+                proxy = self.get_item_from_redis(redis_name)
                 if not proxy:
                     time.sleep(0.3)
                     continue
@@ -65,6 +68,12 @@ class LiteProxy:
                 logger.warning(f"代理提取异常 --> {err}")
                 time.sleep(1)
         return None
+
+    def get_item_from_redis(self, redis_name: str):
+        if self.mode == 'list':
+            return self.redis.rpoplpush(redis_name, redis_name)
+        else:
+            return self.redis.srandmember(redis_name)
 
     @staticmethod
     def _trans_type(mode: str, proxy: str = None) -> Union[dict, str, None]:
@@ -88,10 +97,12 @@ class LiteProxy:
             }
 
 
-# 下面功能虽然没啥用 是因为只是一个雏形 以后会加入读取配置文件 这样每次只需要去读指定位置的配置文件就好了如
 # rd = LiteRedis("/root/config.yaml")
 # rd = LiteRedis("/root/config.json")
 class LiteRedis:
+    """
+    配置文件创建redis对象
+    """
     def __init__(
             self,
             path: str = None,
@@ -120,8 +131,8 @@ class LiteRedis:
         self.db = db
         self.rd = None
 
-    @staticmethod
-    def help():
+    @classmethod
+    def help(cls):
         """
         这里主要是提示 json文件或者 yaml文件怎么写的
         """

@@ -2,38 +2,40 @@
 # @Time   : 2021-04-06 15:50
 # @Author : Lodge
 __ALL__ = [
-    "try_catch",
-    "get_time",
-    "time_count",
-    "get_b64e",
-    "get_b64d",
-    "get_md5",
-    "get_sha",
-    "get_sha3",
-    "get_ua",
-    "try_get",
-    "try_key",
-    "MySql",
-    "MySqlConfig",      # mysql -- 专属配置
-    "FlattenJson",
-    "JsJson",
-    "WrapJson",
-    "match_case",
-    "CleanString",
-    "color_string",
-    "SqlString",
-    "math_string"
-    "x_timeout",   # 这个没有弄好
-    "Singleton",
-    "Buffer",
+    "try_catch",     # @ 异常捕获 + 重试配置 + 回调
+    "get_time",      # 时间转换 + 时间获取
+    "time_range",    # 获取时间起始范围
+    "time_count",    # @ 获取函数运行时间
+    "get_b64e",      # 加密成 base64 有其它配置
+    "get_b64d",      # 解密   base64
+    "get_md5",       # 加密成 md5
+    "get_sha",       # 用sha 加密  默认sha  256 有其它配置
+    "get_sha3",      # 用sha3加密  默认sha3 256 有其它配置
+    "get_ua",        # 获取一条随机ua 可以加参数指定浏览器或者系统
+    "try_get",       # jsonPath 方式取字典值
+    "try_key",       # 可根据键/值 取值/键
+    "MySql",         # MySql 连接池对象
+    "MySqlConfig",   # mysql -- 专属配置
+    "FlattenJson",   # 把json平坦化
+    # "JsJson",        # 从js里面提取json内容,这个目前不可以泛用
+    "WrapJson",      # 把一个json按照指定模板折叠
+    "match_case",    # 类似match case
+    "CleanString",   # 清理字符串里面的特殊字符 文本不是太大可以用
+    "color_string",  # 给字体加颜色
+    "SqlString",     # 获取mysql的语句 太复杂不行
+    "math_string"    # 没啥用，就是打印以下数学字符
+    # "x_timeout",     # 这个没有弄好 就是限制函数最大运行时间的
+    "Singleton",     # @ 单例
+    "Buffer",        # @ 缓存队列 + 统计
     "count_lines",   # 获取文件行数
     "LiteLogFile",   # 日志文件记录到缓存区 --> 这里是偶尔记录一条那种(打点) 10000条内容缓冲区 超了从1开始记录 高频记录用 loguru
     # 下面的是js转python的操作 还没有写完 也没有弄完 还有 >>>  36进制转换等等操作
-    "atob",
-    "btoa",
+    "atob",          # ascii to bytes
+    "btoa",          # bytes to ascii
     # 下面是一些可以对外使用的一些redis操作 等http包第一版能用的时候再放出来
-    "LiteRedis",
-    "LiteProxy"
+    "LiteRedis",     # 这个用处不大 但是可以用一个本地文件的配置文件来初始化这个对象使用 如 rd = LiteRedis("/root/config.json")
+    "LiteProxy"      # 更方便的获取代理的操作 基于redis的set/list模式 默认set随机弹出 也可以切换为mode='list'滚动获取 使用方式可以使用 LiteRedis.help() 获取
+
 ]
 
 # 还有一个东西不放这里了 可以这样引用
@@ -42,7 +44,7 @@ __ALL__ = [
 from lite_tools.tools.core.lib_base64 import get_b64d, get_b64e
 from lite_tools.tools.core.lite_parser import try_get, try_key, FlattenJson, JsJson, WrapJson
 from lite_tools.tools.core.lib_hashlib import get_md5, get_sha, get_sha3
-from lite_tools.tools.time.lite_time import get_time, time_count  # get_date 后续放出
+from lite_tools.tools.time.lite_time import get_time, time_count, time_range
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.sql.lite_mysql import MySql
