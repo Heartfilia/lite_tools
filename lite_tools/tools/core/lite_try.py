@@ -19,9 +19,26 @@ class BaseRetryException(Exception):
         pass
 
 
-def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception], Exception, type] = BaseRetryException,
-              default: T = None, log: Union[bool, str] = True, catch: bool = False, timeout: Union[int, float] = None,
-              err_callback: Callable = None, err_args: Sequence = None):
+def combine_retry(exc: Union[List[Exception], Exception, type]) -> T:
+    if isinstance(exc, tuple):
+        not_retry_exception = exc
+    elif isinstance(exc, (list, set)):
+        not_retry_exception = tuple(exc)
+    elif issubclass(exc, Exception):
+        not_retry_exception = exc
+    else:
+        not_retry_exception = BaseRetryException
+
+    return not_retry_exception
+
+
+def try_catch(
+        func=None, *,
+        retry: int = 1,
+        except_retry: Union[List[Exception], Exception, type] = BaseRetryException,
+        ignore_retry: Union[List[Exception], Exception, type] = BaseRetryException,
+        default: T = None, log: Union[bool, str] = True, catch: bool = False, timeout: Union[int, float] = None,
+        err_callback: Callable = None, err_args: Sequence = None):
     """
     异常捕获装饰器
     -->不加参数 就是把异常捕获了 返回None
@@ -30,6 +47,7 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
     :param retry       : 重试次数
     :param timeout     : 重试的时候加的休眠时间
     :param except_retry: 如果有这种异常那么就不重试 直接返回默认值 这里如果写Exception 那么就会忽略所有异常不进行重试直接返回默认值
+    :param ignore_retry: 如果有这种异常 就继续重试
     :param default     : 默认的返回值
     :param log         : 是否打印报错信息,默认是打印的(如果传入指定的内容 那么就会报错指定内容)
     :param catch       : 按栈方式捕获异常
@@ -42,18 +60,15 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
             err_callback=err_callback, err_args=err_args
         )
 
-    if isinstance(except_retry, tuple):
-        not_retry_exception = except_retry
-    elif isinstance(except_retry, (list, set)):
-        not_retry_exception = tuple(except_retry)
-    elif issubclass(except_retry, Exception):
-        not_retry_exception = except_retry
-    else:
-        not_retry_exception = BaseRetryException
+    not_retry_exception = combine_retry(except_retry)
+    continue_exception = combine_retry(ignore_retry)
     
-    def __log_true():
+    def __log_true(last: bool = False):
+        """
+        :param last: 如果是最后一次重试才会打印日志
+        """
         line, fl, exception_type, exception_detail = handle_exception(traceback.format_exc(), func.__name__)
-        if err_callback is not None:
+        if err_callback is not None and last is True:
             try:
                 if isinstance(err_args, (tuple, list, set, dict)):
                     err_callback(*err_args)
@@ -72,7 +87,7 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        for _ in range(retry):
+        for ind in range(retry):
             try:
                 return func(*args, **kwargs)
             except KeyboardInterrupt:
@@ -80,10 +95,12 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
                 exit(0)
             except not_retry_exception:
                 break
+            except continue_exception:
+                continue
             except Exception as err:
                 _ = err
                 if log:
-                    __log_true()
+                    __log_true(True if retry-1 == ind else False)
                 if timeout is not None and isinstance(timeout, (int, float)):
                     time.sleep(timeout)
                 continue
@@ -92,7 +109,7 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
     
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
-        for _ in range(retry):
+        for ind in range(retry):
             try:
                 return await func(*args, **kwargs)
             except KeyboardInterrupt:
@@ -100,10 +117,12 @@ def try_catch(func=None, *, retry: int = 1, except_retry: Union[List[Exception],
                 exit(0)
             except not_retry_exception:
                 break
+            except continue_exception:
+                continue
             except Exception as err:
                 _ = err
                 if log:
-                    __log_true()
+                    __log_true(True if retry-1 == ind else False)
                 if timeout is not None and isinstance(timeout, (int, float)):
                     await asyncio.sleep(timeout)
                 continue
