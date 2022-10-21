@@ -131,7 +131,8 @@ class MySql:
 
             # 增删改查  这里mode不会碰到查的  # 如果总改动行数为50的倍数就可以打印一下
             change_line_all = sum(self.change_line.values(), sum(self.not_change_line.values()))
-            if change_line_all % 50 == 0 or int(time.time() - self.start_time) % 60 == 0:    # 改变行和时间都可作打印依据
+            # 改变行和时间都可作打印依据
+            if self.log == "all" or change_line_all % 50 == 0 or int(time.time() - self.start_time) % 60 == 0:
                 self._print_rate(mode, end_time, start_time, result)
             return result
         except Exception as err:
@@ -141,7 +142,7 @@ class MySql:
             self.sql_log(f"耗时: {end_time-start_time:.3f}s 异常原因: [{err}]", sql, "error")
             conn.rollback()
             if str(err).find("Duplicate entry") != -1 and batch is True:
-                logger.warning(f"批量操作异常 --> 现在转入单条操作... 重复的字段内容日志将不会再打印")
+                logger.warning(f"批量操作的数据有重复,现在转入单条操作,重复的字段内容日志将不会再打印:{err}")
                 raise DuplicateEntryException
             return -1
         finally:

@@ -29,14 +29,25 @@ from lite_tools.commands.today.fisher_date import print_date
 from lite_tools.tools.utils.lite_dir import lite_tools_dir
 
 
+# _my_image = """
+# ┏┓┏┳━━┳━┳━━┳━┳━┳┓┏━┓
+# ┃┃┃┣┓┏┫━╋┓┏┫┃┃┃┃┃┃━┫
+# ┃┗┫┃┃┃┃━┫┃┃┃┃┃┃┃┗╋━┃
+# ┗━┻┛┗┛┗━┛┗┛┗━┻━┻━┻━┛
+# """
+
 _my_image = """
-[̲̅l][̲̅i][̲̅t][̲̅e][̲̅-][̲̅t][̲̅o][̲̅o][̲̅l][̲̅s]
+██░░░██░████░████░████░░▄███▄░░░▄███▄░░██░░░▄███▄
+██░░░██░░██░░██▄░░░██░░██▀░▀██░██▀░▀██░██░░░▀█▄▀▀
+██░░░██░░██░░██▀░░░██░░██▄░▄██░██▄░▄██░██░░░▄▄▀█▄
+████░██░░██░░████░░██░░░▀███▀░░░▀███▀░░████░▀███▀
 """
 
 
 def _print_base():
     """输出lite-tools基本信息的"""
-    print_info = f"lite-tools {color_string(VERSION, 'cyan')}  当前版本均为测试版,等1.0修复稳定了才是正式的\n\n"
+    print_info = _my_image + "\n"
+    print_info += f"lite-tools {color_string(VERSION, 'cyan')}  当前版本均为测试版,等1.0修复稳定了才是正式的\n\n"
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
     # print_info += "  flush       清理本地关于lite-tools的全部缓存(慎用)\n"   # 有这个功能但是不对外展示
@@ -174,4 +185,5 @@ def execute():
 
 
 if __name__ == "__main__":
-    flush_local(1)
+    _print_base()
+    # flush_local(1)
