@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 func in(target string) bool {
@@ -133,8 +134,8 @@ func circle_run() {
 
 		string_info = []rune(input_str)
 		mode := judge_mode(string_info)
+		input_str = strings.Replace(input_str, "\n", "", -1)
 		if mode == 0 {
-
 			fmt.Println("输入:", RoarEncode(input_str)) // 当前是输入模式
 		} else {
 			fmt.Println("翻译:", RoarDecode(input_str)) // 当前是翻译模式
@@ -147,7 +148,4 @@ func main() {
 	fmt.Println("基于与熊论道兽音板块制作而成[http://hi.pcmoe.net/roar.html] MadeBy:Heartfilia")
 	fmt.Println()
 	circle_run()
-	// result := RoarEncode("测试一下a")
-	// result := RoarDecode("~呜嗷呜啊~啊呜啊~啊~嗷嗷嗷嗷~~嗷~嗷呜~啊啊啊~嗷嗷啊~~啊啊啊嗷嗷嗷呜啊嗷呜嗷啊")
-	// fmt.Println(result)
 }
