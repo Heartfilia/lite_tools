@@ -80,7 +80,7 @@ def _parse_news(data, location):
     title_line = "\n".join(print_head(f"【每日资讯】<red>{location}</red> 最新消息", 11).split("\n")[:2])
     base_string = f"{title_line}\n"
     for item in items:
-        publish_time = get_time(item.get('ctime'))
+        publish_time = get_time(item.get('ctime'), fmt=True)
         title = item.get('title')
         if not title:
             continue
