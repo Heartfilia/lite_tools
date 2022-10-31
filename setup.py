@@ -57,6 +57,7 @@ setup(
         'lite_tools.commands.today',
         'lite_tools.commands.trans',
         'lite_tools.commands.weather',
+        'lite_tools.commands.whsecret',
         'lite_tools.tools',
         'lite_tools.tools.js',
         'lite_tools.tools.sql',
