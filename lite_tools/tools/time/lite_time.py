@@ -179,6 +179,10 @@ def _guess_fmt(string: str):
     """
     if not string:
         return ""
+    string = string.replace('T', ' ')  # 把带了时区标志的时间变成原样
+    string = re.sub(r"\.\d{3}Z", "", string)  # 把带了时区标志的时间变成原样
+    if re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", string):
+        return "%Y-%m-%d %H:%M:%S"  # 匹配最常用的模板
 
     if re.search(r"^\d{4}$", string): return "%Y"
     elif re.search(r"^\d{4}-\d{2}$", string): return "%Y-%m"
@@ -188,7 +192,6 @@ def _guess_fmt(string: str):
     elif re.search(r"^\d{4}年\d{2}月\d{2}日$", string): return "%Y年%m月%d日"
     elif re.search(r"^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}$", string): return "%Y年%m月%d日 %H:%M"
     elif re.search(r"^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}:\d{2}$", string): return "%Y年%m月%d日 %H:%M:%S"
-    elif re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", string): return "%Y-%m-%d %H:%M:%S"
     elif re.search(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}$", string): return "%Y/%m/%d %H:%M:%S"
     elif re.search(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}$", string): return "%Y/%m/%d %H:%M"
     elif re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$", string): return "%Y-%m-%d %H:%M"

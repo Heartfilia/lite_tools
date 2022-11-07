@@ -52,7 +52,7 @@ def _print_base():
     print_info += "Available commands:\n"
     # print_info += "  flush       清理本地关于lite-tools的全部缓存(慎用)\n"   # 有这个功能但是不对外展示
     print_info += "  fish        获取摸鱼人日历\n"
-    print_info += "  say         兽说\n"
+    print_info += "  say         兽说(后面再加其它的可选加密方案)\n"
     print_info += "  acg         更多详情见 -h 默认输出今日视频记录(没搞完但是可以体验基础操作没有同步更新操作)\n"
     # print_info += "  ball        获取彩票详情\n"   # 这里先不提供了 目前要学习其他的 不搞这个地方了
     print_info += "  news        获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"

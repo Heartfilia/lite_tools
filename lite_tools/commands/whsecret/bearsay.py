@@ -38,7 +38,7 @@ def roar_encode(string: str) -> str:
 
 
 def roar_decode(string: str) -> str:
-    """界面"""
+    """解密部分"""
     if len(string) < 4:
         return ""
     c = roar_key_arr

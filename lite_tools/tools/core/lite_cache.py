@@ -69,6 +69,13 @@ class Buffer(metaclass=Singleton):
     _task_done: bool = False              # 任务是否终止
 
     @classmethod
+    def reset(cls, name: str = "default"):
+        """
+        重置统计数据的
+        """
+        cls.__init__queue__(name, rs=True)
+
+    @classmethod
     def size(cls, name: str = "default") -> int:
         return cls.__queues[name].qsize()
 
@@ -186,7 +193,7 @@ class Buffer(metaclass=Singleton):
         return async_wrapper if iscoroutinefunction(func) else wrapper
 
     @classmethod
-    def __init__queue__(cls, name):
+    def __init__queue__(cls, name, rs: bool = False):
         """
         下面尽可能的划细一点 提升效率 不用每次都要进来加锁判断一下
         """
@@ -195,9 +202,9 @@ class Buffer(metaclass=Singleton):
                 if name not in cls.__queues:
                     cls.__queues[name] = Queue(10000)
 
-        if name not in cls.__task_count:
+        if name not in cls.__task_count or rs is True:
             with cls._lock:
-                if name not in cls.__task_count:
+                if name not in cls.__task_count or rs is True:
                     cls.__task_count[name] = set()
 
         if name not in cls.__task_flag:
@@ -205,12 +212,12 @@ class Buffer(metaclass=Singleton):
                 if name not in cls.__task_flag:
                     cls.__task_flag[name] = True
 
-        if name not in cls.__task_time:
+        if name not in cls.__task_time or rs is True:
             with cls._lock:
-                if name not in cls.__task_time:
+                if name not in cls.__task_time or rs is True:
                     cls.__task_time[name] = time.time()
 
-        if name not in cls._get_count:
+        if name not in cls._get_count or rs is True:
             with cls._lock:
-                if name not in cls._get_count:
+                if name not in cls._get_count or rs is True:
                     cls._get_count[name] = 0

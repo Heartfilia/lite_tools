@@ -27,4 +27,6 @@ lite-tools [-h]   # 可以获取帮助 我这里就不展示更多了
 
 #### 真的懒得写文档 直接看源码 直接点这里 [`__init__.py`](https://github.com/Heartfilia/lite_tools/blob/master/lite_tools/__init__.py)
 
+#### 还有稍微详细的查询工具网站，持续更新的 [lite-tools](https://www.yuque.com/heartfilia/oip3kg/egpxli)
+
 #### 或者部分demo见 [demo.py](https://github.com/Heartfilia/lite_tools/tree/master/demo)
