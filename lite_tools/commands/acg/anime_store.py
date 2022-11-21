@@ -397,7 +397,7 @@ def fresh_by_check_row(row: tuple, now_week: int, today_time_fmt: str):
     else:
         # 指定了开播时间 需要判断是否已经开播
         if date_table == today_time_fmt:   # 如果今天是开播日期
-            pass
+            change_row['nowEpisode'] = 1
         elif date_table < today_time_fmt:
             # 如果已经过了开播日期 判断当前集数是否-1 来处理当前集数
             if now_episode_table == -1:

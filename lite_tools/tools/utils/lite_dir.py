@@ -8,7 +8,8 @@ import time
 def get_base_root() -> str:
     """目前兼容win/linux、、、mac不确定"""
     if sys.platform == "win32":
-        return "C:\\Users\\Administrator"
+        user_name = os.environ['username']
+        return f"C:\\Users\\{user_name}"
     elif sys.platform == "linux":
         user_name = os.environ['USER']
         if user_name == "root":
