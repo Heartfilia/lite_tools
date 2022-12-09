@@ -4,7 +4,7 @@
 import re
 import copy
 import json as _json
-from typing import Any, Optional, Iterator, Union, Tuple
+from typing import Any, Optional, Iterator, Union, Literal
 
 from lite_tools.tools.utils.logs import my_logger, get_using_line_info, logger
 from lite_tools.exceptions.DictExceptions import (
@@ -127,7 +127,7 @@ retry_bad_key = "try重试１ダ-故意(yeah)传了一个特殊的不一定重�
 """
 
 
-def try_key(renderer, getter, mode: str = "key", expected_type=None, log: bool = False,
+def try_key(renderer, getter, mode: Literal['key', 'value'] = "key", expected_type=None, log: bool = False,
             options: dict = None) -> Optional[list]:
     """
     批量获取结果json、字典的键值结果
