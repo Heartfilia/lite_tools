@@ -33,7 +33,8 @@ def get_date(timedelta: tuple = None):
 def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = False, unit: Literal["ms", "s"] = "s",
              instance: Union[None, type] = None, cursor: Union[str, int, float] = 0, **kwargs):
     """
-    返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor
+    返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor  如果传入字符串并且满足fmt格式 将会转换为时间戳
+    异常的时候默认返回当前时间
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
     params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整 --> 可以设置 unit="ms/int" 对double后的结果取整
@@ -60,7 +61,7 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
         instance = int
     if not isinstance(goal, str) and fmt is False:
         return _cal_cursor_timestamp(goal, times, instance, cursor)
-    elif goal and isinstance(goal, str) and not goal.replace(".", "").isdigit():  # 转换目标格式为 时间戳
+    elif goal and isinstance(goal, str):  # 转换目标格式为 时间戳
         return _fmt_to_timestamp(goal, fmt_str, times, instance)
     elif goal and isinstance(goal, (float, int)) and cursor == 0:   # 转换时间戳为 目标时间格式
         return _timestamp_to_f_time(goal, fmt_str)
@@ -186,15 +187,19 @@ def _guess_fmt(string: str):
 
     if re.search(r"^\d{4}$", string): return "%Y"
     elif re.search(r"^\d{4}-\d{2}$", string): return "%Y-%m"
+    elif re.search(r"^\d{4}\.\d{2}$", string): return "%Y.%m"
     elif re.search(r"^\d{4}年\d{2}月$", string): return "%Y年%m月"
     elif re.search(r"^\d{4}-\d{2}-\d{2}$", string): return "%Y-%m-%d"
+    elif re.search(r"^\d{4}\.\d{2}\.\d{2}$", string): return "%Y.%m.%d"
     elif re.search(r"^\d{4}/\d{2}/\d{2}$", string): return "%Y/%m/%d"
     elif re.search(r"^\d{4}年\d{2}月\d{2}日$", string): return "%Y年%m月%d日"
     elif re.search(r"^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}$", string): return "%Y年%m月%d日 %H:%M"
     elif re.search(r"^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}:\d{2}$", string): return "%Y年%m月%d日 %H:%M:%S"
     elif re.search(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}$", string): return "%Y/%m/%d %H:%M:%S"
+    elif re.search(r"^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2}$", string): return "%Y.%m.%d %H:%M:%S"
     elif re.search(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}$", string): return "%Y/%m/%d %H:%M"
     elif re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$", string): return "%Y-%m-%d %H:%M"
+    elif re.search(r"^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$", string): return "%Y.%m.%d %H:%M"
     # from dateutil.parser import parse
     # from dateparser import parse
 
@@ -358,4 +363,5 @@ def _check_month_day_max(year: int, month: int) -> int:
 
 
 if __name__ == "__main__":
-    pass
+    print(get_time())
+

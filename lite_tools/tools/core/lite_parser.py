@@ -15,7 +15,7 @@ from lite_tools.exceptions.DictExceptions import (
 __ALL__ = ['try_get', 'try_key', 'FlattenJson', 'JsJson', 'WrapJson']
 """
 try_get 取值和 FlattenJson 取值规则不一样 两者的时间复杂度也不一样 
-TODO (这里需要优化代码 文件读取位置需要调整)  get_using_line_info  这个也得调整
+get_using_line_info  这个也得调整
 """
 
 
@@ -27,13 +27,13 @@ def try_get(
     r"""
     获取字典键值  --> 只获取**一个结果** 如果碰到了列表 只获取**第一个值**或者**特定值**
     只传入一个json串 那么就是转换为字典:
-    注意：如果是 点(\.) 或者 竖(\|) 或者数字(\-35/) 或者左中括号(\["a"])--> 如果要匹配 a = {"\0/": 1} 这种类型键 try_get(a, "\\0/")
-         在键里面需要加转义符号（不支持小数因为使用率比较低，弄起来又麻烦浪费时间）--> **如果键是花里胡哨的别用这个方法,可能会错**
+    注意：这几种东西如果是键需要转义 -->    |  .  [    ]   这四个符号如果是键得加 \
+        如 {”a|b[c.d]“: {"x": 666}}  这种我们需要写 --> "a\|b\c\.d\].x"
+        如果是纯数字或者小数做主键 请不要用我这个方法 如 {12: {3.14: 666}}  真有这种需求请用json包
     如果传入一个字典 json=True 那么就是转为json字符串
     :param renderer: 传入的需要解析的字典或者json串
     :param getters : 链式取值 -- 不传入那么就只是单纯的格式化json传 这里支持管道符多匹配辣 如: a.b.c|a.b.d[-1]|a.c.d
-            如果键里面有管道符 --> 请把键里面的管道符用 反斜杠表示 防止转义
-            示例:a.b.c.d   a[2].b 或者 a.[2].b  或者 a.[*]b ->*是代表不知道是哪一个列表下面出现的b 如果都有那就取第一个
+        这里单词前面如果是数组必须有 .  如 a[1][2].b  或者 a.[1][2].b 或者 a.[1].[2].b  请不要写a[1][2]b 否则碰到 a.b.c咋说
     :param default : 默认的返回值, 默认返回None, 可以自定义返回值
     :param expected_type: 期望获得的值类型 不是则为 default  可多传如：  expected_type=(list, str)
     :param log     :  是否打印日志
@@ -56,173 +56,64 @@ def try_get(
         return renderer
 
     if isinstance(getters, str):
-        getters, split_string = _split_by_high_core(getters, r"\|")
-        for each_getter in getters.split(split_string):    # 兼容 | 管道符号可以多个条件一起操作
-            if r"\|" in each_getter:
-                each_getter = each_getter.replace(r"\|", "|")  # 防止转义的键里面的管道符恢复原样
-            getter = each_getter.strip('. \n\r')          # 去掉首位特殊字符 增加容错 避免有的人还写了空格或者.
-            getter, split_string = _split_by_high_core(getter, r"\.")
-            # 把转义过的键里面的.排除 然后再把没有转义符的.做分割处理
-            if "." in getter:
-                origin_getter, renderer = handle_dot_situation(getter, renderer, split_string)
-            else:
-                origin_getter, renderer = handle_normal_situation(getter, renderer)
-
-            if renderer == retry_bad_key:
-                continue
-
+        getters = symbol_encode(getters)
+        for each_getter in getters.split("|"):    # 兼容 | 管道符号可以多个条件一起操作
+            origin_getter = trans_to_dict_rule(each_getter)
+            decode_getter = symbol_decode(origin_getter)
             try:
-                now_result = __main_try_get(renderer, lambda _: eval(origin_getter), default, expected_type, log)
+                now_result = __main_try_get(renderer, lambda _: eval(decode_getter), default, expected_type, log)
             except Exception as err:
                 # 因为有些时候lambda 那里可能会出现问题
-                _ = err
                 if log is True:
                     line, fl = get_using_line_info()
-                    my_logger(fl, "try_get", line, f"请不要连写一堆操作符在 -- [{getters.replace('||', '|')}] 这上面")
+                    my_logger(fl, "try_get", line, err)
                 continue
             if now_result != default:
                 return now_result
     return default
 
 
-def _split_by_high_core(getters: str, handle: str) -> Tuple[str, str]:
+def symbol_encode(origin_string: str) -> str:
     """
-    切割核心字符串 避免切割错误
-    :param getters: 需要切割的字符串
-    :param handle : 需要处理的转义后符号如: \\|  \\.
-    :return: 替换后的字符串, 可用于切割的标记符
+    把特殊符号加密 避免后面出问题
     """
-    if handle not in getters:
-        return getters, handle[1:]
-    only_string = "开始^解_耦$结束"
-    cut_string = "开始^切_割$结束"
-    getter = getters.replace(
-        handle, only_string
-    ).replace(
-        handle[1], cut_string
-    ).replace(
-        only_string, handle
-    )
-    return getter, cut_string
+    origin_string = origin_string.replace(r"\.", chr(64446))
+    origin_string = origin_string.replace(r"\[", chr(64447))
+    origin_string = origin_string.replace(r"\]", chr(64448))
+    origin_string = origin_string.replace(r"\|", chr(64449))
+    return origin_string
 
 
-def handle_dot_situation(getter: str, renderer: dict, split_string: str) -> Tuple[str, Union[dict, list, None]]:
-    """
-    处理有 . 在的情况
-    """
-    origin_getter = "_"
-    getter = getter.split(split_string)
-    for now_getter in getter:
-        # 把转义过后的键里面的点恢复原样
-        if r"\." in now_getter:
-            now_getter = now_getter.replace(r"\.", ".")
-        if re.search(r"\S*\\\[\S+]\S*", now_getter):
-            new_getter = now_getter.replace(r"\[", '[')
-            origin_getter += f"['{new_getter}']"
-        elif re.search(r"\S+\[-?\d+]", now_getter):
-            origin_getter += _get_w_d_rules(now_getter)
-        elif re.search(r"\[-?\d+]\S+", now_getter):
-            origin_getter += _get_d_w_rules(now_getter)
-        elif re.search(r"\[\*]\S+", now_getter):
-            # 这里因为会改 render的结构 所以就不要单独处理了
-            renderer, origin_getter = handle_reg_rule(
-                renderer, origin_getter, now_getter, retry_bad_key)
-            # 避免本来结果就是None或者什么情况
-            if renderer == retry_bad_key:
-                continue
-        elif re.search(r"\[\d+]", now_getter):
-            origin_getter += now_getter  # 这里是为了兼容  a.[2].b  这种格式
-        else:
-            if re.search(r"^\\-?\d+/$", now_getter):
-                origin_getter += f"[{now_getter[1:-1]}]"
+def symbol_decode(decode_string: str) -> str:
+    decode_string = decode_string.replace(chr(64446), ".")
+    decode_string = decode_string.replace(chr(64447), "[")
+    decode_string = decode_string.replace(chr(64448), "]")
+    decode_string = decode_string.replace(chr(64449), "|")
+    return "_" + decode_string
+
+
+def trans_to_dict_rule(origin_string: str):
+    result = ""
+    for string in origin_string.split('.'):
+        if "[" not in string:
+            result += f"['{string}']"
+        elif "[" in string and string.endswith("]"):
+            if not string.startswith("["):
+                result += re.sub(r"(^[^\[]+)", r"['\1']", string)
             else:
-                origin_getter += f"['{now_getter}']"
-
-    return origin_getter, renderer
-
-
-def handle_normal_situation(each_getter: str, renderer: dict):
-    """
-    处理没有 . 的情况
-    """
-    origin_getter = "_"
-    if re.search(r"\[\*]\S+", each_getter):
-        renderer, origin_getter = handle_reg_rule(
-            renderer, origin_getter, each_getter, retry_bad_key)
-        # 避免本来结果就是None或者什么情况
-        if renderer == retry_bad_key:
-            origin_getter = "_"
-    elif re.search(r"\\\[\S+]", each_getter):
-        origin_getter += f"['{each_getter[1:]}']"
-    elif re.search(r"\S+\[-?\d+]", each_getter):  # a[2]
-        origin_getter += _get_w_d_rules(each_getter)
-    elif re.search(r"\[-?\d+]\S+", each_getter):  # [2]b   # 这里是为了兼容 不推荐这样写
-        origin_getter += _get_d_w_rules(each_getter)
-    else:
-        if re.search(r"^\\-?\d+/$", each_getter):
-            origin_getter += f"[{each_getter[1:-1]}]"
-        elif re.search(r"\\\\-?\d+/", each_getter):
-            origin_getter += f"['{each_getter[1:]}']"
-        else:
-            origin_getter += f"['{each_getter}']"
-
-    return origin_getter, renderer
+                result += string
+    return result
 
 
-def _get_w_d_rules(now_getter: str) -> str:
-    """
-    这里是之规则为 -- \\w+\\[-?\\d+\\] 的
-    """
-    origin_getter = ""
-    getter_head = now_getter.split('[')[0]
-    origin_getter += f"['{getter_head}']"
-    getter_foot = "[" + now_getter.split('[')[1]
-    origin_getter += getter_foot
-    return origin_getter
-
-
-def _get_d_w_rules(now_getter: str) -> str:
-    """
-    这里是之规则为 -- [-?\\d+\\]\\w+ 的
-    """
-    origin_getter = ""
-    getter_head = now_getter.split(']')[0]
-    origin_getter += getter_head + "]"
-    getter_foot = now_getter.split(']')[1]
-    origin_getter += f"['{getter_foot}']"
-    return origin_getter
-
-
-def handle_reg_rule(renderer, origin_getter, getter, default):
-    """
-    这里是因为只会出现 [*]a  这种匹配规则 故结果一定是列表 不是的话返回自己规定的错误状态 
-    """
-    matching_var = getter[3:]
-    
-    # 这里先获取到列表 [{},{}]
-    results = __main_try_get(renderer, lambda _: eval(origin_getter), default)
-
-    if isinstance(results, list):
-        for result in results:
-            if not isinstance(result, dict):
-                continue
-            if matching_var in result:
-                return result.get(matching_var, default), "_"
-    return default, origin_getter
-
-
-def __main_try_get(renderer, getters: Any, default=None, expected_type=None, log=False):
-    if not isinstance(getters, (list, tuple)):
-        getters = [getters]
-    for getter in getters:
-        try:
-            result = getter(renderer)  # lambda function
-            if expected_type is None or isinstance(result, expected_type):
-                return result
-        except (AttributeError, KeyError, TypeError, IndexError) as e:
-            if log is True:
-                line, fl = get_using_line_info()
-                my_logger(fl, "try_get", line, e)
+def __main_try_get(renderer, getter: Any, default=None, expected_type=None, log=False):
+    try:
+        result = getter(renderer)  # lambda function
+        if expected_type is None or isinstance(result, expected_type):
+            return result
+    except (AttributeError, KeyError, TypeError, IndexError) as e:
+        if log is True:
+            line, fl = get_using_line_info()
+            my_logger(fl, "try_get", line, e)
     return default
 
 

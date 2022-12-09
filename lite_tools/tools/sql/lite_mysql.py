@@ -21,7 +21,7 @@
 import re
 import time
 from threading import RLock
-from typing import Iterator, Union
+from typing import Iterator, Union, Literal
 
 import pymysql
 from dbutils.pooled_db import PooledDB
@@ -39,7 +39,8 @@ class MySql:
             pool: PooledDB = None,
             *,
             config: MySqlConfig = None,
-            table_name: str = None
+            table_name: str = None,
+            log_rule: Literal['default', 'each'] = 'default'
     ):
         """
         pool: 如果用的自己构建的连接池 那么就传自己构建好了的进来，但是如果要用insert,update,delete等方法就还需要额外传入table_name
@@ -54,6 +55,7 @@ class MySql:
                         maxconnections: int = 20,
                         table_name: str = None,
         table_name: 如果是自己传入pool 那么就需要传入这个参数
+        log_rule  : 打印日志的模式，默认是每隔一段时间或者一定的量打印一下，可以设置为each 每条打印
         """
         if pool:
             self.log = True   # 默认肯定是要打印日志的啦
@@ -88,6 +90,7 @@ class MySql:
         }   # 操作了 但是没有改变的行数
         self.lock = RLock()
         self.start_time = time.time()
+        self.log_rule = log_rule
 
     def _init_mysql(self, database, maxconnections, host, port, user, password, charset):
         if self.pool is None:
@@ -132,7 +135,9 @@ class MySql:
             # 增删改查  这里mode不会碰到查的  # 如果总改动行数为50的倍数就可以打印一下
             change_line_all = sum(self.change_line.values(), sum(self.not_change_line.values()))
             # 改变行和时间都可作打印依据
-            if self.log == "all" or change_line_all % 50 == 0 or int(time.time() - self.start_time) % 60 == 0:
+            if self.log_rule == "each" or (
+                    self.log == "all" or change_line_all % 50 == 0 or int(time.time() - self.start_time) % 60 == 0
+            ):
                 self._print_rate(mode, end_time, start_time, result)
             return result
         except Exception as err:
