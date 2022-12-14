@@ -29,15 +29,16 @@ def get_lan() -> str:
         txt = get_command_result("ipconfig")
         ip_reg_0 = re.search(r"以太网适配器.*?IPv4\s?地址.*?(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I)
         # ip_reg_1 = re.search(r"(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I)
-        ip_reg = ip_reg_0  # or ip_reg_1
+        ip_reg = ip_reg_0  # or ip_reg_1  # 如果有不同情况的方案格式如上和这里注释部分
     else:
         txt = get_command_result("ifconfig")
-        ip_reg_0 = re.search(r"eth0.*?\n\s+inet\s(\d+\.\d+\.\d+\.\d+)", txt)
+        ip_reg_0 = re.search(r"(?=eth0|en0).*?\n\s+inet\s(\d+\.\d+\.\d+\.\d+)", txt)
+        # 如果有不同情况的方案二就放这里
         ip_reg = ip_reg_0
     if not ip_reg:
         # 如果没有匹配到内容那么就走系统自带的方法
         print('获取内网ip通过正则获取失败，希望你能把你当前pc的特殊情况发给我,我这里先返回系统方法获取的ip给到你')
-        ip = socket.gethostbyname_ex(socket.gethostname())[-1][0]
+        ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
     else:
         ip = ip_reg.group(1)
 
@@ -65,7 +66,3 @@ def get_wan(vps: bool = False) -> str:
     except Exception as err:
         _ = err
         return ""
-
-
-if __name__ == "__main__":
-    print(get_wan())
