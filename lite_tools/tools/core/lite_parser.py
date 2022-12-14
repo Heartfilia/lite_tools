@@ -494,7 +494,7 @@ class WrapJson(object):
         base_key = ""
         split_key = key.split('.')   # a   [0]   c
         for sk in split_key:
-            if sk.endswith(']') and sk.startswith('['):
+            if sk.endswith(']') and sk.startswith('[') and re.search(r'^\[-?\d+]', sk):
                 base_key += sk
             else:
                 if sk.find('[') != -1 and sk.find(']') != -1:
@@ -535,3 +535,8 @@ class WrapJson(object):
                     pass
                 else:
                     self.results.append(result)
+
+
+if __name__ == "__main__":
+    a = [1, 2, 3]
+    print(try_get(a, [-1]))
