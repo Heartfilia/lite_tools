@@ -188,7 +188,7 @@ class MySql:
 
     def select_iter(self, sql: str, limit: int = 1000) -> Iterator:
         """
-        通过批量的迭代获取数据
+        通过批量的迭代获取数据 有点问题 后面再优化
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
         :param limit : 这里交给我来自动管理 默认我给了1000
         return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数w2  Q12

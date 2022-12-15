@@ -21,17 +21,17 @@
 import json
 import time
 import random
-from typing import Union, Literal, Sequence
+from typing import Union, Literal, Sequence, Optional
 
 import yaml
-import redis
+import redis as _redis
 
 from lite_tools.tools.utils.logs import logger
 from lite_tools.exceptions.CacheExceptions import FileNotFount
 
 
 class LiteProxy:
-    def __init__(self, redis_client: redis.Redis, redis_name: Union[str, Sequence], retry: int = 5,
+    def __init__(self, redis_client: _redis.Redis, redis_name: Union[str, Sequence], retry: int = 5,
                  mode: Literal['set', 'list'] = 'set'):
         """
         基于redis设计的代理池 --> 默认模式是 set 类型: 方便随机弹出  也可以list,滚动提取
@@ -152,13 +152,16 @@ decode: True
 kwargs: 
   xxx: ~
   yyy: ~
-  zzz: ~      
+  zzz: ~  
+  
+创建DEMO:
+  app = LiteRedis('test.json').client   后面的client没有括号哦~    
         """)
 
     @property
-    def client(self):
+    def client(self) -> _redis.Redis:
         if not self.rd:
-            self.rd = redis.Redis(
+            self.rd = _redis.Redis(
                 host=self.host,
                 port=self.port,
                 password=self.password,
@@ -166,7 +169,7 @@ kwargs:
                 db=self.db,
                 **self.kwargs
             )
-            logger.success("redis-链接成功")
+            logger.success("redis-链接成功 这里是一个`property` 如果说Redis Not Callable, 请不要加后面的括号哦~")
         return self.rd
 
     def set_param(self, config: dict):
