@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Time   : 2021-04-07 12:23
 # @Author : Lodge
+import re
 from hashlib import (
     md5, sha1, sha224, sha256, sha384, sha512,
     sha3_224, sha3_256, sha3_384, sha3_512
@@ -87,3 +88,17 @@ def get_sha3(s: Union[str, bytes, int, float], mode: Literal[224, 256, 384, 512]
     except Exception:
         raise TypeError
     return sha3_obj.hexdigest()
+
+
+def get_5dm(s: str) -> str:
+    """
+    这个是给我自己用的 别人用没啥用 主要是对md5操作
+    :param s: md5
+    """
+    if len(s) != 32 or re.search("[^0-9a-z]", s):
+        s = get_md5(s)   # 如果长对不对 先加密成md5
+
+    new_array = [s[ind:ind + 4] for ind in range(0, 32, 4)]
+    array_1 = new_array[:4][::-1]
+    array_2 = new_array[4:][::-1]  # 我这里颗粒度比较低
+    return "".join(array_1 + array_2)

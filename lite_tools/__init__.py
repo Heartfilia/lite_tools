@@ -46,7 +46,7 @@ __ALL__ = [
 from lite_tools.tools.core.ip_info import get_lan, get_wan
 from lite_tools.tools.core.lib_base64 import get_b64d, get_b64e
 from lite_tools.tools.core.lite_parser import try_get, try_key, FlattenJson, JsJson, WrapJson
-from lite_tools.tools.core.lib_hashlib import get_md5, get_sha, get_sha3
+from lite_tools.tools.core.lib_hashlib import get_md5, get_sha, get_sha3, get_5dm  # 5dm是我自己用的不对外展示
 from lite_tools.tools.time.lite_time import get_time, time_count, time_range
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_ua import get_ua
@@ -62,3 +62,4 @@ from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
 
 from lite_tools.tools.js import atob, btoa
 
+__ALL__ += ["5dm"]
