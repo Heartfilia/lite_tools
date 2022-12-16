@@ -108,8 +108,6 @@ def try_catch(
                         err_callback()
                     else:
                         # 到这里了 err_params 是一定有内容的
-                        logger.debug(f"传入的参数 err_params--> {err_params}")
-                        logger.debug(f"传入的参数 args--> {args}")
                         function_args = args[0]
                         function_kwargs = args[1]
                         send_args = ()
@@ -119,15 +117,11 @@ def try_catch(
                         if function_kwargs:
                             send_kwargs = get_params_kwargs(err_params)
 
-                        logger.debug(f"send_args = {send_args}")
-
                         cache_args = []
                         for a in send_args:
                             if a >= len(args[0]):
                                 continue
                             cache_args.append(args[0][a])
-
-                        logger.debug(f"cache_args = {cache_args}")
 
                         cache_kwargs = {}
                         for k in send_kwargs:
