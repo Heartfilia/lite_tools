@@ -50,10 +50,11 @@ def _print_base():
     print_info += f"lite-tools {color_string(VERSION, 'cyan')}  当前版本均为测试版,等1.0修复稳定了才是正式的\n\n"
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
-    # print_info += "  flush       清理本地关于lite-tools的全部缓存(慎用)\n"   # 有这个功能但是不对外展示
+    print_info += "  flush       清理本地关于lite-tools的记录(慎用)\n"
     print_info += "  fish        获取摸鱼人日历\n"
+    print_info += "  fresh       更新一些lite-tools需要的资源 可以后跟具体参数\n"
     print_info += "  say         兽说(后面再加其它的可选加密方案)\n"
-    print_info += "  acg         更多详情见 -h 默认输出今日视频记录(没搞完但是可以体验基础操作没有同步更新操作)\n"
+    # print_info += "  acg         更多详情见 -h 默认输出今日视频记录(没搞完但是可以体验基础操作没有同步更新操作)\n"
     # print_info += "  ball        获取彩票详情\n"   # 这里先不提供了 目前要学习其他的 不搞这个地方了
     print_info += "  news        获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"
     print_info += "  today       获取当天黄历 后接`history`可以获取今日往事 接`oil`获取今日油价\n"
@@ -90,9 +91,15 @@ def bear_say(_, *args):
 
 @chose_option.register("flush")
 def flush_local(_, *args):
-    # 写一写的忧郁了要不要弄这个删除本地文件的操作  因为我这些本来我就做了移除操作
-    root = lite_tools_dir()
-    # 然后对下面的内容的文件夹进行操作  可选参数 acg  today  history
+    from lite_tools.commands.flush.flush_cmd import flush_cmdline
+    flush_cmdline(args[0])
+
+
+@chose_option.register("fresh")
+def fresh_something(_, *args):
+    # 联网更新一些资源 这里是手动操作
+    from lite_tools.commands.fresh.fresh_cmd import fresh_cmdline
+    fresh_cmdline(args[0])
 
 
 @chose_option.register("ball")
@@ -103,7 +110,6 @@ def get_ball(_, *args):
 
 @chose_option.register("weather")
 def get_weather(_, *args):
-
     from lite_tools.commands.weather.weather_cmd import weather_cmdline
     weather_cmdline(args[0])
 

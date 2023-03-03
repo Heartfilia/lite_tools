@@ -88,6 +88,10 @@ class MySql:
             "update": 0,
             "delete": 0
         }   # 操作了 但是没有改变的行数
+        self.row_count = {
+            "total": 0,
+            "run": 0
+        }   # 总行数  surplus
         self.lock = RLock()
         self.start_time = time.time()
         self.log_rule = log_rule
@@ -131,24 +135,28 @@ class MySql:
                         self.not_change_line[mode] += 1
                     else:
                         self.change_line[mode] += result
+                    if mode == 'update':
+                        self.row_count["run"] += 1
 
-            # 增删改查  这里mode不会碰到查的  # 如果总改动行数为50的倍数就可以打印一下
-            change_line_all = sum(self.change_line.values(), sum(self.not_change_line.values()))
-            # 改变行和时间都可作打印依据
-            if self.log_rule == "each" or (
-                    self.log == "all" or change_line_all % 50 == 0 or int(time.time() - self.start_time) % 60 == 0
-            ):
-                self._print_rate(mode, end_time, start_time, result)
+            self._print_rate(mode, end_time, start_time, result)
             return result
         except Exception as err:
             if str(err).find("Duplicate entry") != -1 and log is False:
                 return 0
             end_time = time.time()
-            self.sql_log(f"耗时: {end_time-start_time:.3f}s 异常原因: [{err}]", sql, "error")
+            # 只要不是主键重复的错误 那么都需要打印出来
+            if str(err).find("Duplicate entry") == -1:
+                self.sql_log(f"Cost: {end_time-start_time:.3f}s Exception: [{err}]", sql, "error", output=True)
+
             conn.rollback()
             if str(err).find("Duplicate entry") != -1 and batch is True:
                 logger.warning(f"批量操作的数据有重复,现在转入单条操作,重复的字段内容日志将不会再打印:{err}")
                 raise DuplicateEntryException
+
+            if mode in ['insert', 'update']:
+                with self.lock:
+                    self.not_change_line[mode] += 1
+                self._print_rate(mode, end_time, start_time, 0, flag="info")
             return -1
         finally:
             conn.close()
@@ -177,6 +185,8 @@ class MySql:
                 raise IterNotNeedRun
             return
         for row in items:
+            with self.lock:
+                self.row_count['total'] = all_num
             if count is False:
                 yield row[0] if len(row) == 1 else row
             else:
@@ -310,12 +320,20 @@ class MySql:
                 return False
         return True
 
-    def _print_rate(self, mode: str, end_time, start_time, result):
+    def _print_rate(self, mode: str, end_time, start_time, result, flag: str = "success"):
         all_line = self.change_line[mode] + self.not_change_line[mode]
-        rate = round(all_line / (time.time() - self.start_time), 3)  # 平均每秒改变行
-        other_log = f"-->总影响行数={self.change_line[mode]}; 总未影响行={self.not_change_line[mode]}; 效率={rate} line/s;"
+        cost_time = time.time() - self.start_time
+        rate = round(all_line / cost_time, 3)  # 平均每秒改变行
+        if mode == 'update':
+            cost_row = self.row_count['total'] - self.row_count['run']
+            other_log = f"【Surplus/AllRow: {cost_row}/{self.row_count['total']} Time:{cost_time:.3f}s】 "
+        elif mode == "insert":
+            other_log = f"【Time:{cost_time:.3f}s】 "
+        else:
+            other_log = " "
+        other_log += f"Affect={self.change_line[mode]}; NotAffect={self.not_change_line[mode]}; LineRate={rate} line/s;"
         self.sql_log(
-            f"模式:[{mode}]{other_log} 本条耗时:{end_time - start_time:.3f}s 本次影响行={result}", "", "success", True
+            f"[{mode}]{other_log} lineCost:{end_time - start_time:.3f}s AffectLine={result}", "", flag, True
         )
 
     def sql_log(self, string: str, sql_string: str, string_level: str, output: bool = False) -> None:

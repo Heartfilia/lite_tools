@@ -40,6 +40,7 @@ def try_get(
     :param json    :  设置为True 返回值会返回默认的json串
     :param options : 这里就是json.dumps的参数 变成了字典传入 不过我默认值有修改 ensure_ascii=False json那默认的是True 如果读取js文件设置见demo
                    : 如果处理文件：需要加参数 "mode": "file"  (可以额外指定的参数:encoding-默认utf-8) 具体见demo
+                   : 一般不建议用我这个包搞这个 虽然可以 但是复杂
     :return        : 如果取到则为值，否则为 default 设置的值 默认None
     """
     renderer = _judge_json(renderer, json, options)

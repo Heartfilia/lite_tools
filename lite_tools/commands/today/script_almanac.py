@@ -94,7 +94,7 @@ def get_wiki_info(mode: str = "history", time_fmt: str = "") -> dict:
 @check_cache
 def get_date_web(mode: str = "almanac") -> str:
     _ = mode
-    resp = requests.get('https://www.wannianli.cn/', headers={'user-agent': get_ua()}, verify=False)
+    resp = requests.get('http://www.wannianli.cn/', headers={'user-agent': get_ua()}, verify=False)
     return resp.text
 
 
@@ -131,13 +131,13 @@ def parse_html_holiday(html: etree.HTML):
     # pt_holiday.set_style(pt.PLAIN_COLUMNS)
     pt_holiday.junction_char = "-"
     pt_holiday.vertical_char = " "
-    tables = html.xpath('//table/tbody/tr[@class="c-table-hihead firstRow"]/following-sibling::tr')
+    tables = html.xpath('//div[@class="col-md-6"][2]/div/table/tbody/tr')
     for tr in tables:
-        name = "".join(tr.xpath('./td[1]/text()')).replace(' ', '').replace("\n", "").replace('\r', "")
-        holiday_range = "".join(tr.xpath('./td[2]/text()')).replace(' ', '').replace("\n", "").replace('\r', "")
+        name = "".join(tr.xpath('./td[1]/text()')).strip()
+        holiday_range = "".join(tr.xpath('./td[2]/text()')).strip()
         _need_color = _holiday_judge_range(holiday_range)
-        make_up_days = "".join(tr.xpath('./td[3]/text()')).replace(' ', '').replace("\n", "").replace('\r', "")
-        holiday_days = "".join(tr.xpath('./td[4]/text()')).replace(' ', '').replace("\n", "").replace('\r', "")
+        make_up_days = "".join(tr.xpath('./td[3]/text()')).strip().replace(' ', "、")
+        holiday_days = "".join(tr.xpath('./td[4]/text()')).strip()
         if _need_color:
             name = color_string(f"<{_need_color}>{name}</{_need_color}>")
             holiday_range = color_string(f"<{_need_color}>{holiday_range}</{_need_color}>")
@@ -154,6 +154,8 @@ def _get_time_ts(string: str) -> float:
     year = time.localtime().tm_year
     month = re.search(r"(\d+)月", string).group(1)
     day = re.search(r"(\d+)日", string).group(1)
+    if month == "12" and day == "31":  # 元旦那天需要调整
+        year -= 1
     return time.mktime(time.strptime(f"{year}-{month:>02}-{day:>02}", "%Y-%m-%d"))
 
 

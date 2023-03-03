@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 # @Time   : 2021-04-06 15:28
 # @Author : Lodge
+import os
 import re
+import json
 import random
 
 from lite_tools.version import VERSION
-from lite_tools.tools.utils.u_ua_info import platform_data, browser_data, versions
+from lite_tools.tools.utils.lite_dir import lite_tools_dir
+from lite_tools.tools.utils.u_ua_info import platform_data, browser_data
 
 
 __ALL__ = ["get_ua"]
@@ -63,13 +66,37 @@ def judge_ua(browser, template) -> str:
 
     if browser in ["chrome", "edge"]:
         browser = "chromium"
-    version = random.choice(versions.get(browser))
+    version = random.choice(get_versions().get(browser))
 
     if p_nums == 1:
         return template.format(version)
     elif p_nums == 2:
         return template.format(version, version)
     return template
+
+
+__UA_CACHE: dict = {}   # 尽量减少io读取 用空间换时间
+
+
+def get_versions() -> dict:
+    global __UA_CACHE
+    if __UA_CACHE:
+        return __UA_CACHE
+
+    ua_path = os.path.join(lite_tools_dir(), "browser", "ua_version.json")
+    if not os.path.exists(ua_path):
+        from lite_tools.tools.utils.u_ua_info import versions
+        __UA_CACHE = versions
+    else:
+        try:
+            with open(ua_path, 'r', encoding='utf-8') as fp:
+                __UA_CACHE = json.load(fp)
+        except Exception as err:
+            _ = err
+            from lite_tools.tools.utils.u_ua_info import versions
+            __UA_CACHE = versions
+
+    return __UA_CACHE
 
 
 def lite_ua(name=None) -> str:

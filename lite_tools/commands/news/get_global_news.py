@@ -64,14 +64,21 @@ def get_world_news():
     params = {
         "node": '"/e3pmh22ph/e3pmh2398","/e3pmh22ph/e3pmh26vv","/e3pmh22ph/e3pn6efsl","/e3pmh22ph/efp8fqe21"',
         "offset": 0,
-        "limit": 20
+        "limit": 24
     }
     data = _get_global_requests(url, params)
     _parse_news(data, "国际")
 
 
 def _get_global_requests(url, params=None) -> dict:
-    resp = requests.get(url, params=params, headers={"user-agent": get_ua()})
+    resp = requests.get(
+        url,
+        params=params,
+        headers={
+            "user-agent": get_ua(),
+            "referer": "https://world.huanqiu.com/"
+        }
+    )
     return resp.json()
 
 
@@ -80,7 +87,10 @@ def _parse_news(data, location):
     title_line = "\n".join(print_head(f"【每日资讯】<red>{location}</red> 最新消息", 11).split("\n")[:2])
     base_string = f"{title_line}\n"
     for item in items:
-        publish_time = get_time(item.get('ctime'), fmt=True)
+        time_info = item.get('ctime')
+        if not time_info:
+            continue
+        publish_time = get_time(int(time_info), fmt=True)
         title = item.get('title')
         if not title:
             continue
