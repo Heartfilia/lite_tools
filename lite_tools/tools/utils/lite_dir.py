@@ -11,11 +11,14 @@ def get_base_root() -> str:
         user_name = os.environ['username']
         return f"C:\\Users\\{user_name}"
     elif sys.platform == "linux":
-        user_name = os.environ['USER']
-        if user_name == "root":
-            return "/root"
+        user_name = os.environ.get('USER')
+        if user_name:
+            if user_name == "root":
+                return "/root"
+            else:
+                return "/home/" + user_name
         else:
-            return "/home/" + user_name
+            return "/root"
     elif sys.platform == "darwin":
         # mac的适配不一定正确
         return "/Users/" + os.environ['USER']

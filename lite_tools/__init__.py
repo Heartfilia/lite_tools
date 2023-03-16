@@ -4,6 +4,7 @@
 __ALL__ = [
     "get_lan",       # 获取内网ip
     "get_wan",       # 获取外网ip
+    "check_proxy",   # 校验代理是否有效
     "try_catch",     # @ 异常捕获 + 重试配置 + 回调
     "get_time",      # 时间转换 + 时间获取
     "time_range",    # 获取时间起始范围
@@ -44,7 +45,7 @@ __ALL__ = [
 # 还有一个东西不放这里了 可以这样引用
 # from lite_tools.tools.core.lite_ja3 import sync_ja3, async_ja3
 
-from lite_tools.tools.core.ip_info import get_lan, get_wan
+from lite_tools.tools.core.ip_info import get_lan, get_wan, check_proxy
 from lite_tools.tools.core.lib_base64 import get_b64d, get_b64e
 from lite_tools.tools.core.lite_parser import try_get, try_key, FlattenJson, JsJson, WrapJson
 from lite_tools.tools.core.lib_hashlib import get_md5, get_sha, get_sha3, get_5dm  # 5dm是我自己用的不对外展示
@@ -62,5 +63,10 @@ from lite_tools.tools.core.lite_cache import Singleton, Buffer
 from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
 
 from lite_tools.tools.js import atob, btoa, to_string_36
+
+from lite_tools.version import VERSION
+
+
+version = VERSION
 
 __ALL__ += ["5dm"]  # 这个是给我自己用的

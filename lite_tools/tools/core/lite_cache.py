@@ -59,6 +59,7 @@ TODO:下面缓存区还需要加一个超时异常结束程序的操作.
 
 
 class Buffer(metaclass=Singleton):
+    max_cache: int = 10000                # 最大的缓存队列大小 有些时候可以设置小一点 这样子不会一次性拿掉太多任务
     __task_flag: Dict[str, bool] = {}     # 队列什么时候结束由这里和队列长度一起说了算
     __queues: Dict[str, Queue] = {}       # 创建任务的时候初始化这个 取任务要是没有直接会报错..
     __task_count: Dict[str, set] = {}     # 线程情况统计
@@ -92,7 +93,6 @@ class Buffer(metaclass=Singleton):
         这里是种种子 相当于 queue.put(xxx)
         """
         cls.__queues[name].put(job)
-
 
     @classmethod
     def seed(cls, name: str = "default") -> Any:
@@ -200,7 +200,7 @@ class Buffer(metaclass=Singleton):
         if name not in cls.__queues:
             with cls._lock:
                 if name not in cls.__queues:
-                    cls.__queues[name] = Queue(10000)
+                    cls.__queues[name] = Queue(cls.max_cache)
 
         if name not in cls.__task_count or rs is True:
             with cls._lock:

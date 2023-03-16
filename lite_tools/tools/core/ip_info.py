@@ -2,8 +2,11 @@ import os
 import re
 import socket
 import platform
+import telnetlib
+from typing import Tuple
 
 import requests
+from loguru import logger
 
 
 """
@@ -66,3 +69,33 @@ def get_wan(vps: bool = False) -> str:
     except Exception as err:
         _ = err
         return ""
+
+
+def check_proxy(proxy: str, timeout=3, log: bool = False) -> bool:
+    """
+    传入代理 校验代理是否有效
+    :param proxy  : 代理用字符串传入就好了 带不带账密都可以 example: xxxx:xxx@iiii:ppp or iiii:ppp 都可以
+    :param timeout: 校验超时 超过时间 即认定失效
+    :param log    : 是否打印出结果日志 默认不打印
+    """
+    def extract_info(pro: str) -> Tuple[str, int]:
+        if "@" in pro:
+            pro = pro[pro.index("@")+1:]
+        ip_port = pro.split(":")
+        if len(ip_port) != 2 or not ip_port[1].isdigit():
+            return "", 0
+        return ip_port[0], int(ip_port[1])
+
+    if not isinstance(proxy, str):
+        return False
+    ip, port = extract_info(proxy)
+    try:
+        telnetlib.Telnet(ip, port, timeout=timeout)
+        if log:
+            logger.success(f"[{proxy}] 可以成功访问，判定有效。")
+        return True
+    except Exception as err:
+        _ = err
+        if log:
+            logger.warning(f"[{proxy}] 不可访问，暂定失效。")
+        return False

@@ -50,16 +50,17 @@ def _print_base():
     print_info += f"lite-tools {color_string(VERSION, 'cyan')}  当前版本均为测试版,等1.0修复稳定了才是正式的\n\n"
     print_info += "Usage: lite-tools <command> [options] [args]\n\n"
     print_info += "Available commands:\n"
-    print_info += "  flush       清理本地关于lite-tools的记录(慎用)\n"
-    print_info += "  fish        获取摸鱼人日历\n"
-    print_info += "  fresh       更新一些lite-tools需要的资源 可以后跟具体参数\n"
-    print_info += "  say         兽说(后面再加其它的可选加密方案)\n"
-    # print_info += "  acg         更多详情见 -h 默认输出今日视频记录(没搞完但是可以体验基础操作没有同步更新操作)\n"
-    # print_info += "  ball        获取彩票详情\n"   # 这里先不提供了 目前要学习其他的 不搞这个地方了
-    print_info += "  news        获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"
-    print_info += "  today       获取当天黄历 后接`history`可以获取今日往事 接`oil`获取今日油价\n"
-    print_info += "  weather     默认获取本地天气信息 跟 -h 获取更多操作\n"
-    print_info += "  trans       文件转换相关内容[目前测试版有图片转pdf]\n\n"
+    print_info += "  -V,--version   输出版本信息\n"
+    print_info += "  flush          清理本地关于lite-tools的记录(慎用)\n"
+    print_info += "  fish           获取摸鱼人日历\n"
+    print_info += "  fresh          更新一些lite-tools需要的资源 可以后跟具体参数\n"
+    print_info += "  say            兽说(后面再加其它的可选加密方案)\n"
+    # print_info += "  acg            更多详情见 -h 默认输出今日视频记录(没搞完但是可以体验基础操作没有同步更新操作)\n"
+    # print_info += "  ball           获取彩票详情\n"   # 这里先不提供了 目前要学习其他的 不搞这个地方了
+    print_info += "  news           获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"
+    print_info += "  today          获取当天黄历 后接`history`可以获取今日往事 接`oil`获取今日油价\n"
+    print_info += "  weather        默认获取本地天气信息 跟 -h 获取更多操作\n"
+    print_info += "  trans          文件转换相关内容[目前测试版有图片转pdf]\n\n"
     print_info += "Use \"lite-tools <command> -h\" to see more info about a command"
     print(print_info)
 

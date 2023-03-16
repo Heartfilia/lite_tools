@@ -323,15 +323,19 @@ class MySql:
     def _print_rate(self, mode: str, end_time, start_time, result, flag: str = "success"):
         all_line = self.change_line[mode] + self.not_change_line[mode]
         cost_time = time.time() - self.start_time
-        rate = round(all_line / cost_time, 3)  # 平均每秒改变行
         if mode == 'update':
             cost_row = self.row_count['total'] - self.row_count['run']
-            other_log = f"【Surplus/AllRow: {cost_row}/{self.row_count['total']} Time:{cost_time:.3f}s】 "
+            other_log = f"【Surplus/AllTask: {cost_row}/{self.row_count['total']} Time:{cost_time:.3f}s】 "
+            rate = round(self.row_count['run'] / cost_time, 3)
+            rate_str = f" TaskRate={rate} tasks/s;"    # 剩余的行效率
         elif mode == "insert":
             other_log = f"【Time:{cost_time:.3f}s】 "
+            rate = round(all_line / cost_time, 3)  # 平均每秒改变行
+            rate_str = f" LineRate={rate} line/s;"       # 插入的行效率
         else:
             other_log = " "
-        other_log += f"Affect={self.change_line[mode]}; NotAffect={self.not_change_line[mode]}; LineRate={rate} line/s;"
+            rate_str = ""
+        other_log += f"Affect={self.change_line[mode]}; NotAffect={self.not_change_line[mode]};{rate_str}"
         self.sql_log(
             f"[{mode}]{other_log} lineCost:{end_time - start_time:.3f}s AffectLine={result}", "", flag, True
         )
