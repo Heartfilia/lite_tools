@@ -81,6 +81,7 @@ def check_proxy(proxy: str, timeout=3, log: bool = False) -> bool:
     def extract_info(pro: str) -> Tuple[str, int]:
         if "@" in pro:
             pro = pro[pro.index("@")+1:]
+        pro = re.sub("^https?://", "", pro)
         ip_port = pro.split(":")
         if len(ip_port) != 2 or not ip_port[1].isdigit():
             return "", 0
