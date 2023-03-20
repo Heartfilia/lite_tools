@@ -57,10 +57,8 @@ def get_ua(*args) -> str:
     
 
 def judge_ua(browser, template) -> str:
-    # 判断模版里面有多少个 {}
-    rule = r"\{\}"  # 不写出来 写在re里面会给我报黄
-    p_nums = len(re.findall(rule, template))
-    # 提取版本号
+    # 判断模版里面是否需要替换
+    p_nums = re.search(r"\{tag}", template)
     if not p_nums:
         return template   # 如果没有匹配到证明是完整的ua 不需要组合
 
@@ -68,11 +66,7 @@ def judge_ua(browser, template) -> str:
         browser = "chromium"
     version = random.choice(get_versions().get(browser))
 
-    if p_nums == 1:
-        return template.format(version)
-    elif p_nums == 2:
-        return template.format(version, version)
-    return template
+    return template.format(tag=version)
 
 
 __UA_CACHE: dict = {}   # 尽量减少io读取 用空间换时间
@@ -104,3 +98,15 @@ def lite_ua(name=None) -> str:
     if name is not None:
         base_ua = f"{base_ua} {name}"
     return base_ua
+
+
+if __name__ == "__main__":
+    print(get_ua())
+    print(get_ua('mobile'))
+    print(get_ua('win'))
+    print(get_ua('linux'))
+    print(get_ua('ios'))
+    print(get_ua('pc'))
+    print(get_ua('chrome'))
+    print(get_ua('edge'))
+    print(get_ua('mac'))
