@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Time   : 2021-04-06 15:50
 # @Author : Lodge
+name = "lite-tools"
 __ALL__ = [
     "get_lan",       # 获取内网ip
     "get_wan",       # 获取外网ip

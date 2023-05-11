@@ -184,9 +184,15 @@ class MySql:
             if kwargs.get("_function_use") is True:
                 raise IterNotNeedRun
             return
-        for row in items:
-            with self.lock:
+
+        with self.lock:
+            if "_first" not in kwargs or kwargs.get("_first") is True:
                 self.row_count['total'] = all_num
+            else:
+                if kwargs.get("_first") is False:
+                    self.row_count['total'] += all_num
+
+        for row in items:
             if count is False:
                 yield row[0] if len(row) == 1 else row
             else:
@@ -207,13 +213,15 @@ class MySql:
         if "limit" in sql.lower():
             sql = re.sub(r' limit \d+, *\d+| limit +\d+', '', sql, re.I)  # 剔除原先句子中的
         cursor = 0
+        first = True  # 第一次进入
         while True:
             new_sql = f"{sql} LIMIT {cursor}, {limit};"
             try:
-                yield from self.select(new_sql, _function_use=True, _limit_num=limit)
+                yield from self.select(new_sql, _function_use=True, _limit_num=limit, _first=first)
             except IterNotNeedRun:
                 break
             cursor += limit
+            first = False
 
     def exists(self, where: Union[dict, str]) -> bool:
         """

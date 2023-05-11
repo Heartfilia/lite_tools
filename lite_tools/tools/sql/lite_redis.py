@@ -127,8 +127,7 @@ class LiteRedis:
             self.password = password
             self.decode = decode_responses
             self.kwargs = kwargs
-
-        self.db = db
+            self.db = db
         self.rd = None
 
     @classmethod
@@ -175,6 +174,7 @@ kwargs:
     def set_param(self, config: dict):
         self.host = config.get("host", "localhost")
         self.port = config.get("port", 6379)
+        self.db = config.get("db", 0)
         self.password = config.get("password")
         self.decode = config.get("decode", True)
         self.kwargs = config.get("kwargs", {})

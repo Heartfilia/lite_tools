@@ -1,7 +1,7 @@
 # lite-tools
 
 
-![](https://img.shields.io/badge/python-3.6-brightgreen)
+![](https://img.shields.io/badge/python-3.8-brightgreen)
 ![](https://img.shields.io/github/watchers/Heartfilia/lite_tools?style=social)
 ![](https://img.shields.io/github/stars/Heartfilia/lite_tools?style=social)
 ![](https://img.shields.io/github/forks/Heartfilia/lite_tools?style=social)
@@ -13,7 +13,7 @@
 ### 项目说明
 
 **有空随缘更新一下**
-> python 3.7+   // 什么年代了 该不会还有人还在用3.6及以下叭
+> python 3.8+   // 什么年代了 该不会还有人还在用3.6及以下叭
 
 ### Installation
 ```bash
