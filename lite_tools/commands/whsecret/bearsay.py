@@ -68,8 +68,3 @@ def roar_decode(string: str) -> str:
         a += chr(int(e, 16))
 
     return a
-
-
-if __name__ == "__main__":
-    # print(roar_encode("测试一下"))  # ~呜嗷呜啊~啊呜啊~啊~嗷嗷嗷嗷~~嗷~嗷呜~啊啊啊~嗷嗷啊~~啊啊啊啊
-    print(roar_decode("~呜嗷呜啊~啊呜啊~啊~嗷嗷嗷嗷~~嗷~嗷呜~啊啊啊~嗷嗷啊~~啊啊啊啊"))
