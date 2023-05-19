@@ -47,14 +47,14 @@ def _print_say_help():
     """
     base_info = "lite_tools say <command> [options]\n\n"
     base_info += "关于加解密说话的一些操作:\n"
-    base_info += "command arguments:\n"
-    base_info += "bear          [默认 不跟操作也是这个]进入兽音加密解密模式\n"
+    base_info += "command arguments:\n  "
+    base_info += "bear          [默认 不跟操作也是这个]进入兽音加密解密模式\n  "
     base_info += "morse         进入摩斯加密解密模式\n"
     base_info += "optional arguments:\n  "
     base_info += "-h, --help    show this help message and exit\n  "
-    base_info += "--split       摩斯密码专用 --split=<rule> 分割模式,默认rule=' ' 一个空(不支持多个空)\n"
-    base_info += "--short       摩斯密码专用 --short=<rule> 短码模式,默认rule='.'\n"
-    base_info += "--long        摩斯密码专用 --long=<rule>  长码模式,默认rule='-'\n"
+    base_info += "--split       摩斯密码专用 --split=<rule> 分割模式,默认rule=' ' 一个空(不支持多个空)\n  "
+    base_info += "--short       摩斯密码专用 --short=<rule> 短码模式,默认rule='.'\n  "
+    base_info += "--long        摩斯密码专用 --long=<rule>  长码模式,默认rule='-'\n  "
     print(base_info)
 
 
