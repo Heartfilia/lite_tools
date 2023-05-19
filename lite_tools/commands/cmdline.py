@@ -54,7 +54,7 @@ def _print_base():
     print_info += "  flush          清理本地关于lite-tools的记录(慎用)\n"
     print_info += "  fish           获取摸鱼人日历\n"
     print_info += "  fresh          更新一些lite-tools需要的资源 可以后跟具体参数\n"
-    print_info += "  say            兽说(后面再加其它的可选加密方案)\n"
+    print_info += "  say            加解密:默认 <bear>兽说 <morse>摩斯\n"
     # print_info += "  acg            更多详情见 -h 默认输出今日视频记录(没搞完但是可以体验基础操作没有同步更新操作)\n"
     # print_info += "  ball           获取彩票详情\n"   # 这里先不提供了 目前要学习其他的 不搞这个地方了
     print_info += "  news           获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"
@@ -87,7 +87,7 @@ def get_fish_date(_, *args):
 def bear_say(_, *args):
     _ = args
     from lite_tools.commands.whsecret.says import cmd_say
-    cmd_say()
+    cmd_say(args[0])
 
 
 @chose_option.register("flush")

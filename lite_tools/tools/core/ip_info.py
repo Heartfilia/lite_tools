@@ -100,3 +100,7 @@ def check_proxy(proxy: str, timeout=3, log: bool = False) -> bool:
         if log:
             logger.warning(f"[{proxy}] 不可访问，暂定失效。")
         return False
+
+
+if __name__ == "__main__":
+    print(get_lan())

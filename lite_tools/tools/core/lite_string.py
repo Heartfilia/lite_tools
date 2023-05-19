@@ -187,7 +187,7 @@ def __get_view_mode(mode: str, viewer=True) -> Optional[int]:
         return 8          # 不可见
     elif lower_string in ["strikethrough", "删除线", "s", "9"]:
         return 9          # 删除线
-    return None
+    return 0
 
 
 def _trans_color(string: str, color: str = "") -> str:

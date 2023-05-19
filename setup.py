@@ -17,6 +17,7 @@ with open("README.md", "r", encoding='utf-8') as fd:
 base_requires = [
     'loguru',          # 基本的日志打印相关的调用
     "requests",        # 请求模块，本来不想安装那么多东西的，现在谁没有一个requests啊
+    "pydantic",        # 神器,不多说 一般你装其它的包这个也会被装，我这里只是避免提示
     'urllib3',         # 安装requests自动装的,主要是有个地方用到了它里面的解析模块,不写这里ide会提示
     'colorama',        # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
     "prettytable",     # 基本的展示一些操作的模块
