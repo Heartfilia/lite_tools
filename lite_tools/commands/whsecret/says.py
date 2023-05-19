@@ -52,9 +52,9 @@ def _print_say_help():
     base_info += "morse         进入摩斯加密解密模式\n"
     base_info += "optional arguments:\n  "
     base_info += "-h, --help    show this help message and exit\n  "
-    base_info += "--split       摩斯密码专用 --split=<rule> 分割模式,默认rule=' ' 一个空(不支持多个空)\n  "
-    base_info += "--short       摩斯密码专用 --short=<rule> 短码模式,默认rule='.'\n  "
-    base_info += "--long        摩斯密码专用 --long=<rule>  长码模式,默认rule='-'\n  "
+    base_info += "--split       摩斯密码专用 --split=<不含空字符的rule> 分割:默认rule=' ' 默认一个空(所以空就不要写了)\n  "
+    base_info += "--short       摩斯密码专用 --short=<不含空字符的rule> 短码:默认rule='.'\n  "
+    base_info += "--long        摩斯密码专用 --long=<不含空字符的rule>  长码:默认rule='-'"
     print(base_info)
 
 
@@ -106,17 +106,17 @@ def morse_decode_check(string: str, rule: Rule) -> bool:
 
 def morse_mode(rule_string: str):
     rule = Rule()
-    split = re.search(r"--split=(\S+)", rule_string)
+    split = re.search(r"--split=(?P<symbol>[\"']?)(\S+)(?P=symbol)", rule_string)
     if split:
-        rule.split = split.group(1)
+        rule.split = split.group(2)
 
-    short = re.search(r"--short=(\S+)", rule_string)
+    short = re.search(r"--short=(?P<symbol>[\"']?)(\S+)(?P=symbol)", rule_string)
     if short:
-        rule.short = short.group(1)
+        rule.short = short.group(2)
 
-    long = re.search(r'--long=(\S+)', rule_string)
+    long = re.search(r"--long=(?P<symbol>[\"']?)(\S+)(?P=symbol)", rule_string)
     if long:
-        rule.long = long.group(1)
+        rule.long = long.group(2)
 
     split_line_long = get_terminal_long() // 2 - 4
 
