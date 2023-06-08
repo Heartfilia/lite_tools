@@ -240,9 +240,9 @@ class MySql:
 
         for row in items:
             if count is False:
-                yield row[0] if len(row) == 1 else row
+                yield row[0] if len(row) == 1 and isinstance(row, tuple) else row
             else:
-                yield all_num, row[0] if len(row) == 1 else row
+                yield all_num, row[0] if len(row) == 1 and isinstance(row, tuple) else row
                 all_num -= 1
 
         if all_num < kwargs.get("_limit_num", 0):   # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
@@ -396,6 +396,7 @@ class MySql:
         """
         批量更新, 一次传入一批列表 然后我这里是负责拼接成sql执行
         #TODO(后面有空改这个 [({需要更新的字段}, {更新的条件}), ({需要更新的字段}, {更新的条件})])
+        # 下面就和pandas的dataframe格式一样的 所以也可以顺道插入mysql就很方便
         items = {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]}
         where = {"C": None, "D": 666}
         """

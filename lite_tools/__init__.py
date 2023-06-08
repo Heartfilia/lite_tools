@@ -38,6 +38,10 @@ __ALL__ = [
     "atob",          # ascii to bytes
     "btoa",          # bytes to ascii
     "to_string_36",  # js里面数字转36进制   (123456789).toString(36)
+    "xor",           # 异或 同python ^  这里主要是解决精度问题
+    "unsigned_right_shift",  # >>>  无符号右移  解决精度问题
+    "left_shift",   # << 左移  解决精度问题
+    "dec_to_bin",   # 十进制浮数转二进制数据(返回的是字符串 注意哦)
     # 下面是一些可以对外使用的一些redis操作 等http包第一版能用的时候再放出来
     "LiteRedis",     # 这个用处不大 但是可以用一个本地文件的配置文件来初始化这个对象使用 如 rd = LiteRedis("/root/config.json")
     "LiteProxy"      # 更方便的获取代理的操作 基于redis的set/list模式 默认set随机弹出 也可以切换为mode='list'滚动获取 使用方式可以使用 LiteRedis.help() 获取
@@ -64,7 +68,7 @@ from lite_tools.tools.time.httpx_timeout import x_timeout
 from lite_tools.tools.core.lite_cache import Singleton, Buffer
 from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
 
-from lite_tools.tools.js import atob, btoa, to_string_36
+from lite_tools.tools.js import atob, btoa, to_string_36, xor, unsigned_right_shift, left_shift, dec_to_bin
 
 from lite_tools.version import VERSION
 
