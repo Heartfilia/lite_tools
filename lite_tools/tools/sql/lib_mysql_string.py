@@ -98,6 +98,40 @@ class SqlString(object):
         else:
             raise NotSupportType
 
+    def __handle_create_data(self, keys):
+        """
+        K神专用函数 <<<<<<<<<<
+        """
+        dddd = list(keys.items())
+        field_str = ""
+
+        for i in range(len(dddd)):
+            if i == len(dddd) - 1:
+                field_str += dddd[i][0] + " " + dddd[i][1]
+            else:
+                field_str += dddd[i][0] + " " + dddd[i][1] + " ,"
+
+        return field_str
+
+    def create_table(self, keys: Union[dict, list], engine: str = 'InnoDB', charset: str = 'utf8mb4') -> Optional[str]:
+        """
+        K神专用函数 <<<<<<<<<<
+        如果是拼接单条sql: keys传入字典 自动提取键值
+        如果是多值拼接   : keys传入需要插入的字段命 可以列表 可以元组
+        :param keys
+        :param engine
+        :param charset
+        """
+        if not keys:
+            return None
+        base_create = f"CREATE TABLE `{self.table_name}`"
+        # key_string, value_string = self.__handle_create_data(keys, values)
+        key_string = self.__handle_create_data(keys)
+        if key_string == "":
+            return None
+        insert_string = f"{base_create} ({self._handle_key(key_string)}) ENGINE={engine} DEFAULT CHARSET={charset};"
+        return self.__clear_string(insert_string)
+
     def update(self, keys: dict, where: Union[dict, list, tuple, str]) -> Optional[str]:
         """
         更新数据操作, 传入需要更新的字典即可

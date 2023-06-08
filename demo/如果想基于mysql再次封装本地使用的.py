@@ -19,7 +19,7 @@
           ┗━┻━┛   ┗━┻━┛
 """
 import time
-from typing import Iterator, Union
+from typing import Literal, Iterator, Union
 
 from lite_tools import MySqlConfig
 from lite_tools import MySql as LiteMySql
@@ -37,8 +37,9 @@ class MySql(LiteMySql):
             password: str = "mysql的密码",
             charset: str = "utf8mb4",
             *,
+            cursor: Literal['tuple', 'dict'] = 'tuple',
             table_name: str = None,   # 这个是给insert  update  delete 用的
-            log: bool = True
+            log: Literal[True, False, 'all'] = True
     ):
         """
         只需要把上面的参数设置一下然后就可以放到你们自己的包里直接使用 不用每次都填入账号密码 或者自己写个连接池对象 或者 Config
@@ -62,4 +63,5 @@ class MySql(LiteMySql):
             charset=charset,
             maxconnections=maxconnections,
             table_name=table_name,
+            cursor=cursor,
             log=log))

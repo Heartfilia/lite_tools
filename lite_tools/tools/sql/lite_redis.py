@@ -21,7 +21,11 @@
 import json
 import time
 import random
-from typing import Union, Literal, Sequence, Optional
+from typing import Union, Sequence
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 import yaml
 import redis as _redis

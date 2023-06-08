@@ -7,7 +7,11 @@ from hashlib import (
     sha3_224, sha3_256, sha3_384, sha3_512
 )
 
-from typing import Union, Literal
+from typing import Union
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 from lite_tools.exceptions.StringExceptions import BadModeException
 

@@ -2,13 +2,14 @@
 import re
 from typing import Optional
 
-from lite_tools.tools.utils.u_code_range import u_range_list, U_range_list
+from usepy import useCleanHtml
 
+from lite_tools.tools.utils.u_code_range import u_range_list, U_range_list
 from lite_tools.tools.utils.u_sub_sup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
-__ALL__ = ["CleanString", "color_string", "math_string"]
+__ALL__ = ["clean_html", "CleanString", "color_string", "math_string"]
 
 
 class CleanString(object):
@@ -105,6 +106,14 @@ class CleanString(object):
             ord(kill) not in U_range_list and \
                 not self.__judge_big_p(kill) and not self.__judge_f(kill):
             return True
+
+
+def clean_html(html: str, white_tags: list = None) -> str:
+    """
+    采用了米乐大佬的包 usepy
+    """
+    content = useCleanHtml(html, white_tags)
+    return content
 
 
 def __get_color_front(string: str) -> Optional[int]:

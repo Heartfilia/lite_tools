@@ -24,6 +24,7 @@ __ALL__ = [
     # "JsJson",        # 从js里面提取json内容,这个目前不可以泛用
     "WrapJson",      # 把一个json按照指定模板折叠
     "match_case",    # 类似match case
+    "clean_html",    # 提取html标签内的内容
     "CleanString",   # 清理字符串里面的特殊字符 文本不是太大可以用
     "color_string",  # 给字体加颜色
     "SqlString",     # 获取mysql的语句 太复杂不行
@@ -58,7 +59,7 @@ from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy
 from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.core.lite_match import match_case
-from lite_tools.tools.core.lite_string import CleanString, color_string, math_string
+from lite_tools.tools.core.lite_string import clean_html, CleanString, color_string, math_string
 from lite_tools.tools.time.httpx_timeout import x_timeout
 from lite_tools.tools.core.lite_cache import Singleton, Buffer
 from lite_tools.tools.core.lite_file import count_lines, LiteLogFile

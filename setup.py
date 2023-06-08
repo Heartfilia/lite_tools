@@ -22,6 +22,7 @@ base_requires = [
     'colorama',        # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
     "prettytable",     # 基本的展示一些操作的模块
     "datetime",        # 谁没有一个datetime模块啊
+    "usepy",           # >> 米乐大佬的工具包，我只是用里面的部分功能二次封装，很多操作直接引用他的包就好了
     "lxml",            # 提取一些静态页面内容的时候要用这个
     "redis",           # redis 的一个东西需要用这个
     "pyyaml",          # redis 那里读取配置文件要用这个
@@ -75,7 +76,7 @@ setup(
     entry_points={"console_scripts": [
         "lite-tools=lite_tools.commands.cmdline:execute",
     ]},
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     extras_require={
         "all": file_requires,
     },
@@ -83,9 +84,6 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Natural Language :: Chinese (Simplified)',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.8+',
     ]
 )

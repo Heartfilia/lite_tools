@@ -21,7 +21,11 @@
 import re
 import time
 from threading import RLock
-from typing import Iterator, Union, Literal
+from typing import Iterator, Union, Mapping
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 import pymysql
 from dbutils.pooled_db import PooledDB
@@ -29,6 +33,7 @@ from dbutils.pooled_db import PooledDB
 from lite_tools.tools.utils.logs import logger
 from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.SqlLog import log_level
+from lite_tools.tools.core.lite_cache import Buffer
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.exceptions.SqlExceptions import DuplicateEntryException, IterNotNeedRun
 
@@ -52,6 +57,7 @@ class MySql:
                         password: str = "",
                         port: int = 3306,
                         charset: str = "utf8mb4",
+                        cursor: str = 'tuple',
                         maxconnections: int = 20,
                         table_name: str = None,
         table_name: 如果是自己传入pool 那么就需要传入这个参数
@@ -67,7 +73,8 @@ class MySql:
             self.table_name = self.config.table_name
             self._init_mysql(
                 self.config.database, self.config.maxconnections,
-                self.config.host, self.config.port, self.config.user, self.config.password, self.config.charset
+                self.config.host, self.config.port, self.config.user, self.config.password, self.config.charset,
+                self.config.cursor
             )
             self.log = self.config.log
         else:
@@ -96,8 +103,12 @@ class MySql:
         self.start_time = time.time()
         self.log_rule = log_rule
 
-    def _init_mysql(self, database, maxconnections, host, port, user, password, charset):
+    def _init_mysql(self, database, maxconnections, host, port, user, password, charset, cursor):
         if self.pool is None:
+            if cursor == "dict":
+                cursor_type = pymysql.cursors.DictCursor
+            else:
+                cursor_type = pymysql.cursors.Cursor
             self.pool = PooledDB(
                 creator=pymysql,  # 使用链接数据库的模块
                 maxconnections=maxconnections,  # 连接池允许的最大连接数，0和None表示不限制连接数
@@ -113,7 +124,8 @@ class MySql:
                 user=user,
                 password=password,
                 database=database,
-                charset=charset
+                charset=charset,
+                cursorclass=cursor_type   # 调整返回结果的样式
             )
 
     def execute(self, sql: str, batch: bool = False, log: bool = True, mode: str = None) -> int:
@@ -161,12 +173,42 @@ class MySql:
         finally:
             conn.close()
 
-    def select(self, sql: str, count: bool = False, *, query_log: bool = True, **kwargs) -> Iterator:
+    def execute_many(self, sql: str, values: list, mode: str) -> int:
+        if not sql:
+            logger.warning(f"传入了空sql语句--> sql:[ {sql} ]")
+            return 0
+        start_time = time.time()
+        conn = self.connection()
+        try:
+            with conn.cursor() as cursor:    # 这里是返回影响的行数
+                result = cursor.executemany(sql, values)
+            conn.commit()
+            end_time = time.time()
+            with self.lock:
+                if result == 0:
+                    self.not_change_line[mode] += 1
+                else:
+                    self.change_line[mode] += result
+                if mode == 'update':
+                    self.row_count["run"] += 1
+            self._print_rate(mode, end_time, start_time, result)
+            return result
+        except Exception as err:
+            logger.error(f"批量操作报错为: {err}")
+
+            conn.rollback()
+            return -1
+        finally:
+            conn.close()
+
+    def select(self, sql: str, count: bool = False, *, query_log: bool = True, fetch: Literal['all', 'one'] = 'all',
+               **kwargs) -> Iterator:
         """
         一次性查询全部数据
         :param sql: 传入的查询sql语句
         :param count: 是否需要统计剩余的行数 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数
         :param query_log: 是否把query的查询日志打印出来,默认就是打印出来
+        :param fetch: 获取数据模式 默认 fetchall 设置 one 就是 fetchone
         :return:
         """
         start_time = time.time()
@@ -174,12 +216,16 @@ class MySql:
         with conn.cursor() as cursor:  # 这里是有结果返回的
             cursor.execute(sql)
         conn.commit()
-        items = cursor.fetchall()
+        if fetch == 'one':
+            item = cursor.fetchone()
+            items = [item]
+        else:
+            items = cursor.fetchall()
         conn.close()
         end_time = time.time()
         all_num = len(items)
         if query_log is True:
-            self.sql_log(f"SELECT-耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
+            self.sql_log(f"SELECT[{fetch}]-耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", sql, "success")
         if all_num == 0:  # 如果这次结果是 0 那就是没有数据了
             if kwargs.get("_function_use") is True:
                 raise IterNotNeedRun
@@ -202,26 +248,67 @@ class MySql:
         if all_num < kwargs.get("_limit_num", 0):   # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
             raise IterNotNeedRun
 
-    def select_iter(self, sql: str, limit: int = 1000) -> Iterator:
+    def select_iter(
+        self, sql: str, pk: Union[str, int], limit: int = Buffer.max_cache, mode: Literal['Iter', 'Last'] = 'Iter'
+    ) -> Iterator:
         """
-        通过批量的迭代获取数据 有点问题 后面再优化
+        通过批量的迭代获取数据 有点问题 后面再优化: 目前只能支持一个表的操作，如果是多个表关联之类的 还有别名啥的 就不行了
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
-        :param limit : 这里交给我来自动管理 默认我给了1000
+        :param pk    : 主键，只需要告诉我主键的名字就好了
+        :param limit : 这里交给我来自动管理 默认我给了 1000, Buffer的大小 方便buffer使用
+        :param mode  :
+                |_____模式: 默认 Iter: 迭代，从头到尾;
+                >可能有bug,我还没测试出来 Last:每次都从最开始位置开始,记得调整过滤条件保证从最开始拿到的是正常的, 这个模式只能结合我的Buffer使用,不支持自己添加 ORDER BY 和 GROUP BY
         return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数w2  Q12
         """
-        sql = sql.rstrip('; ')  # 剔除右边的符号
-        if "limit" in sql.lower():
-            sql = re.sub(r' limit \d+, *\d+| limit +\d+', '', sql, re.I)  # 剔除原先句子中的
-        cursor = 0
-        first = True  # 第一次进入
-        while True:
-            new_sql = f"{sql} LIMIT {cursor}, {limit};"
-            try:
-                yield from self.select(new_sql, _function_use=True, _limit_num=limit, _first=first)
-            except IterNotNeedRun:
-                break
-            cursor += limit
-            first = False
+        origin_sql = sql.rstrip('; ')  # 剔除右边的符号
+        if "limit" in origin_sql.lower():
+            origin_sql = re.sub(r' limit \d+, *\d+| limit +\d+', '', origin_sql, re.I)  # 剔除原先句子中的
+        first = True
+        if mode == "Last":
+            if re.search("GROUP BY|ORDER BY", origin_sql, re.I):
+                logger.error("这个模式需要结合Buffer使用,并且语句中不能包含 ORDER BY 和 GROUP BY 语句")
+                return
+
+            while True:
+                if Buffer.size() > 0:
+                    time.sleep(.5)
+                    continue
+                _sql = f"{origin_sql} ORDER BY {pk} asc LIMIT {limit};"
+                try:
+                    yield from self.select(_sql, _function_use=True, _limit_num=limit, _first=first)
+                except IterNotNeedRun:
+                    break
+                first = False
+
+        else:
+            # 替换掉源sql里面的小写的关键词
+            origin_sql = re.sub(" where ", " WHERE ", origin_sql, flags=re.I, count=1)
+            origin_sql = re.sub(" from ", " FROM ", origin_sql, flags=re.I, count=1)
+
+            cursor = 0
+            while True:
+                if "WHERE" in origin_sql:
+                    _by_rule = re.search(r"(ORDER BY|GROUP BY)", origin_sql, re.I)
+                    _sql = re.sub(
+                        r" WHERE\s+(.+?)(?:ORDER BY|GROUP BY|$)",
+                        rf" WHERE {pk} > (SELECT {pk} FROM {self.table_name} WHERE \1 ORDER BY {pk} LIMIT {cursor}, 1) AND \1{_by_rule.group(1) if _by_rule else ''}",
+                        origin_sql
+                    )
+                else:
+                    _sql = re.sub(
+                        r" FROM\s+(\S+)",
+                        rf" FROM \1 WHERE {pk} > (SELECT {pk} FROM {self.table_name} ORDER BY {pk} LIMIT {cursor}, 1)",
+                        origin_sql
+                    )
+
+                new_sql = f"{_sql} LIMIT {limit};"
+                try:
+                    yield from self.select(new_sql, _function_use=True, _limit_num=limit, _first=first)
+                except IterNotNeedRun:
+                    break
+                cursor += limit
+                first = False
 
     def exists(self, where: Union[dict, str]) -> bool:
         """
@@ -271,6 +358,14 @@ class MySql:
                     new_sql = self.sql_base.insert(items, each_value, ignore)
                     self.execute(new_sql, log=False, mode="insert")
 
+    def insert_batch(self, items: Mapping[str, list], ignore: bool = True) -> None:
+        """
+        批量插入, 一次传入一批列表
+        #TODO(这里和批量更新一样， 我要单独想一下怎么弄逻辑比较好点 准备依赖 executemany)
+
+        """
+        pass
+
     def replace(self, items: Union[dict, list, tuple], values: list = None) -> None:
         """
         存在更新 不存在覆盖 但是没有写的的字段会置为null
@@ -296,6 +391,15 @@ class MySql:
         self._check_table()
         sql = self.sql_base.update(items, where)
         self.execute(sql, mode="update")
+
+    def update_batch(self, items: Mapping[str, list], where: dict) -> None:
+        """
+        批量更新, 一次传入一批列表 然后我这里是负责拼接成sql执行
+        #TODO(后面有空改这个 [({需要更新的字段}, {更新的条件}), ({需要更新的字段}, {更新的条件})])
+        items = {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]}
+        where = {"C": None, "D": 666}
+        """
+        self._check_table()
 
     def delete(self, where: Union[dict, str]) -> None:
         """

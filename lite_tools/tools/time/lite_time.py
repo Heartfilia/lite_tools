@@ -5,7 +5,11 @@ import re
 import time
 import calendar
 import functools
-from typing import Union, Literal, Tuple
+from typing import Union, Tuple
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 # from inspect import currentframe
 
 from lite_tools.tools.utils.logs import logger

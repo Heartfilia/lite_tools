@@ -4,7 +4,12 @@
 from base64 import (
     b16encode, b32encode, b64encode, b85encode,
     b16decode, b32decode, b64decode, b85decode)
-from typing import Union, Literal
+from typing import Union
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
 
 __ALL__ = ['get_b64e', 'get_b64d']
 
