@@ -76,7 +76,7 @@ setup(
     entry_points={"console_scripts": [
         "lite-tools=lite_tools.commands.cmdline:execute",
     ]},
-    python_requires=">=3.8",
+    python_requires=">=3.6",
     extras_require={
         "all": file_requires,
     },
@@ -84,6 +84,6 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Natural Language :: Chinese (Simplified)',
-        'Programming Language :: Python :: 3.8+',
+        'Programming Language :: Python :: 3.6+',
     ]
 )

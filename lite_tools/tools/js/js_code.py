@@ -53,23 +53,23 @@ def xor(num_1: int, num_2: int):
     return ctypes.c_int(x ^ y).value
 
 
-def unsigned_right_shift(num: int, cursor: int):
+def unsigned_right_shift(num: int,  step: int):
     """
-    'num >>> cursor' 无符号右移
+    'num >>>  step' 无符号右移
     :param num: 需要移动的数
-    :param cursor: 移动的步数
+    :param  step: 移动的步数
     """
-    x, y = ctypes.c_uint32(num).value, cursor % 32
+    x, y = ctypes.c_uint32(num).value,  step % 32
     return ctypes.c_uint32(x >> y).value
 
 
-def left_shift(num: int, cursor: int):
+def left_shift(num: int,  step: int):
     """
-    <<      num << cursor
+    <<      num <<  step
     :param num: 需要移动的数据
-    :param cursor: 移动的步数
+    :param  step: 移动的步数
     """
-    x, y = ctypes.c_int32(num).value, cursor % 32
+    x, y = ctypes.c_int32(num).value,  step % 32
     return ctypes.c_int32(x << y).value
 
 

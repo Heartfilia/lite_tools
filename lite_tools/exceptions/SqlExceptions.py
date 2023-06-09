@@ -36,3 +36,7 @@ class NotSupportType(Exception):
 
     def __str__(self):
         return self.error
+
+
+class LengthError(Exception):
+    pass

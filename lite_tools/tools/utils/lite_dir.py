@@ -4,12 +4,37 @@ import os
 import sys
 import time
 
+# 获取本机有哪些磁盘分区 (windows 专用)
+DIST_PART_windows = []
+dir_path = None
+
 
 def get_base_root() -> str:
     """目前兼容win/linux、、、mac不确定"""
+    global dir_path
+    if dir_path:
+        # windows 专属缓存
+        return dir_path
     if sys.platform == "win32":
         user_name = os.environ['username']
-        return f"C:\\Users\\{user_name}"
+        temp_path = f"C:\\Users\\{user_name}"
+        if not os.access(temp_path, os.W_OK | os.R_OK):
+            # 这里还是尝试在C盘目录下尝试其它用户目录
+            temp_path = "C:\\Users\\Administrator"
+            if not os.access(temp_path, os.W_OK | os.R_OK):
+                temp_path = ""
+        if not temp_path:
+            # 如果尝试了两个基本目录都不行就尝试其它盘符
+            disks = get_windows_partial()
+            if len(disks) >= 2:
+                for check_path in disks[1:]:
+                    if os.access(check_path, os.W_OK | os.R_OK):
+                        temp_path = check_path
+                        break
+            else:
+                temp_path = "."  # 实在不行就在当前目录创建缓存
+        dir_path = temp_path
+        return temp_path
     elif sys.platform == "linux":
         user_name = os.environ.get('USER')
         if user_name:
@@ -52,3 +77,20 @@ def _time_stamp_to_time(timestamp: float) -> str:
     """因为太底层的包我们不建议引用已经实现的get_time方法"""
     time_struct = time.localtime(timestamp)
     return time.strftime('%Y-%m-%d %H:%M:%S', time_struct)
+
+
+def _scan_partial():
+    """扫描windows电脑磁盘有哪些分区"""
+    if sys.platform != "win32":
+        return
+    for num in range(67, 91):
+        partial = f"{chr(num)}:"
+        if os.path.isdir(partial):
+            DIST_PART_windows.append(partial)
+
+
+def get_windows_partial():
+    """获取电脑盘符"""
+    if sys.platform == "win32" and not DIST_PART_windows:
+        _scan_partial()
+    return DIST_PART_windows

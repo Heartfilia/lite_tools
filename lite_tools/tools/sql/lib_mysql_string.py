@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import re
-from typing import Union, Optional
+from typing import Union, Optional, Mapping
 
-from lite_tools.exceptions.SqlExceptions import NotSupportType
 from lite_tools.tools.utils.u_sql_base_string import MysqlKeywordsList
+from lite_tools.exceptions.SqlExceptions import NotSupportType, LengthError
 
 
 __ALL__ = ["SqlString"]
@@ -167,6 +167,11 @@ class SqlString(object):
             raise NotSupportType
         return self.__clear_string(base_update)
 
+    def insert_batch(self, items: Mapping[str, list], where: dict):
+        key, field, values = self._handle_batch(items)
+        where_field = self.__clear_string(self._handle_where_dict(where))
+        return f" {self.table_name} SET {key} VALUES {field} WHERE {where_field}", values
+
     def replace(self, keys: Union[dict, list, tuple], values: list = None) -> Optional[str]:
         """
         不确定是否可以用
@@ -245,6 +250,31 @@ class SqlString(object):
         """
 
     @staticmethod
+    def _handle_batch(items: Mapping[str, list]):
+        """
+        批量操作的拼接 格式为 {"A": [1, 2, 3], "B": [6, 7, 8]}
+        --> A, B    (1, 6), (2, 7), (3, 8)
+        """
+        if not items:
+            raise LengthError("没有输入有效数据,传入了空数据")
+        # 第一步，校验value的长度是否一致
+        if len(set(map(lambda x: len(x), items.values()))) != 1:
+            raise LengthError("传入的值长度不一致")
+        key_order = items.keys()   # 后续将用这个的顺序保证后续值的顺序一致
+        value_list = []
+        for ind in range(len(key_order)+1):  # 依次提取每个位置的数据
+            value = []
+            for key in key_order:
+                value.append(items[key][ind])
+            value_list.append(value)
+        new_key = []
+        value_field = []
+        for key in key_order:
+            new_key.append(key if key.upper() not in MysqlKeywordsList else f"`{key}`")
+            value_field.append("%s")
+        return f'({", ".join(new_key)})', f"({', '.join(value_field)})", value_list
+
+    @staticmethod
     def _handle_key(key_string: str) -> str:
         key_string = re.sub(r"'`|`'", "`", key_string)
         key_string = re.sub(r"'", '', key_string)
@@ -280,15 +310,7 @@ class SqlString(object):
         return base_string
 
 
-# if __name__ == "__main__":
-#     base = SqlString("b_longtail")
+if __name__ == "__main__":
+    base = SqlString("b_longtail")
+    print(base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"id": None}))
 #     print(base.insert({"word": "测试I'm Your \"Betst\"Friend", "query": 123}))
-#     print(base.insert(("word", "query"), [("测试I'm Your \"Betst\"Friend", 123)]))
-#     print(base.insert(("word", "query"), [("测试I'm Your \"Betst\"Friend", 123), ("测试", "测试")]))
-#     print(base.insert([{"word": "测试I'm Your \"Betst\"Friend", "query": 123}, {"word": "测22试", "query": "11123"}]))
-#     print(base.update({"word": "测试I'm Your \"Betst\"Friend"}, {"query": "测试"}))
-#     print(base.update({"word": "测试I'm Your \"Betst\"Friend", "query": "test"}, {"query": "测试"}))
-#     print(base.update({"word": "测试I'm Your \"Betst\"Friend"}, [{"query": "测试"}, {"word": "哈哈哈"}]))
-#     print(base.update({"word": "测试I'm Your \"Betst\"Friend"}, ["`query` = '测试'", "`query` = '你好'"]))
-#     print(base.update({"word": "测试I'm Your \"Betst\"Friend"}, "`query` = '测试'"))
-#     print(base.delete({"query": "测试I'm Your \"Betst\"Friend"}))

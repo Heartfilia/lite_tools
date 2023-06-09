@@ -87,14 +87,14 @@ def get_wiki_info(mode: str = "history", time_fmt: str = "") -> dict:
     resp = requests.get(
         f'https://baike.baidu.com/cms/home/eventsOnHistory/{month}.json',
         headers={'user-agent': get_ua()},
-        verify=False)
+        timeout=5)
     return resp.json()
 
 
 @check_cache
 def get_date_web(mode: str = "almanac") -> str:
     _ = mode
-    resp = requests.get('http://www.wannianli.cn/', headers={'user-agent': get_ua()}, verify=False)
+    resp = requests.get('http://www.wannianli.cn/', headers={'user-agent': get_ua()}, timeout=5)
     return resp.text
 
 

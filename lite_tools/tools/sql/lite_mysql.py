@@ -358,11 +358,13 @@ class MySql:
                     new_sql = self.sql_base.insert(items, each_value, ignore)
                     self.execute(new_sql, log=False, mode="insert")
 
-    def insert_batch(self, items: Mapping[str, list], ignore: bool = True) -> None:
+    def insert_batch(self, items: Mapping[str, list], duplicate: Union['ignore', None] = None) -> None:
         """
         批量插入, 一次传入一批列表
-        #TODO(这里和批量更新一样， 我要单独想一下怎么弄逻辑比较好点 准备依赖 executemany)
-
+        #TODO(后面有空改这个 [({需要更新的字段}, {更新的条件}), ({需要更新的字段}, {更新的条件})])
+        # 下面就和pandas的dataframe格式一样的 所以也可以顺道插入mysql就很方便
+        items = {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]}
+        where = {"C": None, "D": 666}
         """
         pass
 
@@ -391,16 +393,6 @@ class MySql:
         self._check_table()
         sql = self.sql_base.update(items, where)
         self.execute(sql, mode="update")
-
-    def update_batch(self, items: Mapping[str, list], where: dict) -> None:
-        """
-        批量更新, 一次传入一批列表 然后我这里是负责拼接成sql执行
-        #TODO(后面有空改这个 [({需要更新的字段}, {更新的条件}), ({需要更新的字段}, {更新的条件})])
-        # 下面就和pandas的dataframe格式一样的 所以也可以顺道插入mysql就很方便
-        items = {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]}
-        where = {"C": None, "D": 666}
-        """
-        self._check_table()
 
     def delete(self, where: Union[dict, str]) -> None:
         """
