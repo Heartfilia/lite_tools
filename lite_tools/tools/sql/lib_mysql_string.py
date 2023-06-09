@@ -285,8 +285,8 @@ class SqlString(object):
         where_field = " AND ".join([f"{key}=%s" for key in items_order if key in where])
         value_field = []
         for ind in range(key_length.pop()):  # 依次提取每个位置的数据
+            value = []
             for key in items_order:
-                value = []
                 if key in items:
                     value.append(items[key][ind])
                 if key in where:
