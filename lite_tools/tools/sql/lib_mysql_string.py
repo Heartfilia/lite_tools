@@ -291,7 +291,7 @@ class SqlString(object):
                     value.append(items[key][ind])
                 if key in where:
                     value.append(where[key][ind])
-                value_field.append(tuple(value))
+            value_field.append(tuple(value))
         return set_field, where_field, value_field
 
     @staticmethod
