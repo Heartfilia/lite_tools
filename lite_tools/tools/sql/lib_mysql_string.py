@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 import re
-from typing import Union, Optional, Mapping
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+from typing import Union, Optional, Mapping, List
 
 from lite_tools.tools.utils.u_sql_base_string import MysqlKeywordsList
 from lite_tools.exceptions.SqlExceptions import NotSupportType, LengthError
@@ -167,10 +171,30 @@ class SqlString(object):
             raise NotSupportType
         return self.__clear_string(base_update)
 
-    def insert_batch(self, items: Mapping[str, list], where: dict):
+    def update_batch(self, items: Mapping[str, list], where: Mapping[str, list]):
+        """
+        批量更新操作
+        """
+        set_field, where_field, value_field = self._handle_update_batch(items, where)
+        return f"UPDATE {self.table_name} SET {set_field} WHERE {where_field}", value_field
+
+    def insert_batch(self, items: Mapping[str, list], duplicate: Literal['ignore', 'update', None] = None, *,
+                     update_field: List[str] = None):
         key, field, values = self._handle_batch(items)
-        where_field = self.__clear_string(self._handle_where_dict(where))
-        return f" {self.table_name} SET {key} VALUES {field} WHERE {where_field}", values
+        if duplicate == "ignore":
+            ignore_field, duplicate_field, update_string = "IGNORE ", "", ""
+        elif duplicate == "update":
+            if not update_field:
+                raise LengthError("更新模式需要补充 update_field 字段数据")
+            else:
+                if all([x in items.keys() for x in update_field]):
+                    update_string = ", ".join([f"{name} = VALUES({name})" for name in update_field])
+                else:
+                    raise LengthError("可更新字段不在传入的数据表里面")
+            ignore_field, duplicate_field = "", " ON DUPLICATE KEY UPDATE "
+        else:
+            ignore_field, duplicate_field, update_string = "", "", ""
+        return f"INSERT {ignore_field}INTO {self.table_name} SET {key} VALUES {field}{duplicate_field}{update_string}", values
 
     def replace(self, keys: Union[dict, list, tuple], values: list = None) -> Optional[str]:
         """
@@ -250,6 +274,27 @@ class SqlString(object):
         """
 
     @staticmethod
+    def _handle_update_batch(items: Mapping[str, list], where: Mapping[str, list]):
+        if not items or not where:
+            raise LengthError("错误的键长度")
+        items_order = [key for key in items.keys()] + [value for value in where.keys()]   # 这里是后续键的顺序，避免顺序异常
+        key_length = set(map(lambda x: len(x), items.values()))
+        if len(key_length) != 1 or len(set(map(lambda x: len(x), where.values()))) != 1:
+            raise LengthError("传入的数据长度不一致")
+        set_field = ", ".join([f"{key}=%s" for key in items_order if key in items])
+        where_field = " AND ".join([f"{key}=%s" for key in items_order if key in where])
+        value_field = []
+        for ind in range(key_length.pop()):  # 依次提取每个位置的数据
+            for key in items_order:
+                value = []
+                if key in items:
+                    value.append(items[key][ind])
+                if key in where:
+                    value.append(where[key][ind])
+                value_field.append(tuple(value))
+        return set_field, where_field, value_field
+
+    @staticmethod
     def _handle_batch(items: Mapping[str, list]):
         """
         批量操作的拼接 格式为 {"A": [1, 2, 3], "B": [6, 7, 8]}
@@ -258,15 +303,16 @@ class SqlString(object):
         if not items:
             raise LengthError("没有输入有效数据,传入了空数据")
         # 第一步，校验value的长度是否一致
-        if len(set(map(lambda x: len(x), items.values()))) != 1:
+        key_length = set(map(lambda x: len(x), items.values()))
+        if len(key_length) != 1:
             raise LengthError("传入的值长度不一致")
         key_order = items.keys()   # 后续将用这个的顺序保证后续值的顺序一致
         value_list = []
-        for ind in range(len(key_order)+1):  # 依次提取每个位置的数据
+        for ind in range(key_length.pop()):  # 依次提取每个位置的数据
             value = []
             for key in key_order:
                 value.append(items[key][ind])
-            value_list.append(value)
+            value_list.append(tuple(value))
         new_key = []
         value_field = []
         for key in key_order:
@@ -312,5 +358,13 @@ class SqlString(object):
 
 if __name__ == "__main__":
     base = SqlString("b_longtail")
-    print(base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"id": None}))
-#     print(base.insert({"word": "测试I'm Your \"Betst\"Friend", "query": 123}))
+    # s, v = base.insert_batch({"comment": [1, 2, 3], "B": [2, 3, 4]})
+    # print("s-->", s, '    v--->', v)
+    # s, v = base.insert_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, duplicate='ignore')
+    # print("s-->", s, '    v--->', v)
+    # s, v = base.insert_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, duplicate='update', update_field=["comment"])
+    # print("s-->", s, '    v--->', v)
+    s, v = base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"C": ["a", "b", "c"]})
+    print("s-->", s, '    v--->', v)
+    s, v = base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"C": ["a", "b", "c"], "D": ["x", "y", "z"]})
+    print("s-->", s, '    v--->', v)

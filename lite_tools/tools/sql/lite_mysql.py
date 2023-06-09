@@ -21,7 +21,7 @@
 import re
 import time
 from threading import RLock
-from typing import Iterator, Union, Mapping
+from typing import Iterator, Union, Mapping, List
 try:
     from typing import Literal
 except ImportError:
@@ -189,13 +189,12 @@ class MySql:
                     self.not_change_line[mode] += 1
                 else:
                     self.change_line[mode] += result
-                if mode == 'update':
+                if mode == 'update_batch':
                     self.row_count["run"] += 1
             self._print_rate(mode, end_time, start_time, result)
             return result
         except Exception as err:
             logger.error(f"批量操作报错为: {err}")
-
             conn.rollback()
             return -1
         finally:
@@ -358,15 +357,18 @@ class MySql:
                     new_sql = self.sql_base.insert(items, each_value, ignore)
                     self.execute(new_sql, log=False, mode="insert")
 
-    def insert_batch(self, items: Mapping[str, list], duplicate: Union['ignore', None] = None) -> None:
+    def insert_batch(self, items: Mapping[str, list], duplicate: Literal['ignore', 'update', None] = None, *,
+                     update_field: List[str] = None) -> None:
         """
-        批量插入, 一次传入一批列表
-        #TODO(后面有空改这个 [({需要更新的字段}, {更新的条件}), ({需要更新的字段}, {更新的条件})])
+        批量插入, 一次传入一批列表 格式如下items
         # 下面就和pandas的dataframe格式一样的 所以也可以顺道插入mysql就很方便
-        items = {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]}
-        where = {"C": None, "D": 666}
+        :param items : {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]} 长度得一致
+        :param duplicate : 内容重复模式 ignore: 忽略重复内容,跳过; update:重复内容更新->需要指定更新的字段需要单独参数控制并且在items的key里面
+        :param update_field: 重复了内容并且模式为update的时候使用,填入重复了需要更新的字段名称
         """
-        pass
+        self._check_table()
+        sql, values = self.sql_base.insert_batch(items, duplicate, update_field)
+        self.execute_many(sql, values, 'update_batch')
 
     def replace(self, items: Union[dict, list, tuple], values: list = None) -> None:
         """
@@ -393,6 +395,16 @@ class MySql:
         self._check_table()
         sql = self.sql_base.update(items, where)
         self.execute(sql, mode="update")
+
+    def update_batch(self, items: Mapping[str, list], where: Mapping[str, list]):
+        """
+        批量更新操作
+        :param items : {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]} 长度得一致
+        :param where : {"C_field": [1, 2, 3]} 后面where数组的长度得和前面items的长度一致
+        """
+        self._check_table()
+        sql, values = self.sql_base.update_batch(items, where)
+        self.execute_many(sql, values, mode='update_batch')
 
     def delete(self, where: Union[dict, str]) -> None:
         """
