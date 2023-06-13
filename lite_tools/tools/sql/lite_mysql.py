@@ -173,7 +173,7 @@ class MySql:
         finally:
             conn.close()
 
-    def execute_many(self, sql: str, values: list, mode: str) -> int:
+    def execute_many(self, sql: str, values: list, mode: str, options: str = None) -> int:
         if not sql:
             logger.warning(f"传入了空sql语句--> sql:[ {sql} ]")
             return 0
@@ -184,14 +184,22 @@ class MySql:
                 result = cursor.executemany(sql, values)
             conn.commit()
             end_time = time.time()
+            if mode == "update_batch":
+                log_mode = "update"
+            else:
+                log_mode = "insert"
             with self.lock:
                 if result == 0:
-                    self.not_change_line[mode] += 1
+                    self.not_change_line[log_mode] += 1
                 else:
-                    self.change_line[mode] += result
+                    if log_mode == "insert" and options == "update":
+                        # 如果重复了主键 并且设置了更新模式为update的话 实际行操作会有双倍 尝试插入+修改 所以我们这里统计数据需要除去一半
+                        self.change_line[log_mode] += result // 2
+                    else:
+                        self.change_line[log_mode] += result
                 if mode == 'update_batch':
                     self.row_count["run"] += 1
-            self._print_rate(mode, end_time, start_time, result)
+            self._print_rate(log_mode, end_time, start_time, result)
             return result
         except Exception as err:
             logger.error(f"批量操作报错为: {err}")
@@ -367,8 +375,8 @@ class MySql:
         :param update_field: 重复了内容并且模式为update的时候使用,填入重复了需要更新的字段名称
         """
         self._check_table()
-        sql, values = self.sql_base.insert_batch(items, duplicate, update_field)
-        self.execute_many(sql, values, 'update_batch')
+        sql, values = self.sql_base.insert_batch(items, duplicate, update_field=update_field)
+        self.execute_many(sql, values, 'insert_batch', options=duplicate)
 
     def replace(self, items: Union[dict, list, tuple], values: list = None) -> None:
         """

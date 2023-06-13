@@ -194,7 +194,7 @@ class SqlString(object):
             ignore_field, duplicate_field = "", " ON DUPLICATE KEY UPDATE "
         else:
             ignore_field, duplicate_field, update_string = "", "", ""
-        return f"INSERT {ignore_field}INTO {self.table_name} SET {key} VALUES {field}{duplicate_field}{update_string}", values
+        return f"INSERT {ignore_field}INTO {self.table_name} {key} VALUES {field}{duplicate_field}{update_string}", values
 
     def replace(self, keys: Union[dict, list, tuple], values: list = None) -> Optional[str]:
         """
@@ -364,7 +364,7 @@ if __name__ == "__main__":
     # print("s-->", s, '    v--->', v)
     # s, v = base.insert_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, duplicate='update', update_field=["comment"])
     # print("s-->", s, '    v--->', v)
-    s, v = base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"C": ["a", "b", "c"]})
-    print("s-->", s, '    v--->', v)
-    s, v = base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"C": ["a", "b", "c"], "D": ["x", "y", "z"]})
-    print("s-->", s, '    v--->', v)
+    # s, v = base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"C": ["a", "b", "c"]})
+    # print("s-->", s, '    v--->', v)
+    # s, v = base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"C": ["a", "b", "c"], "D": ["x", "y", "z"]})
+    # print("s-->", s, '    v--->', v)
