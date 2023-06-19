@@ -4,7 +4,7 @@ try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
-from typing import Union, Optional, Mapping, List
+from typing import Union, Optional, Mapping, List, Dict
 
 from lite_tools.tools.utils.u_sql_base_string import MysqlKeywordsList
 from lite_tools.exceptions.SqlExceptions import NotSupportType, LengthError
@@ -178,16 +178,21 @@ class SqlString(object):
         set_field, where_field, value_field = self._handle_update_batch(items, where)
         return f"UPDATE {self.table_name} SET {set_field} WHERE {where_field}", value_field
 
-    def insert_batch(self, items: Mapping[str, list], duplicate: Literal['ignore', 'update', None] = None, *,
+    def insert_batch(self, items: Union[Mapping[str, list], List[dict]], duplicate: Literal['ignore', 'update', None] = None, *,
                      update_field: List[str] = None):
-        key, field, values = self._handle_batch(items)
+        if items and isinstance(items, list) and isinstance(items[0], dict):
+            # 兼容 [{}, {}] 这个格式
+            new_items = self._handle_items_type(items)
+        else:
+            new_items = items
+        key, field, values = self._handle_batch(new_items)
         if duplicate == "ignore":
             ignore_field, duplicate_field, update_string = "IGNORE ", "", ""
         elif duplicate == "update":
             if not update_field:
                 raise LengthError("更新模式需要补充 update_field 字段数据")
             else:
-                if all([x in items.keys() for x in update_field]):
+                if all([x in new_items.keys() for x in update_field]):
                     update_string = ", ".join([f"{name} = VALUES({name})" for name in update_field])
                 else:
                     raise LengthError("可更新字段不在传入的数据表里面")
@@ -293,6 +298,22 @@ class SqlString(object):
                     value.append(where[key][ind])
             value_field.append(tuple(value))
         return set_field, where_field, value_field
+
+    @staticmethod
+    def _handle_items_type(items: List[dict]) -> Dict[str, list]:
+        base_dict = {}
+        first = True   # 第一次需要确定所有的键 后续要是对应不上或者缺少键则抛出异常
+        for item in items:
+            if first:
+                for key, value in item.items():
+                    base_dict[key] = [value]
+                first = False
+            else:
+                if len(base_dict) != len(item):
+                    raise LengthError("字段长度及所占用的字符名得一致")
+                for key in base_dict.keys():
+                    base_dict[key].append(item[key])
+        return base_dict
 
     @staticmethod
     def _handle_batch(items: Mapping[str, list]):

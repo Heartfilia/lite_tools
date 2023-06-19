@@ -544,4 +544,3 @@ class WrapJson(object):
 
 if __name__ == "__main__":
     a = [1, 2, 3]
-    print(try_get(a, [-1]))

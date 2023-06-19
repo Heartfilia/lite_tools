@@ -84,6 +84,6 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Natural Language :: Chinese (Simplified)',
-        'Programming Language :: Python :: 3.6+',
+        'Programming Language :: Python :: 3',
     ]
 )

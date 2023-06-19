@@ -365,12 +365,20 @@ class MySql:
                     new_sql = self.sql_base.insert(items, each_value, ignore)
                     self.execute(new_sql, log=False, mode="insert")
 
-    def insert_batch(self, items: Mapping[str, list], duplicate: Literal['ignore', 'update', None] = None, *,
-                     update_field: List[str] = None) -> None:
+    def insert_batch(
+            self,
+            items: Union[Mapping[str, list], List[dict]],
+            duplicate: Literal['ignore', 'update', None] = None,
+            *,
+            update_field: List[str] = None
+    ) -> None:
         """
         批量插入, 一次传入一批列表 格式如下items
         # 下面就和pandas的dataframe格式一样的 所以也可以顺道插入mysql就很方便
-        :param items : {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]} 长度得一致
+        :param items :
+                {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]} 长度得一致
+                或者
+                [{"A_field": 1, "B_field": "A"}, {"A_field": 2, "B_field": "B"}, {"A_field": 3, "B_field": "C"}] 每个字典里面的键名称得一致，字典的长度得一致，位置无所谓
         :param duplicate : 内容重复模式 ignore: 忽略重复内容,跳过; update:重复内容更新->需要指定更新的字段需要单独参数控制并且在items的key里面
         :param update_field: 重复了内容并且模式为update的时候使用,填入重复了需要更新的字段名称
         """
