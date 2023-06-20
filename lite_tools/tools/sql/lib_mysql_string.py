@@ -20,10 +20,15 @@ class SqlString(object):
     大部分键值操作推荐用字典，当然其它格式也有些许兼容，处理的语法都是最基础的 进阶的操作自己实现
     """
 
-    def __init__(self, table_name: str) -> None:
+    def __init__(self, table_name: str = None) -> None:
+        """这里和实际调用的地方二选一 都写的话 优先级是代码位置更高 优先取用"""
         self.table_name = table_name
 
-    def insert(self, keys: Union[dict, list, tuple], values: list = None, ignore: bool = False) -> Optional[str]:
+    def check_table_name(self, table: str = None):
+        if not table and not self.table_name:
+            raise ValueError("缺少表名")
+
+    def insert(self, keys: Union[dict, list, tuple], values: list = None, table: str = None, ignore: bool = False) -> Optional[str]:
         """
         如果是拼接单条sql: keys传入字典 自动提取键值  values不需要传
         如果是多值拼接   : keys传入需要插入的字段命 可以列表 可以元组
@@ -32,10 +37,11 @@ class SqlString(object):
         :param values
         :param ignore   : 是否忽略插入中的重复值之类的
         """
+        self.check_table_name(table)
         if not keys:
             return None
         whether_ignore = "IGNORE " if ignore is True else ""
-        base_insert = f"INSERT {whether_ignore}INTO {self.table_name}"
+        base_insert = f"INSERT {whether_ignore}INTO {table or self.table_name}"
         key_string, value_string = self.__handle_insert_data(keys, values)
         if key_string == "":
             return None
@@ -117,7 +123,8 @@ class SqlString(object):
 
         return field_str
 
-    def create_table(self, keys: Union[dict, list], engine: str = 'InnoDB', charset: str = 'utf8mb4') -> Optional[str]:
+    def create_table(self, keys: Union[dict, list], engine: str = 'InnoDB', charset: str = 'utf8mb4',
+                     table: str = None) -> Optional[str]:
         """
         K神专用函数 <<<<<<<<<<
         如果是拼接单条sql: keys传入字典 自动提取键值
@@ -125,10 +132,12 @@ class SqlString(object):
         :param keys
         :param engine
         :param charset
+        :param table
         """
+        self.check_table_name(table)
         if not keys:
             return None
-        base_create = f"CREATE TABLE `{self.table_name}`"
+        base_create = f"CREATE TABLE `{table or self.table_name}`"
         # key_string, value_string = self.__handle_create_data(keys, values)
         key_string = self.__handle_create_data(keys)
         if key_string == "":
@@ -136,7 +145,7 @@ class SqlString(object):
         insert_string = f"{base_create} ({self._handle_key(key_string)}) ENGINE={engine} DEFAULT CHARSET={charset};"
         return self.__clear_string(insert_string)
 
-    def update(self, keys: dict, where: Union[dict, list, tuple, str]) -> Optional[str]:
+    def update(self, keys: dict, where: Union[dict, list, tuple, str], table: str = None) -> Optional[str]:
         """
         更新数据操作, 传入需要更新的字典即可
         :param keys :  传入的更新部分的键值对啦
@@ -145,11 +154,13 @@ class SqlString(object):
             # 想实现更加精准的条件就在下面自己写 推荐==>字符串的传入方式
             --> 如果是列表传入按照 ['test<5', 'hello=1', 'tt LIKES "%VV%"'] 这样传入
             --> 如果是字符串: 'test < 5 AND hello = 1'   这样传入
+        :param table: 表名 优先级 高于全局那个
         """
+        self.check_table_name(table)
         if not keys or not isinstance(keys, dict) or not where:
             raise NotSupportType
 
-        base_update = f"UPDATE {self.table_name} SET "
+        base_update = f"UPDATE {table or self.table_name} SET "
         for key, value in keys.items():
             base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
                            f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)}, '
@@ -171,15 +182,17 @@ class SqlString(object):
             raise NotSupportType
         return self.__clear_string(base_update)
 
-    def update_batch(self, items: Mapping[str, list], where: Mapping[str, list]):
+    def update_batch(self, items: Mapping[str, list], where: Mapping[str, list], table: str = None):
         """
         批量更新操作
         """
+        self.check_table_name(table)
         set_field, where_field, value_field = self._handle_update_batch(items, where)
-        return f"UPDATE {self.table_name} SET {set_field} WHERE {where_field}", value_field
+        return f"UPDATE {table or self.table_name} SET {set_field} WHERE {where_field}", value_field
 
     def insert_batch(self, items: Union[Mapping[str, list], List[dict]], duplicate: Literal['ignore', 'update', None] = None, *,
-                     update_field: List[str] = None):
+                     update_field: List[str] = None, table: str = None):
+        self.check_table_name(table)
         if items and isinstance(items, list) and isinstance(items[0], dict):
             # 兼容 [{}, {}] 这个格式
             new_items = self._handle_items_type(items)
@@ -199,22 +212,25 @@ class SqlString(object):
             ignore_field, duplicate_field = "", " ON DUPLICATE KEY UPDATE "
         else:
             ignore_field, duplicate_field, update_string = "", "", ""
-        return f"INSERT {ignore_field}INTO {self.table_name} {key} VALUES {field}{duplicate_field}{update_string}", values
+        return f"INSERT {ignore_field}INTO {table or self.table_name} {key} VALUES {field}{duplicate_field}{update_string}", values
 
-    def replace(self, keys: Union[dict, list, tuple], values: list = None) -> Optional[str]:
+    def replace(self, keys: Union[dict, list, tuple], values: list = None, table: str = None) -> Optional[str]:
         """
-        不确定是否可以用
+        不确定是否可以用 <<<
         """
-        string = self.insert(keys, values)
+        self.check_table_name(table)
+        string = self.insert(keys, values, table=table)
         string = string.replace('INSERT', 'REPLACE')
         return string
 
-    def delete(self, where: Union[dict, str] = None) -> Optional[str]:
+    def delete(self, where: Union[dict, str] = None, table: str = None) -> Optional[str]:
         """
         这里不推荐用list,tuple数据类型 如果有多个等值条件就写dict  否则自己写字符串
         :param where: 当然是删除条件啦 不写的话就是全部删除
+        :param table: 表名 优先级高于全局那个
         """
-        base_delete = f"DELETE FROM {self.table_name}"
+        self.check_table_name(table)
+        base_delete = f"DELETE FROM {table or self.table_name}"
         if not where:
             return base_delete + ";"
         base_delete += " WHERE "
@@ -230,11 +246,12 @@ class SqlString(object):
             raise NotSupportType
         return self.__clear_string(base_delete)
 
-    def exists(self, where: Union[dict, str]) -> Optional[str]:
+    def exists(self, where: Union[dict, str], table: str = None) -> Optional[str]:
         """
         这个是查询键值在不在mysql中,一般推荐用**主键** 如果用其它键就需要加索引了
         """
-        base_sql = f"SELECT 1 FROM {self.table_name} WHERE "
+        self.check_table_name(table)
+        base_sql = f"SELECT 1 FROM {table or self.table_name} WHERE "
         if isinstance(where, dict):
             base_sql = base_sql + self._handle_where_dict(where)
         elif isinstance(where, str):
@@ -247,8 +264,12 @@ class SqlString(object):
             base_sql += ";"
         return self.__clear_string(base_sql)
 
-    def count(self, where: Union[dict, str] = None) -> Optional[str]:
-        base_sql = f"SELECT COUNT(*) FROM {self.table_name}"
+    def count(self, where: Union[dict, str] = None, table: str = None) -> Optional[str]:
+        """
+        只适用于全局统计 可以加条件 但是不适合 查询条件group 之类的统计
+        """
+        self.check_table_name(table)
+        base_sql = f"SELECT COUNT(*) FROM {table or self.table_name}"
         if where is None:
             return f"{base_sql};"
 

@@ -31,7 +31,7 @@ import pymysql
 from dbutils.pooled_db import PooledDB
 
 from lite_tools.tools.utils.logs import logger
-from lite_tools.tools.sql.config import MySqlConfig
+from lite_tools.tools.sql.config import MySqlConfig, CountConfig
 from lite_tools.tools.sql.SqlLog import log_level
 from lite_tools.tools.core.lite_cache import Buffer
 from lite_tools.tools.sql.lib_mysql_string import SqlString
@@ -84,22 +84,8 @@ class MySql:
             self.sql_base = SqlString(self.table_name)
         else:
             self.sql_base = None
-        # 以下统计均是 统计一个实例运行周期的操作
-        self.change_line = {
-            "insert": 0,
-            "update": 0,
-            "delete": 0
-        }   # 记录一下改变的行数
-        self.not_change_line = {
-            "insert": 0,
-            "update": 0,
-            "delete": 0
-        }   # 操作了 但是没有改变的行数
-        self.row_count = {
-            "total": 0,
-            "run": 0
-        }   # 总行数  surplus
-        self.lock = RLock()
+        self.count_conf = CountConfig()
+        self.reg = re.compile(r"FROM\s+?`?(\S+)`?", re.I | re.S)  # 部分处理 还需要二次处理的
         self.start_time = time.time()
         self.log_rule = log_rule
 
@@ -128,8 +114,9 @@ class MySql:
                 cursorclass=cursor_type   # 调整返回结果的样式
             )
 
-    def execute(self, sql: str, batch: bool = False, log: bool = True, mode: str = None) -> int:
+    def execute(self, sql: str, batch: bool = False, log: bool = True, mode: str = None, table: str = None) -> int:
         """不走智能执行的时候走这里可以执行手动输入的sql语句 这里的log不与全局self.log共享"""
+        self._check_table(table)
         if not sql:
             logger.warning(f"传入了空sql语句--> sql:[ {sql} ]")
             return 0
@@ -142,15 +129,14 @@ class MySql:
             conn.commit()
             end_time = time.time()
             if mode is not None:
-                with self.lock:
-                    if result == 0:
-                        self.not_change_line[mode] += 1
-                    else:
-                        self.change_line[mode] += result
-                    if mode == 'update':
-                        self.row_count["run"] += 1
+                if result == 0:
+                    self.count_conf.set_not_change(table, mode, 1)
+                else:
+                    self.count_conf.set_change(table, mode, result)
+                if mode == 'update':
+                    self.count_conf.set_count(table, mode, 1)
 
-            self._print_rate(mode, end_time, start_time, result)
+            self._print_rate(mode, end_time, start_time, result, table)
             return result
         except Exception as err:
             if str(err).find("Duplicate entry") != -1 and log is False:
@@ -166,14 +152,14 @@ class MySql:
                 raise DuplicateEntryException
 
             if mode in ['insert', 'update']:
-                with self.lock:
-                    self.not_change_line[mode] += 1
-                self._print_rate(mode, end_time, start_time, 0, flag="info")
+                self.count_conf.set_not_change(table, mode, 1)
+                self._print_rate(mode, end_time, start_time, 0, table, flag="info")
             return -1
         finally:
             conn.close()
 
-    def execute_many(self, sql: str, values: list, mode: str, options: str = None) -> int:
+    def execute_many(self, sql: str, values: list, mode: str, options: str = None, table: str = None) -> int:
+        self._check_table(table)
         if not sql:
             logger.warning(f"传入了空sql语句--> sql:[ {sql} ]")
             return 0
@@ -188,18 +174,18 @@ class MySql:
                 log_mode = "update"
             else:
                 log_mode = "insert"
-            with self.lock:
-                if result == 0:
-                    self.not_change_line[log_mode] += 1
+            if result == 0:
+                self.count_conf.set_not_change(table, log_mode, 1)
+            else:
+                if log_mode == "insert" and options == "update":
+                    # 如果重复了主键 并且设置了更新模式为update的话 实际行操作会有双倍 尝试插入+修改 所以我们这里统计数据需要除去一半
+                    self.count_conf.set_change(table, log_mode, result // 2)
                 else:
-                    if log_mode == "insert" and options == "update":
-                        # 如果重复了主键 并且设置了更新模式为update的话 实际行操作会有双倍 尝试插入+修改 所以我们这里统计数据需要除去一半
-                        self.change_line[log_mode] += result // 2
-                    else:
-                        self.change_line[log_mode] += result
+                    self.count_conf.set_change(table, log_mode, result)
+
                 if mode == 'update_batch':
-                    self.row_count["run"] += 1
-            self._print_rate(log_mode, end_time, start_time, result)
+                    self.count_conf.set_count(table, "run", 1)
+            self._print_rate(log_mode, end_time, start_time, result, table)
             return result
         except Exception as err:
             logger.error(f"批量操作报错为: {err}")
@@ -207,6 +193,16 @@ class MySql:
             return -1
         finally:
             conn.close()
+
+    def _get_select_table_name(self, sql: str, **kwargs) -> str:
+        if kwargs.get("table"):  # 第一步直接尝试提取 传入的参数是否有table
+            return kwargs.get('table')
+
+        items = self.reg.findall(sql)
+        if not items:  # 第二步 通过正则提取
+            return self.table_name or "default"   # 没有提取到并且 没有设置将默认一个参数值
+        maybe_table = items[-1].split(".")[-1]    # 将可能是table的提取出来 然后切割一些
+        return maybe_table.strip("`")   # 把特殊标志移除
 
     def select(self, sql: str, count: bool = False, *, query_log: bool = True, fetch: Literal['all', 'one'] = 'all',
                **kwargs) -> Iterator:
@@ -238,12 +234,8 @@ class MySql:
                 raise IterNotNeedRun
             return
 
-        with self.lock:
-            if "_first" not in kwargs or kwargs.get("_first") is True:
-                self.row_count['total'] = all_num
-            else:
-                if kwargs.get("_first") is False:
-                    self.row_count['total'] += all_num
+        table_name = self._get_select_table_name(sql, **kwargs)
+        self.count_conf.set_count(table_name, "total", all_num)
 
         for row in items:
             if count is False:
@@ -256,7 +248,8 @@ class MySql:
             raise IterNotNeedRun
 
     def select_iter(
-        self, sql: str, pk: Union[str, int], limit: int = Buffer.max_cache, mode: Literal['Iter', 'Last'] = 'Iter'
+        self, sql: str, pk: Union[str, int], limit: int = Buffer.max_cache, mode: Literal['Iter', 'Last'] = 'Iter',
+            table: str = None, **kwargs
     ) -> Iterator:
         """
         通过批量的迭代获取数据 有点问题 后面再优化: 目前只能支持一个表的操作，如果是多个表关联之类的 还有别名啥的 就不行了
@@ -266,6 +259,7 @@ class MySql:
         :param mode  :
                 |_____模式: 默认 Iter: 迭代，从头到尾;
                 >可能有bug,我还没测试出来 Last:每次都从最开始位置开始,记得调整过滤条件保证从最开始拿到的是正常的, 这个模式只能结合我的Buffer使用,不支持自己添加 ORDER BY 和 GROUP BY
+        :param table: 和全局二选一 为了迭代的时候用 要不然就是我自己提取的
         return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数w2  Q12
         """
         origin_sql = sql.rstrip('; ')  # 剔除右边的符号
@@ -294,36 +288,39 @@ class MySql:
             origin_sql = re.sub(" from ", " FROM ", origin_sql, flags=re.I, count=1)
 
             cursor = 0
+            if not table and not self.table_name:
+                table = self._get_select_table_name(sql, **kwargs)
             while True:
                 if "WHERE" in origin_sql:
                     _by_rule = re.search(r"(ORDER BY|GROUP BY)", origin_sql, re.I)
                     _sql = re.sub(
                         r" WHERE\s+(.+?)(?:ORDER BY|GROUP BY|$)",
-                        rf" WHERE {pk} > (SELECT {pk} FROM {self.table_name} WHERE \1 ORDER BY {pk} LIMIT {cursor}, 1) AND \1{_by_rule.group(1) if _by_rule else ''}",
+                        rf" WHERE {pk} > (SELECT {pk} FROM {table or self.table_name} WHERE \1 ORDER BY {pk} LIMIT {cursor}, 1) AND \1{_by_rule.group(1) if _by_rule else ''}",
                         origin_sql
                     )
                 else:
                     _sql = re.sub(
                         r" FROM\s+(\S+)",
-                        rf" FROM \1 WHERE {pk} > (SELECT {pk} FROM {self.table_name} ORDER BY {pk} LIMIT {cursor}, 1)",
+                        rf" FROM \1 WHERE {pk} > (SELECT {pk} FROM {table or self.table_name} ORDER BY {pk} LIMIT {cursor}, 1)",
                         origin_sql
                     )
 
                 new_sql = f"{_sql} LIMIT {limit};"
                 try:
-                    yield from self.select(new_sql, _function_use=True, _limit_num=limit, _first=first)
+                    yield from self.select(new_sql, _function_use=True, _limit_num=limit, _first=first, table=table, **kwargs)
                 except IterNotNeedRun:
                     break
                 cursor += limit
                 first = False
 
-    def exists(self, where: Union[dict, str]) -> bool:
+    def exists(self, where: Union[dict, str], table: str = None) -> bool:
         """
         判断条件在不在该表中有数据
         :param where: 通过字典的方式传入条件(推荐) 或者字符串的条件
+        :param table: 如果传入优先取这里的table名称 否则取全局的
         """
-        self._check_table()
-        sql = self.sql_base.exists(where)
+        self._check_table(table)
+        sql = self.sql_base.exists(where, table=table)
         for num in self.select(sql, query_log=False):
             if num == 0:
                 return False
@@ -331,46 +328,48 @@ class MySql:
                 return True
         return False
 
-    def count(self, where: Union[dict, str] = None) -> int:
+    def count(self, where: Union[dict, str] = None, table: str = None) -> int:
         """
-        判断有
+        只能提取全库量 可以加筛选条件 但是 不适合 groupBy 之类的统计
         """
-        self._check_table()
-        sql = self.sql_base.count(where)
+        self._check_table(table)
+        sql = self.sql_base.count(where, table=table)
         for num in self.select(sql, query_log=False):
             return num
 
-    def insert(self, items: Union[dict, list, tuple], values: list = None, ignore: bool = False) -> None:
+    def insert(self, items: Union[dict, list, tuple], values: list = None, ignore: bool = False, table: str = None) -> None:
         """
         这里目前只支持单条的 字典映射关系插入 当然你要多值传入我也兼容 这里的匹配比较迷，但是习惯就好 这里就不兼容存在更新不存在插入了
         :param items: 插入的值(单条的话只需要传这个 传字典就好了) (多条的话这里可以传列表里字典)
         :param values: 如果多条插入 值可以这里插入
         :param ignore: 是否忽略主键重复的警报
+        :param table : 表名 这里和全局二选一 优先级这里最高
         """
-        self._check_table()
+        self._check_table(table)
         if isinstance(items, (list, tuple)):
             batch = True
         else:
             batch = False
-        sql = self.sql_base.insert(items, values, ignore=ignore)
+        sql = self.sql_base.insert(items, values, ignore=ignore, table=table)
         try:
-            self.execute(sql, batch, mode="insert")
+            self.execute(sql, batch, mode="insert", table=table)
         except DuplicateEntryException:
             if values is None and isinstance(items, (list, tuple)):
                 for each_key in items:
-                    new_sql = self.sql_base.insert(each_key, values, ignore)
-                    self.execute(new_sql, log=False, mode="insert")
+                    new_sql = self.sql_base.insert(each_key, values, ignore, table=table)
+                    self.execute(new_sql, log=False, mode="insert", table=table)
             elif values is not None and isinstance(values, (list, tuple)):
                 for each_value in values:
-                    new_sql = self.sql_base.insert(items, each_value, ignore)
-                    self.execute(new_sql, log=False, mode="insert")
+                    new_sql = self.sql_base.insert(items, each_value, ignore, table=table)
+                    self.execute(new_sql, log=False, mode="insert", table=table)
 
     def insert_batch(
             self,
             items: Union[Mapping[str, list], List[dict]],
             duplicate: Literal['ignore', 'update', None] = None,
             *,
-            update_field: List[str] = None
+            update_field: List[str] = None,
+            table: str = None
     ) -> None:
         """
         批量插入, 一次传入一批列表 格式如下items
@@ -381,64 +380,69 @@ class MySql:
                 [{"A_field": 1, "B_field": "A"}, {"A_field": 2, "B_field": "B"}, {"A_field": 3, "B_field": "C"}] 每个字典里面的键名称得一致，字典的长度得一致，位置无所谓
         :param duplicate : 内容重复模式 ignore: 忽略重复内容,跳过; update:重复内容更新->需要指定更新的字段需要单独参数控制并且在items的key里面
         :param update_field: 重复了内容并且模式为update的时候使用,填入重复了需要更新的字段名称
+        :param table: 表名 这里和全局二选一 优先级这里最高
         """
-        self._check_table()
-        sql, values = self.sql_base.insert_batch(items, duplicate, update_field=update_field)
-        self.execute_many(sql, values, 'insert_batch', options=duplicate)
+        self._check_table(table)
+        sql, values = self.sql_base.insert_batch(items, duplicate, update_field=update_field, table=table)
+        self.execute_many(sql, values, 'insert_batch', options=duplicate, table=table)
 
-    def replace(self, items: Union[dict, list, tuple], values: list = None) -> None:
+    def replace(self, items: Union[dict, list, tuple], values: list = None, table: str = None) -> None:
         """
         存在更新 不存在覆盖 但是没有写的的字段会置为null
         参数同insert 不过少了一个ignore判断
         """
-        self._check_table()
+        self._check_table(table)
         if isinstance(items, (list, tuple)):
             batch = True
         else:
             batch = False
-        sql = self.sql_base.replace(items, values)
+        sql = self.sql_base.replace(items, values, table=table)
         try:
-            self.execute(sql, batch, mode="insert")
+            self.execute(sql, batch, mode="insert", table=table)
         except Exception as err:
             logger.error(f"执行异常--> {sql} : {err}")
 
-    def update(self, items: dict, where: Union[dict, str]) -> None:
+    def update(self, items: dict, where: Union[dict, str], table: str = None) -> None:
         """
         更新数据
         :param items: 更新的结果 字典表示
         :param where: 需要更新数据的时候使用的条件
+        :param table: 表名 这里和全局二选一 优先级这里最高
         """
-        self._check_table()
-        sql = self.sql_base.update(items, where)
-        self.execute(sql, mode="update")
+        self._check_table(table)
+        sql = self.sql_base.update(items, where, table=table)
+        self.execute(sql, mode="update", table=table)
 
-    def update_batch(self, items: Mapping[str, list], where: Mapping[str, list]):
+    def update_batch(self, items: Mapping[str, list], where: Mapping[str, list], table: str = None):
         """
         批量更新操作
         :param items : {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]} 长度得一致
         :param where : {"C_field": [1, 2, 3]} 后面where数组的长度得和前面items的长度一致
+        :param table : 表名 这里和全局二选一 优先级这里最高
         """
-        self._check_table()
-        sql, values = self.sql_base.update_batch(items, where)
-        self.execute_many(sql, values, mode='update_batch')
+        self._check_table(table)
+        sql, values = self.sql_base.update_batch(items, where, table=table)
+        self.execute_many(sql, values, mode='update_batch', table=table)
 
-    def delete(self, where: Union[dict, str]) -> None:
+    def delete(self, where: Union[dict, str], table: str = None) -> None:
         """
         删除数据操作
         :param where: 需要删除数据的时候使用的条件
+        :param table: 表名 这里和全局二选一 优先级这里最高
         """
         self._check_table()
-        sql = self.sql_base.delete(where)
-        self.execute(sql, mode="delete")
+        sql = self.sql_base.delete(where, table=table)
+        self.execute(sql, mode="delete", table=table)
 
     def connection(self):
         """获取链接对象"""
         conn = self.pool.connection()
         return conn
 
-    def _check_table(self):
-        if not self.table_name:
-            self.sql_log("你现在执行的操作是需要传入 table 的名字 mysql = MySql(table_name='xxx')", "", "error")
+    def _check_table(self, table: str = None):
+        """判断 table_name 是否有 全局和局部 必须有一个"""
+        if not table and not self.table_name:
+            self.sql_log("你现在执行的操作是需要传入 table 的名字 mysql = MySql(table_name='xxx') 或者在对应操作 xxx(其它参数, table='xx')", "", "error")
             raise ValueError
 
     def _secure_check(self, string: str) -> bool:
@@ -453,13 +457,13 @@ class MySql:
                 return False
         return True
 
-    def _print_rate(self, mode: str, end_time, start_time, result, flag: str = "success"):
-        all_line = self.change_line[mode] + self.not_change_line[mode]
+    def _print_rate(self, mode: str, end_time, start_time: float, result: int, table: str, flag: str = "success"):
+        all_line = self.count_conf.get_change(table, mode) + self.count_conf.get_not_change(table, mode)
         cost_time = time.time() - self.start_time
         if mode == 'update':
-            cost_row = self.row_count['total'] - self.row_count['run']
-            other_log = f"【Surplus/AllTask: {cost_row}/{self.row_count['total']} Time:{cost_time:.3f}s】 "
-            rate = round(self.row_count['run'] / cost_time, 3)
+            cost_row = self.count_conf.get_count(table, 'total') - self.count_conf.get_count(table, 'run')
+            other_log = f"【Surplus/Tasks: {cost_row}/{self.count_conf.get_count(table, 'total')} T:{cost_time:.3f}s】 "
+            rate = round(self.count_conf.get_count(table, 'run') / cost_time, 3)
             rate_str = f" TaskRate={rate} tasks/s;"    # 剩余的行效率
         elif mode == "insert":
             other_log = f"【Time:{cost_time:.3f}s】 "
@@ -468,7 +472,7 @@ class MySql:
         else:
             other_log = " "
             rate_str = ""
-        other_log += f"Affect={self.change_line[mode]}; NotAffect={self.not_change_line[mode]};{rate_str}"
+        other_log += f"Affect={self.count_conf.get_change(table, mode)}; NotAffect={self.count_conf.get_not_change(table, mode)};{rate_str}"
         self.sql_log(
             f"[{mode}]{other_log} lineCost:{end_time - start_time:.3f}s AffectLine={result}", "", flag, True
         )

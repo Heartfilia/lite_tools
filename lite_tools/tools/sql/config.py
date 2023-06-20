@@ -18,6 +18,9 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+import copy
+from threading import RLock
+
 try:
     from typing import Literal
 except ImportError:
@@ -63,5 +66,55 @@ class MySqlConfig:
         self.log = log
 
 
+# 以下统计均是 统计一个实例运行周期的操作
+BASE_TEMPLATE = {
+    "change": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+    },   # 记录一下改变的行数
+    "not_change": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+    },   # 操作了 但是没有改变的行数
+    "count": {
+        "total": 0,
+        "run": 0
+    }    # 总行数  surplus
+}
 
 
+class CountConfig:
+    def __init__(self):
+        self.log_jar = {}
+        self.lock = RLock()
+
+    def init(self, table):
+        """初始化模板数据字段"""
+        if table not in self.log_jar:
+            self.log_jar[table] = copy.deepcopy(BASE_TEMPLATE)
+
+    def set_change(self, table: str, mode: str, num: int = 0):
+        self.init(table)
+        with self.lock:
+            self.log_jar[table]["change"][mode] += num
+
+    def get_change(self, table: str, mode: str):
+        return self.log_jar[table]["change"][mode]
+
+    def set_not_change(self, table: str, mode: str, num: int = 0):
+        self.init(table)
+        with self.lock:
+            self.log_jar[table]["not_change"][mode] += num
+
+    def get_not_change(self, table: str, mode: str):
+        return self.log_jar[table]["not_change"][mode]
+
+    def set_count(self, table: str, mode: str, num: int = 0):
+        self.init(table)
+        with self.lock:
+            self.log_jar[table]["count"][mode] += num
+
+    def get_count(self, table: str, mode: str):
+        return self.log_jar[table]["count"][mode]
