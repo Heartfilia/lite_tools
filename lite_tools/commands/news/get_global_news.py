@@ -19,13 +19,13 @@
           ┗━┻━┛   ┗━┻━┛
 """
 import requests
-
+# from lite_tools.utils.tls import requests
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.time.lite_time import get_time
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_parser import try_get
 from lite_tools.tools.core.lite_string import color_string
-from lite_tools.tools.utils.lite_table import get_terminal_long, print_head
+from lite_tools.utils.lite_table import get_terminal_long, print_head
 
 
 _base_template = """{split_line}
@@ -107,3 +107,7 @@ def _parse_news(data, location):
             source=source
         )
     print(color_string(base_string))
+
+
+if __name__ == "__main__":
+    get_china_news()

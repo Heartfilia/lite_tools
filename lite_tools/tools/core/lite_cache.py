@@ -29,7 +29,7 @@ from queue import Queue, Empty
 from asyncio import iscoroutinefunction
 from threading import RLock, current_thread
 
-from lite_tools.tools.utils.logs import logger
+from lite_tools.logs import logger
 from lite_tools.exceptions.CacheExceptions import QueueEmptyNotion
 
 

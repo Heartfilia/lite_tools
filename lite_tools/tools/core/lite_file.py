@@ -31,7 +31,7 @@ import os
 import subprocess
 from itertools import takewhile, repeat
 
-from lite_tools.tools.utils.lite_dir import lite_tools_dir
+from lite_tools.utils.lite_dir import lite_tools_dir
 from lite_tools.tools.time.lite_time import get_time
 
 

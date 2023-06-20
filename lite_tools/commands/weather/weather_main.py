@@ -19,11 +19,12 @@
           ┗━┻━┛   ┗━┻━┛
 """
 import re
-import requests
 from urllib.parse import quote
 from prettytable import PrettyTable
 
+import requests
 from loguru import logger
+# from lite_tools.utils.tls import requests
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.time.lite_time import get_time
 from lite_tools.tools.core.lite_try import try_catch
@@ -146,7 +147,7 @@ def request_weather(geo_id, city=None):
         city = city[0]
 
     resp = requests.get(
-        f"http://d1.weather.com.cn/weather_index/{geo_id}.html?_={int(get_time(double=True) * 1000)}",
+        f"http://d1.weather.com.cn/weather_index/{geo_id}.html?_={get_time(unit='ms')}",
         headers={
             "user-agent": get_ua(),
             'Referer': "http://www.weather.com.cn/",
@@ -163,7 +164,7 @@ def geo_weather_id():
     var ip="61.140.93.216";var id="101280101";var addr="广东,广州,广州";  # 不需要后面的addr
     """
     resp = requests.get(
-        f"http://wgeo.weather.com.cn/ip/?_={int(get_time(double=True) * 1000)}",
+        f"http://wgeo.weather.com.cn/ip/?_={get_time(unit='ms')}",
         headers={
             "user-agent": get_ua(),
             'Referer': "http://www.weather.com.cn/",

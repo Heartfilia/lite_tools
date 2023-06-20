@@ -22,11 +22,11 @@ import re
 import sys
 
 from lite_tools.version import VERSION
-from lite_tools.tools.utils.logs import logger
+from lite_tools.logs import logger
+from lite_tools.utils.lite_dir import lite_tools_dir
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.commands.today.fisher_date import print_date
-from lite_tools.tools.utils.lite_dir import lite_tools_dir
 
 
 # _my_image = """

@@ -10,7 +10,7 @@ try:
 except ImportError:
     from typing_extensions import Literal
 
-from lite_tools.tools.utils.logs import my_logger, get_using_line_info, logger
+from lite_tools.logs import my_logger, get_using_line_info, logger
 from lite_tools.exceptions.DictExceptions import (
     TemplateFormatError, NotJsonException, NotGoalItemException
 )

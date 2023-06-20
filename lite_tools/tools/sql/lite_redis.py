@@ -30,7 +30,7 @@ except ImportError:
 import yaml
 import redis as _redis
 
-from lite_tools.tools.utils.logs import logger
+from lite_tools.logs import logger
 from lite_tools.exceptions.CacheExceptions import FileNotFount
 
 

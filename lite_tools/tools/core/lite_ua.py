@@ -7,8 +7,8 @@ import json
 import random
 
 from lite_tools.version import VERSION
-from lite_tools.tools.utils.lite_dir import lite_tools_dir
-from lite_tools.tools.utils.u_ua_info import platform_data, browser_data
+from lite_tools.utils.lite_dir import lite_tools_dir
+from lite_tools.utils.u_ua_info import platform_data, browser_data
 
 
 __ALL__ = ["get_ua"]

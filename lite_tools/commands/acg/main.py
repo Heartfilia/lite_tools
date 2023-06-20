@@ -20,7 +20,7 @@
 """
 import time
 
-from lite_tools.tools.utils.logs import logger
+from lite_tools.logs import logger
 from lite_tools.tools.core.lite_match import match_case
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.sql.lib_mysql_string import SqlString

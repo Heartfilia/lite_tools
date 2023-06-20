@@ -4,8 +4,8 @@ from typing import Optional
 
 from usepy import useCleanHtml
 
-from lite_tools.tools.utils.u_code_range import u_range_list, U_range_list
-from lite_tools.tools.utils.u_sub_sup_string import SUB_SUP_WORDS_HASH
+from lite_tools.utils.u_code_range import u_range_list, U_range_list
+from lite_tools.utils.u_sub_sup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """

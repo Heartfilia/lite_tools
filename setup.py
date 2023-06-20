@@ -16,6 +16,7 @@ with open("README.md", "r", encoding='utf-8') as fd:
 
 base_requires = [
     'loguru',          # 基本的日志打印相关的调用
+    # "tls-client",      # 替换requests用的
     "requests",        # 请求模块，本来不想安装那么多东西的，现在谁没有一个requests啊
     "pydantic",        # 神器,不多说 一般你装其它的包这个也会被装，我这里只是避免提示
     'urllib3',         # 安装requests自动装的,主要是有个地方用到了它里面的解析模块,不写这里ide会提示
@@ -62,14 +63,15 @@ setup(
         'lite_tools.commands.trans',
         'lite_tools.commands.weather',
         'lite_tools.commands.whsecret',
+        'lite_tools.exceptions',
+        'lite_tools.logs',
         'lite_tools.tools',
         'lite_tools.tools.js',
         'lite_tools.tools.sql',
         'lite_tools.tools.core',
         'lite_tools.tools.time',
         # 'lite_tools.tools.http',   # 这个还在研发中
-        'lite_tools.tools.utils',
-        'lite_tools.exceptions'
+        'lite_tools.utils',
     ],
     license='MIT',
     install_requires=base_requires,

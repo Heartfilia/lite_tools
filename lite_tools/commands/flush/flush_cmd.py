@@ -4,7 +4,7 @@ from loguru import logger
 
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_string import color_string
-from lite_tools.tools.utils.lite_dir import lite_tools_dir
+from lite_tools.utils.lite_dir import lite_tools_dir
 
 
 def _print_flush_base():

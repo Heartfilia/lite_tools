@@ -19,7 +19,7 @@
           ┗━┻━┛   ┗━┻━┛
 """
 import sys
-from lite_tools.tools.utils.logs import logger
+from lite_tools.logs import logger
 
 try:
     import requests
@@ -29,7 +29,7 @@ except ImportError:
 
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.core.lite_try import try_catch
-from lite_tools.tools.utils.lite_table import print_head
+from lite_tools.utils.lite_table import print_head
 from lite_tools.tools.core.lite_parser import try_get
 from lite_tools.tools.core.lite_string import color_string
 
@@ -74,3 +74,7 @@ def parse_tiyu(data):
         base_string, title_dlt, dlt_date, dlt_blue, dlt_yellow, title_pls, pls_date, pls_purple,
         title_plw, plw_date, plw_purple, title_qxc, qxc_date, qxc_blue, qxc_yellow
     ])))
+
+
+if __name__ == "__main__":
+    get_tiyu()

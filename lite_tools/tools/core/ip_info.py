@@ -6,7 +6,8 @@ import telnetlib
 from typing import Tuple
 
 import requests
-from loguru import logger
+
+from lite_tools.logs import logger
 
 
 """

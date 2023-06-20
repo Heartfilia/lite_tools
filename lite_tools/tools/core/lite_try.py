@@ -5,8 +5,8 @@ from typing import Callable, TypeVar, List, Union, Sequence
 from functools import wraps, partial
 from asyncio import iscoroutinefunction
 
-from lite_tools.tools.utils.logs import my_logger as try_log
-from lite_tools.tools.utils.logs import logger, handle_exception
+from lite_tools.logs import my_logger as try_log
+from lite_tools.logs import logger, handle_exception
 
 __ALL__ = ["try_catch"]
 
