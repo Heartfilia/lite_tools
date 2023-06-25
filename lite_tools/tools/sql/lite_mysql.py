@@ -255,25 +255,30 @@ class MySql:
             raise IterNotNeedRun
 
     def select_iter(
-        self, sql: str, pk: Union[str, int], limit: int = Buffer.max_cache, mode: Literal['Iter', 'Last'] = 'Iter',
-            table_name: str = None, **kwargs
+        self, sql: str, pk: Union[str, int], buffer: int = Buffer.max_cache, mode: Literal['Iter', 'Last'] = 'Iter',
+            limit: int = None, table_name: str = None, **kwargs
     ) -> Iterator:
         """
         通过批量的迭代获取数据 有点问题 后面再优化: 目前只能支持一个表的操作，如果是多个表关联之类的 还有别名啥的 就不行了
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
         :param pk    : 主键，只需要告诉我主键的名字就好了
-        :param limit : 这里交给我来自动管理 默认我给了 1000, Buffer的大小 方便buffer使用
+        :param limit : 总共读取的数据量
+        :param buffer : 每个批次读取的数据 这里交给我来自动管理 默认我给了 1000, Buffer的大小 方便buffer使用
         :param mode  :
                 |_____模式: 默认 Iter: 迭代，从头到尾;
                 >可能有bug,我还没测试出来 Last:每次都从最开始位置开始,记得调整过滤条件保证从最开始拿到的是正常的, 这个模式只能结合我的Buffer使用,不支持自己添加 ORDER BY 和 GROUP BY
         :param table_name: 和全局二选一 为了迭代的时候用 要不然就是我自己提取的
         return: 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数w2  Q12
         """
+        total_count = 0
         origin_sql = sql.rstrip('; ')  # 剔除右边的符号
         if "limit" in origin_sql.lower():
             origin_sql = re.sub(r' limit \d+, *\d+| limit +\d+', '', origin_sql, re.I)  # 剔除原先句子中的
         first = True
         if mode == "Last":
+            if "buffer" not in dir():
+                logger.error("这个模式需要结合Buffer使用<from lite_tools import Buffer> 这个Buffer需要结合多线程使用<建议vthread>")
+                return
             if re.search("GROUP BY|ORDER BY", origin_sql, re.I):
                 logger.error("这个模式需要结合Buffer使用,并且语句中不能包含 ORDER BY 和 GROUP BY 语句")
                 return
@@ -282,9 +287,13 @@ class MySql:
                 if Buffer.size() > 0:
                     time.sleep(.5)
                     continue
-                _sql = f"{origin_sql} ORDER BY {pk} asc LIMIT {limit};"
+                _sql = f"{origin_sql} ORDER BY {pk} asc LIMIT {buffer};"
                 try:
-                    yield from self.select(_sql, _function_use=True, _limit_num=limit, _first=first)
+                    for row in self.select(_sql, _function_use=True, _limit_num=buffer, _first=first):
+                        yield row
+                        total_count += 1
+                        if limit and total_count >= limit:
+                            raise IterNotNeedRun
                 except IterNotNeedRun:
                     break
                 first = False
@@ -298,27 +307,35 @@ class MySql:
             if not table_name and not self.table_name:
                 table_name = self._get_select_table_name(sql, **kwargs)
             while True:
+                if first:
+                    _symbol = ">="
+                else:
+                    _symbol = ">"
                 if "WHERE" in origin_sql:
                     _by_rule = re.search(r"(ORDER BY|GROUP BY)", origin_sql, re.I)
                     _sql = re.sub(
                         r" WHERE\s+(.+?)(?:ORDER BY|GROUP BY|$)",
-                        rf" WHERE {pk} > (SELECT {pk} FROM {table_name or self.table_name} WHERE \1 ORDER BY {pk} LIMIT {cursor}, 1) AND \1{_by_rule.group(1) if _by_rule else ''}",
+                        rf" WHERE {pk} {_symbol} (SELECT {pk} FROM {table_name or self.table_name} WHERE \1 ORDER BY {pk} LIMIT {cursor}, 1) AND \1{_by_rule.group(1) if _by_rule else ''}",
                         origin_sql
                     )
                 else:
                     _sql = re.sub(
                         r" FROM\s+(\S+)",
-                        rf" FROM \1 WHERE {pk} > (SELECT {pk} FROM {table_name or self.table_name} ORDER BY {pk} LIMIT {cursor}, 1)",
+                        rf" FROM \1 WHERE {pk} {_symbol} (SELECT {pk} FROM {table_name or self.table_name} ORDER BY {pk} LIMIT {cursor}, 1)",
                         origin_sql
                     )
 
-                new_sql = f"{_sql} LIMIT {limit};"
+                new_sql = f"{_sql} LIMIT {buffer};"
                 try:
-                    yield from self.select(new_sql, _function_use=True, _limit_num=limit, _first=first,
-                                           table_name=table_name, **kwargs)
+                    for row in self.select(new_sql, _function_use=True, _limit_num=buffer, _first=first,
+                                           table_name=table_name, **kwargs):
+                        yield row
+                        total_count += 1
+                        if limit and total_count >= limit:
+                            raise IterNotNeedRun
                 except IterNotNeedRun:
                     break
-                cursor += limit
+                cursor += buffer
                 first = False
 
     def exists(self, where: Union[dict, str], table_name: str = None) -> bool:

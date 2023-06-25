@@ -151,7 +151,7 @@ class Buffer(metaclass=Singleton):
                                 cost_time = round(time.time() - cls.__task_time[name], 3)
                                 logger.debug(
                                     f"[{name}] 队列任务种子消耗完毕,worker结束.总耗时:{cost_time}s; "
-                                    f"总调用任务种子:{cls.count(name)}条; 效率:{round(cls.count(name)/cost_time, 3)} seed/s"
+                                    f"总调用任务种子:{cls.count(name)}条; 效率:{round(cls.count(name)/(cost_time or 1), 3)} seed/s"
                                 )
                                 cls._task_done = True
                     break

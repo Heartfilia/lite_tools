@@ -52,6 +52,7 @@ def _print_base():
     print_info += "Available commands:\n"
     print_info += "  -V,--version   输出版本信息\n"
     print_info += "  flush          清理本地关于lite-tools的记录(慎用)\n"
+    print_info += "  dict           部首查词,拼音的肯定你也知道怎么读,方便生僻字查询\n"
     print_info += "  fish           获取摸鱼人日历\n"
     print_info += "  fresh          更新一些lite-tools需要的资源 可以后跟具体参数\n"
     print_info += "  say            加解密:默认 <bear>兽说 <morse>摩斯\n"
