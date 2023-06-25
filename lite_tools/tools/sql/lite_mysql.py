@@ -206,35 +206,49 @@ class MySql:
         maybe_table = items[-1].split(".")[-1]    # 将可能是table的提取出来 然后切割一些
         return maybe_table.strip("`")   # 把特殊标志移除
 
-    def select(self, sql: str, count: bool = False, *, query_log: bool = True, fetch: Literal['all', 'one'] = 'all',
-               **kwargs) -> Iterator:
+    def select(self, sql: str, count: bool = False, *, query_log: bool = True,
+               fetch: Literal['all', 'many', 'one'] = 'all', **kwargs) -> Iterator:
         """
         一次性查询全部数据
         :param sql: 传入的查询sql语句
         :param count: 是否需要统计剩余的行数 如果传入count=True 那么第一个参数是行数,第二个参数是剩余行数
         :param query_log: 是否把query的查询日志打印出来,默认就是打印出来
-        :param fetch: 获取数据模式 默认 fetchall 设置 one 就是 fetchone
+        :param fetch: 获取数据模式 默认 fetchall 设置 one 就是 fetchone 设置many的时候 需要设置 buffer >>> 直接buffer=数字 否则默认1000
+                    ------> 设置 many 的时候有点类似批量读取 每次读取 buffer 的量 这里 count 无效 将不再打印日志
         :return:
         """
         start_time = time.time()
         conn = self.connection()
+        table_name = self._get_select_table_name(sql, **kwargs)
         with conn.cursor() as cursor:  # 这里是有结果返回的
             cursor.execute(sql)
-        conn.commit()
         if fetch == 'one':
             item = cursor.fetchone()
             items = [item]
+        elif fetch == "many":
+            if not isinstance(kwargs.get('buffer', 1000), int):
+                logger.warning("需要设置的 buffer 为数字....")
+                return
+            items = cursor.fetchmany(kwargs.get("buffer", 1000))
+            self.count_conf.set_count(table_name, "total", len(items))
+            for row in items:
+                yield row[0] if len(row) == 1 and isinstance(row, tuple) else row
+            while items:
+                items = cursor.fetchmany(kwargs.get("buffer", 1000))
+                self.count_conf.set_count(table_name, "total", len(items))
+                for row in items:
+                    yield row[0] if len(row) == 1 and isinstance(row, tuple) else row
+            return
         else:
             items = cursor.fetchall()
         conn.close()
         end_time = time.time()
         all_num = len(items)
-        table_name = self._get_select_table_name(sql, **kwargs)
         if query_log is True:
             sql_log(
-                f"{table_name} - SELECT[{fetch}] 耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]", 
-                sql, 
-                "success", 
+                f"{table_name} - SELECT[{fetch}] 耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]",
+                sql,
+                "success",
                 log=self.log
             )
         if all_num == 0:  # 如果这次结果是 0 那就是没有数据了
@@ -255,15 +269,15 @@ class MySql:
             raise IterNotNeedRun
 
     def select_iter(
-        self, sql: str, pk: Union[str, int], buffer: int = Buffer.max_cache, mode: Literal['Iter', 'Last'] = 'Iter',
-            limit: int = None, table_name: str = None, **kwargs
+        self, sql: str, pk: Union[str, int], limit: int = None, mode: Literal['Iter', 'Last'] = 'Iter',
+        table_name: str = None, **kwargs
     ) -> Iterator:
         """
         通过批量的迭代获取数据 有点问题 后面再优化: 目前只能支持一个表的操作，如果是多个表关联之类的 还有别名啥的 就不行了
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
         :param pk    : 主键，只需要告诉我主键的名字就好了
         :param limit : 总共读取的数据量
-        :param buffer : 每个批次读取的数据 这里交给我来自动管理 默认我给了 1000, Buffer的大小 方便buffer使用
+        :buffer      : 每个批次读取的数据 默认我给了 1000, Buffer的大小 方便buffer使用 如需自己设置 直接 buffer = xxx
         :param mode  :
                 |_____模式: 默认 Iter: 迭代，从头到尾;
                 >可能有bug,我还没测试出来 Last:每次都从最开始位置开始,记得调整过滤条件保证从最开始拿到的是正常的, 这个模式只能结合我的Buffer使用,不支持自己添加 ORDER BY 和 GROUP BY
@@ -275,6 +289,10 @@ class MySql:
         if "limit" in origin_sql.lower():
             origin_sql = re.sub(r' limit \d+, *\d+| limit +\d+', '', origin_sql, re.I)  # 剔除原先句子中的
         first = True
+        buffer = kwargs.get("buffer", Buffer.max_cache or 1000)
+        if not isinstance(buffer, int):
+            logger.error("buffer 需要设置为数字,不设置的话默认 1000")
+            return
         if mode == "Last":
             if "buffer" not in dir():
                 logger.error("这个模式需要结合Buffer使用<from lite_tools import Buffer> 这个Buffer需要结合多线程使用<建议vthread>")
