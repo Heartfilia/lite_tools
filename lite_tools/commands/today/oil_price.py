@@ -57,15 +57,23 @@ def get_html_info(mode: str = "oil"):
 def parse_oil_data(html_obj):
     new_msg = "".join(html_obj.xpath('//div[@id="left"]/div[1]//text()')[:2])
     print(color_string(f"【今日油价】：{new_msg}"))
-    tb_base = PrettyTable(["地区", "92#", "95#", "98#", "0#"])
+    tb_base = PrettyTable(["地区 ", "92# ", "95# ", "98# ", "0# ", " 地区", " 92#", " 95#", " 98#", " 0#"])
     city_nums = html_obj.xpath('//ul[@class="ylist"]/li[position() > 5]')
+    temp_save = []
     for num in range(0, len(city_nums), 5):
         name = "".join(city_nums[num].xpath('./a/text()'))
         _92 = "".join(city_nums[num+1].xpath('./text()'))
         _95 = "".join(city_nums[num+2].xpath('./text()'))
         _98 = "".join(city_nums[num+3].xpath('./text()'))
         _0 = "".join(city_nums[num+4].xpath('./text()'))
-        tb_base.add_row([name, _92, _95, _98, _0])
+        if len(temp_save) < 10:
+            temp_save.extend([name, _92, _95, _98, _0])
+        if len(temp_save) == 10:
+            tb_base.add_row(temp_save)
+            temp_save = []
+    if len(temp_save) == 5:
+        temp_save.extend(["", "", "", "", ""])
+        tb_base.add_row(temp_save)
     print(tb_base)
 
 
