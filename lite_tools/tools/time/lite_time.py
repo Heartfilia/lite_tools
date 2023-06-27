@@ -10,11 +10,10 @@ try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
-# from inspect import currentframe
 
 from lite_tools.logs import logger
 from lite_tools.tools.core.lite_match import match_case
-from lite_tools.utils.u_re_time import DATETIME_PATTERN
+from lite_tools.utils.u_re_time import NORMAL_PATTERN
 from lite_tools.exceptions.TimeExceptions import TimeFormatException, ErrorTimeRange
 
 """
@@ -50,7 +49,7 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
     params kwargs: 兼容不重要参数
     """
     if isinstance(fmt, bool) and isinstance(goal, str):
-        fmt_str = _guess_fmt(goal)
+        goal, fmt_str = _guess_fmt(goal)
         if not fmt_str:
             fmt_str = "%Y-%m-%d %H:%M:%S"
     elif not isinstance(goal, str) and fmt is True:
@@ -183,31 +182,14 @@ def _guess_fmt(string: str):
     (会自动匹配时间 目前只匹配基本的模板)
     """
     if not string:
-        return ""
+        return string, ""
     string = string.replace('T', ' ')  # 把带了时区标志的时间变成原样
-    string = re.sub(r"\.\d{3}Z", "", string)  # 把带了时区标志的时间变成原样
-    if re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", string):
-        return "%Y-%m-%d %H:%M:%S"  # 匹配最常用的模板
+    string = re.sub(r"\.\d{3}Z|Z$", "", string)  # 把带了时区标志的时间 和 秒后面 还有为微秒之类的 变成原样
 
-    if re.search(r"^\d{4}$", string): return "%Y"
-    elif re.search(r"^\d{4}-\d{2}$", string): return "%Y-%m"
-    elif re.search(r"^\d{4}\.\d{2}$", string): return "%Y.%m"
-    elif re.search(r"^\d{4}年\d{2}月$", string): return "%Y年%m月"
-    elif re.search(r"^\d{4}-\d{2}-\d{2}$", string): return "%Y-%m-%d"
-    elif re.search(r"^\d{4}\.\d{2}\.\d{2}$", string): return "%Y.%m.%d"
-    elif re.search(r"^\d{4}/\d{2}/\d{2}$", string): return "%Y/%m/%d"
-    elif re.search(r"^\d{4}年\d{2}月\d{2}日$", string): return "%Y年%m月%d日"
-    elif re.search(r"^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}$", string): return "%Y年%m月%d日 %H:%M"
-    elif re.search(r"^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}:\d{2}$", string): return "%Y年%m月%d日 %H:%M:%S"
-    elif re.search(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}$", string): return "%Y/%m/%d %H:%M:%S"
-    elif re.search(r"^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2}$", string): return "%Y.%m.%d %H:%M:%S"
-    elif re.search(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}$", string): return "%Y/%m/%d %H:%M"
-    elif re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$", string): return "%Y-%m-%d %H:%M"
-    elif re.search(r"^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$", string): return "%Y.%m.%d %H:%M"
-    # from dateutil.parser import parse
-    # from dateparser import parse
-
-    return ""
+    for rule, sure_fmt in NORMAL_PATTERN:
+        if re.search(rule, string):
+            return string, sure_fmt
+    return string, ""
 
 
 @match_case

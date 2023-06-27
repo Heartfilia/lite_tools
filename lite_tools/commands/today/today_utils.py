@@ -33,7 +33,7 @@ def today_cache_dir(file_name: Literal['oil', 'almanac', 'history']) -> str:
         os.makedirs(today_root)
 
     cache_dir = os.path.join(today_root, file_name)
-    if not cache_dir:
+    if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
     return cache_dir

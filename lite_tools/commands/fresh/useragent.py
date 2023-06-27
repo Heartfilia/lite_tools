@@ -8,14 +8,11 @@ from lite_tools.version import VERSION
 from lite_tools.tools.core.lib_hashlib import get_md5
 from lite_tools.tools.core.lite_parser import try_get
 from lite_tools.tools.core.lite_try import try_catch
-from lite_tools.utils.lite_dir import lite_tools_dir
+from lite_tools.utils.json_download import get_goal_dir
 
 
 def fresh_useragent():
-    ua_root = os.path.join(lite_tools_dir(), "browser")
-    if not os.path.exists(ua_root):
-        os.makedirs(ua_root)
-    ua_path = os.path.join(ua_root, "ua_version.json")
+    ua_path = get_goal_dir("browser", "ua_version.json", "http://static.litetools.top/source/json/useragent.json")
     if os.path.exists(ua_path):
         with open(ua_path, "r", encoding='utf-8') as fp:
             file_hash = get_md5(fp.read())
@@ -33,10 +30,12 @@ def fresh_useragent():
         logger.warning("获取api文件失败，请重试.")
 
 
-@try_catch(log=False, retry=3)
+@try_catch(log=False, retry=1)
 def get_info():
+    # http://static.litetools.top/source/json/useragent.json
+    # https://cdn.jsdelivr.net/npm/litetools/tools/useragent.json
     resp = requests.get(
-        "https://cdn.jsdelivr.net/npm/litetools/tools/useragent.json",
+        "http://static.litetools.top/source/json/useragent.json",
         headers={"user-agent": f"python-lite-tools/{VERSION} Based On Script Engine"},
         timeout=5
     )

@@ -31,7 +31,7 @@ from lite_tools.utils.base_cmd import circle_cmd, input_option
 
 
 all_tabs = {
-    "1": "-------",
+    "1": "热门新闻",
     "2": "微博热榜",
     "3": "国内新闻",
     "4": "国际新闻",

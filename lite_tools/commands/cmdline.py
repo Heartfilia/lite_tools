@@ -97,6 +97,12 @@ def flush_local(_, *args):
     flush_cmdline(args[0])
 
 
+@chose_option.register("dict")
+def flush_local(_, *args):
+    from lite_tools.commands.dictionary.dict_cmd import dict_cmdline
+    dict_cmdline()
+
+
 @chose_option.register("fresh")
 def fresh_something(_, *args):
     # 联网更新一些资源 这里是手动操作

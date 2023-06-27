@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 import os
+import sys
 """
 这里只先实现基础的打印功能  后面再添加
 """
@@ -41,6 +42,13 @@ def get_terminal_long() -> int:
 
 def char_long(char) -> int:
     return 2 if ord(char) > 7000 else 1   # 随便界定了一个范围而已
+
+
+def clear_screen():
+    if sys.platform in ["win32", "win64"]:
+        _ = os.system("cls")
+    else:
+        _ = os.system("clear")
 
 
 if __name__ == "__main__":

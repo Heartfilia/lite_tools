@@ -501,11 +501,12 @@ class MySql:
         return True
 
     def _print_rate(self, mode: str, end_time, start_time: float, result: int, table: str, flag: str = "success"):
+        """因为日志太长了 这里缩减了一下长度"""
         all_line = self.count_conf.get_change(table, mode) + self.count_conf.get_not_change(table, mode)
         cost_time = time.time() - self.start_time
         if mode == 'update':
             cost_row = self.count_conf.get_count(table, 'total') - self.count_conf.get_count(table, 'run')
-            other_log = f"【Surplus/Tasks: {cost_row}/{self.count_conf.get_count(table, 'total')} T:{cost_time:.3f}s】 "
+            other_log = f"【S/Ts: {cost_row}/{self.count_conf.get_count(table, 'total')} T:{cost_time:.3f}s】 "
             rate = round(self.count_conf.get_count(table, 'run') / cost_time, 3)
             rate_str = f" TR={rate} tasks/s;"    # 剩余的行效率 TaskRate
         elif mode == "insert":
@@ -515,9 +516,9 @@ class MySql:
         else:
             other_log = " "
             rate_str = ""
-        other_log += f"Affect={self.count_conf.get_change(table, mode)}; NotAffect={self.count_conf.get_not_change(table, mode)};{rate_str}"
+        other_log += f"OK={self.count_conf.get_change(table, mode)}; BAD={self.count_conf.get_not_change(table, mode)};{rate_str}"
         sql_log(
-            f"[{table} -> {mode}]{other_log} lineCost:{end_time - start_time:.3f}s AffectLine={result}",
+            f"[{table}:{mode}]{other_log} lineCost:{end_time - start_time:.3f}s Success={result}",
             "", 
             flag, 
             True, 

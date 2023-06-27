@@ -1,4 +1,5 @@
 from lite_tools.commands.fresh.useragent import fresh_useragent
+from lite_tools.commands.fresh.dictionary import fresh_dictionary
 
 
 def _print_fresh_base():
@@ -10,6 +11,7 @@ def _print_fresh_base():
     base_info += "optional arguments:\n  "
     base_info += "-h, --help      展示帮助并退出，目前只有如下操作\n  "
     base_info += "ua, useragent   更新ua库资源,属于联网更新我在维护ua库\n  "
+    base_info += "dict            更新dict库的资源,这里是手动更新,方便lite-tools dict使用\n  "
     print(base_info)
 
 
@@ -18,3 +20,5 @@ def fresh_cmdline(args: tuple):
         _print_fresh_base()
     elif isinstance(args[1], str) and args[1].lower() in ["ua", "useragent"]:
         fresh_useragent()
+    elif isinstance(args[1], str) and args[1].lower() in ["dict"]:
+        fresh_dictionary()

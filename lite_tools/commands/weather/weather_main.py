@@ -18,20 +18,21 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+import os
 import re
+import json
 from urllib.parse import quote
 from prettytable import PrettyTable
 
 import requests
 from loguru import logger
-# from lite_tools.utils.tls import requests
+
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.time.lite_time import get_time
 from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.utils.json_download import get_goal_dir
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.core.lite_parser import try_key, JsJson, try_get
-
-from lite_tools.commands.weather.citys import city_data
 
 print_template = """<yellow>【今日天气】</yellow>[更新时间 {fresh_time}]
 <cyan>{city}</cyan>当前: <red>{temp} ℃</red> {weather} {date}
@@ -47,7 +48,7 @@ def get_weather(city: str = None, geo_id: str = None):
     city_id = None
     if city is not None:
         pure_city = clean_city_name(city)
-        geo_id_list = try_key(city_data, "AREAID", options={"filter": {"equal": {"NAMECN": pure_city}}})
+        geo_id_list = try_key(get_city(), "AREAID", options={"filter": {"equal": {"NAMECN": pure_city}}})
         city_id = geo_id_list[0] if geo_id_list else None
         if not city_id:
             logger.warning("请输入国内有的准确的地点，只需要写入最小单位的数据即可[仅支持 - 市、区、县]")
@@ -62,6 +63,16 @@ def get_weather(city: str = None, geo_id: str = None):
     information = request_weather(city_id, city)
     if information:
         parse_weather_info(information)
+
+
+def get_city():
+    base_root = get_goal_dir("weather", "cities.json", "http://static.litetools.top/source/json/cities.json")
+    if not os.path.exists(base_root):
+        logger.warning("字典源数据获取异常...")
+        return
+    with open(base_root, "r", encoding='utf-8') as fp:
+        data = json.load(fp)
+    return data
 
 
 def parse_head_info(data):
@@ -87,6 +98,7 @@ def parse_recent_days(data):
     """近日情况"""
     heads = []
     temps = []
+    weather_info = []
     winds = []
     wind_level = []
     for each in data.get('f'):
@@ -94,10 +106,12 @@ def parse_recent_days(data):
         temp_high = each.get('fc')
         temp_low = each.get('fd')
         temps.append(f"{temp_low}/{temp_high} ℃")
+        weather_info.append(weather_detail(each.get("fa")))
         winds.append(each.get('fe'))
         wind_level.append(each.get('fg'))
     tb_recent = PrettyTable(heads)
     tb_recent.add_row(temps)
+    tb_recent.add_row(weather_info)
     tb_recent.add_row(winds)
     tb_recent.add_row(wind_level)
     return tb_recent
@@ -135,12 +149,24 @@ def clean_city_name(city):
         return city
 
 
+def weather_detail(code):
+    weather_code = {
+        "10": "暴雨", "11": "大暴雨", "12": "特大暴雨", "13": "阵雪", "14": "小雪", "15": "中雪", "16": "大雪", "17": "暴雪",
+        "18": "雾", "19": "冻雨", "20": "沙尘暴", "21": "小到中雨", "22": "中到大雨", "23": "大到暴雨", "24": "暴雨到大暴雨",
+        "25": "大暴雨到特大暴雨", "26": "小到中雪", "27": "中到大雪", "28": "大到暴雪", "29": "浮尘", "30": "扬沙",
+        "31": "强沙尘暴", "32": "浓雾", "49": "强浓雾", "53": "霾", "54": "中度霾", "55": "重度霾", "56": "严重霾",
+        "57": "大雾", "58": "特强浓雾", "99": "无", "301": "雨", "302": "雪", "00": "晴", "01": "多云", "02": "阴",
+        "03": "阵雨", "04": "雷阵雨", "05": "雷阵雨伴有冰雹", "06": "雨夹雪", "07": "小雨", "08": "中雨", "09": "大雨"
+    }
+    return weather_code.get(code) or ""
+
+
 def request_weather(geo_id, city=None):
     """
     这里负责请求城市信息
     """
     if city is None:
-        city = try_key(city_data, 'NAMECN', options={"filter": {"equal": {"AREAID": str(geo_id)}}})
+        city = try_key(get_city(), 'NAMECN', options={"filter": {"equal": {"AREAID": str(geo_id)}}})
         if not city:
             logger.warning(f"没有找到对应的城市...")
             return
@@ -173,3 +199,6 @@ def geo_weather_id():
     if not geo_id:
         raise KeyError
     return geo_id
+
+
+
