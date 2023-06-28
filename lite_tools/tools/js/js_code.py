@@ -26,18 +26,38 @@ from lite_tools.tools.core.lib_base64 import get_b64e as btoa
 from lite_tools.tools.core.lib_base64 import get_b64d as atob
 
 
-_base_num_str = '0123456789abcdefghijklmnopqrstuvwxyz'
-
-
-def to_string_36(number: int) -> str:
-    """将数字转为36进制字符串"""
+def to_string_36(number: Union[float, int]) -> str:
+    """
+    将数字转为36进制字符串  TODO(浮点数处理还没有实现)
+    """
     if number == 0 or not isinstance(number, int):
         return '0'
     base36 = []
     while number != 0:
         number, i = divmod(number, 36)
-        base36.append(_base_num_str[i])
+        base36.append('0123456789abcdefghijklmnopqrstuvwxyz'[i])
     return ''.join(reversed(base36))
+
+
+def to_string_16(number: Union[float, int]) -> str:
+    if number < 0:
+        flag = "-"
+        number = abs(number)
+    else:
+        flag = ""
+    s = [flag + str(int(number)) + '.']
+    number -= int(number)
+
+    for _ in range(16):
+        y = int(number * 16)
+        s.append(f"{y:x}")
+        number = number * 16 - y
+
+    temp_ok = ''.join(s).rstrip('0')
+    if "." in temp_ok:
+        base, other = temp_ok.split('.')
+        temp_ok = f"{int(base):x}.{other}"
+    return temp_ok.strip(".")
 
 
 """
@@ -75,7 +95,7 @@ def left_shift(num: int,  step: int):
 
 def dec_to_bin(num: Union[float, int]) -> str:
     """
-    十进制浮点数转二进制
+    十进制浮点数转二进制 toString(2)
     """
     # 判断是否为浮点数
     if num == int(num):
@@ -84,6 +104,11 @@ def dec_to_bin(num: Union[float, int]) -> str:
         return integer
     else:
         # 若为浮点数
+        if float(num) < 0:
+            num = abs(num)
+            flag = "-"
+        else:
+            flag = ""
         # 取整数部分
         integer_part = int(num)
         # 取小数部分
@@ -103,10 +128,13 @@ def dec_to_bin(num: Union[float, int]) -> str:
             else:    # 当乘以2后正好为1，则进制变换停止
                 break
         float_com = tmp_float
-        return integer_com + '.' + ''.join(float_com)
+        return flag + integer_com + '.' + ''.join(float_com)
+
+
+to_string_2 = dec_to_bin
 
 
 if __name__ == '__main__':
-    xx = 4
-    result = xor(xx, 2)
+    xx = 35.51
+    result = to_string_36(xx)
     print(f'{xx} -->：{result}')

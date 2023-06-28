@@ -61,7 +61,7 @@ def circle_pian_zi(data: dict) -> Optional[dict]:
 def wrap_dict(data: dict):
     check_ind = {}
     temp_save = []
-    zi = PrettyTable(["序号 ", "偏旁部首 ", " 序号", " 偏旁部首"])
+    zi = PrettyTable(["序号", "偏旁部首", " 序号", " 偏旁部首"])
     for ind, key in enumerate(data.keys()):
         check_ind[str(ind)] = key
         if len(temp_save) < 4:
@@ -97,7 +97,7 @@ def circle_zi_detail(data: dict):
 
     split_num = need_split(data.keys())
     if split_num == 2:
-        dt = PrettyTable(["字 ", "拼音 ", "五笔 ", " 字", " 拼音", " 五笔"])
+        dt = PrettyTable(["字", "拼音", "五笔", " 字", " 拼音", " 五笔"])
         temp_save = []
         for word, info in data.items():
             if len(temp_save) < 6:

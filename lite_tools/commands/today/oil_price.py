@@ -57,7 +57,7 @@ def get_html_info(mode: str = "oil"):
 def parse_oil_data(html_obj):
     new_msg = "".join(html_obj.xpath('//div[@id="left"]/div[1]//text()')[:2])
     print(color_string(f"【今日油价】：{new_msg}"))
-    tb_base = PrettyTable(["地区 ", "92# ", "95# ", "98# ", "0# ", " 地区", " 92#", " 95#", " 98#", " 0#"])
+    tb_base = PrettyTable(["地区", "92#", "95#", "98#", "0#", " 地区", " 92#", " 95#", " 98#", " 0#"])
     city_nums = html_obj.xpath('//ul[@class="ylist"]/li[position() > 5]')
     temp_save = []
     for num in range(0, len(city_nums), 5):

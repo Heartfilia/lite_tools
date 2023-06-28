@@ -79,7 +79,7 @@ def get_versions() -> dict:
 
     ua_path = os.path.join(lite_tools_dir(), "browser", "ua_version.json")
     if not os.path.exists(ua_path):
-        from lite_tools.tools.utils.u_ua_info import versions
+        from lite_tools.utils.u_ua_info import versions
         __UA_CACHE = versions
     else:
         try:
@@ -87,7 +87,7 @@ def get_versions() -> dict:
                 __UA_CACHE = json.load(fp)
         except Exception as err:
             _ = err
-            from lite_tools.tools.utils.u_ua_info import versions
+            from lite_tools.utils.u_ua_info import versions
             __UA_CACHE = versions
 
     return __UA_CACHE
