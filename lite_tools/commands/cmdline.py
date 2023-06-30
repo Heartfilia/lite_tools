@@ -18,14 +18,17 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+import os.path
 import re
 import sys
 
 import requests
 from lite_tools.version import VERSION
 from lite_tools.logs import logger
+from lite_tools.utils.lite_dir import lite_tools_dir
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.core.lite_match import match_case
+from lite_tools.tools.time.lite_time import get_time
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.commands.today.fisher_date import print_date
 
@@ -75,13 +78,28 @@ Run>>> {color_string('pip install --upgrade lite-tools', 'yellow')} to update!
 """)
 
 
+def _get_last_check_version(fun):
+    def wrap():
+        if "beta" in VERSION:
+            # 如果版本里面有version 那么就是开发中 所以就不提示更新了 也不用请求浪费网络
+            return
+        version_path = os.path.join(lite_tools_dir(), ".version")
+        if not os.path.exists(version_path):
+            return fun()   # 不存在 需要重新获取的
+        with open(version_path, "r", encoding='utf-8') as fp:
+            version_log = fp.read()  # "时间|版本"    至少缓存30分钟 30分钟内有变动不提示
+        t, v = version_log.split("|")
+        if get_time() - int(t) >= 1800:  # 如果现在的时间比缓存的时间相差超过30分钟 将重新请求缓存
+            return fun()
+    return wrap
+
+
 @try_catch(log=False)
+@_get_last_check_version
 def check_new_version():
-    if "beta" in VERSION:
-        # 如果版本里面有version 那么就是开发中 所以就不提示更新了 也不用请求浪费网络
-        return
     def sure_version(version: str):
         return tuple(map(lambda x: int(x), version.split(".")))
+
     resp = requests.get(
         'https://pypi.org/simple/lite-tools/',
         headers={"user-agent": "lite-tools Spider Engine"},
@@ -92,6 +110,8 @@ def check_new_version():
     now_stable_version = re.sub(r"-beta\d+", "", VERSION)     # 现在的稳定版
     if sure_version(now_stable_version) < sure_version(online_last_stable_version):
         _print_new_version_tip(new_version=online_last_stable_version)
+    with open(os.path.join(lite_tools_dir(), ".version"), "w", encoding='utf-8') as fp:
+        fp.write(f"{get_time()}|{online_last_stable_version}")  # "时间|版本"    至少缓存30分钟 30分钟内有变动不提示
 
 
 @match_case
