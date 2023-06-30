@@ -69,7 +69,7 @@ def _print_base():
 
 def _print_new_version_tip(new_version: str):
     # 模板直接摘取自博哥的哈哈哈
-    print(f"""──────────────────────────────────────────────────────
+    print(f"""──────────────────────────────────────────────────────────────
 New version available {color_string(VERSION, 'red')} → {color_string(new_version, 'green')}
 Run>>> {color_string('pip install --upgrade lite-tools', 'yellow')} to update!
 """)
