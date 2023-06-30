@@ -80,7 +80,6 @@ def check_new_version():
     if "beta" in VERSION:
         # 如果版本里面有version 那么就是开发中 所以就不提示更新了 也不用请求浪费网络
         return
-    # 可以搞一个玩玩
     def sure_version(version: str):
         return tuple(map(lambda x: int(x), version.split(".")))
     resp = requests.get(
@@ -238,5 +237,5 @@ def execute():
 
 
 if __name__ == "__main__":
-    _print_base()
-    # flush_local(1)
+    # _print_base()
+    check_new_version()
