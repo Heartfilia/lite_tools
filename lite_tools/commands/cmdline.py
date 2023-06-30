@@ -21,11 +21,12 @@
 import re
 import sys
 
+import requests
 from lite_tools.version import VERSION
 from lite_tools.logs import logger
-from lite_tools.utils.lite_dir import lite_tools_dir
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.tools.core.lite_match import match_case
+from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.commands.today.fisher_date import print_date
 
 
@@ -64,6 +65,34 @@ def _print_base():
     print_info += "  trans          文件转换相关内容[目前测试版有图片转pdf]\n\n"
     print_info += "Use \"lite-tools <command> -h\" to see more info about a command"
     print(print_info)
+
+
+def _print_new_version_tip(new_version: str):
+    # 模板直接摘取自博哥的哈哈哈
+    print(f"""──────────────────────────────────────────────────────
+New version available {color_string(VERSION, 'red')} → {color_string(new_version, 'green')}
+Run>>> {color_string('pip install --upgrade lite-tools', 'yellow')} to update!
+""")
+
+
+@try_catch(log=False)
+def check_new_version():
+    if "beta" in VERSION:
+        # 如果版本里面有version 那么就是开发中 所以就不提示更新了 也不用请求浪费网络
+        return
+    # 可以搞一个玩玩
+    def sure_version(version: str):
+        return tuple(map(lambda x: int(x), version.split(".")))
+    resp = requests.get(
+        'https://pypi.org/simple/lite-tools/',
+        headers={"user-agent": "lite-tools Spider Engine"},
+        timeout=3
+    )
+    stable_version = re.findall('>lite_tools-([^b]+)-py3-none-any.whl</a>', resp.text)
+    online_last_stable_version = stable_version[-1]           # 线上最后一个稳定版
+    now_stable_version = re.sub(r"-beta\d+", "", VERSION)     # 现在的稳定版
+    if sure_version(now_stable_version) < sure_version(online_last_stable_version):
+        _print_new_version_tip(new_version=online_last_stable_version)
 
 
 @match_case
@@ -200,10 +229,12 @@ def execute():
     args = sys.argv
     if len(args) < 2:
         _print_base()
+        check_new_version()
         return
 
     command = args.pop(1)
     chose_option(command, args)
+    check_new_version()
 
 
 if __name__ == "__main__":
