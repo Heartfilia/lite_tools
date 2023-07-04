@@ -87,26 +87,32 @@ def _get_last_check_version(fun):
         if not os.path.exists(version_path):
             return fun()   # 不存在 需要重新获取的
         with open(version_path, "r", encoding='utf-8') as fp:
-            version_log = fp.read()  # "时间|版本"    至少缓存30分钟 30分钟内有变动不提示
+            version_log = fp.read()  # "时间|版本"    至少缓存10分钟 10分钟内有变动不提示
         t, v = version_log.split("|")
-        if get_time() - int(t) >= 1800:  # 如果现在的时间比缓存的时间相差超过30分钟 将重新请求缓存
-            return fun()
+        if get_time() - int(t) >= 600:  # 如果现在的时间比缓存的时间相差超过10分钟 将重新请求缓存
+            return v
     return wrap
 
 
 @try_catch(log=False)
 @_get_last_check_version
-def check_new_version():
-    def sure_version(version: str):
-        return tuple(map(lambda x: int(x), version.split(".")))
-
+def _get_version():
     resp = requests.get(
         'https://pypi.org/simple/lite-tools/',
         headers={"user-agent": "lite-tools Spider Engine"},
         timeout=3
     )
     stable_version = re.findall('>lite_tools-([^b]+)-py3-none-any.whl</a>', resp.text)
-    online_last_stable_version = stable_version[-1]           # 线上最后一个稳定版
+    online_last_stable_version = stable_version[-1]  # 线上最后一个稳定版
+    return online_last_stable_version
+
+
+def check_new_version():
+    def sure_version(version: str):
+        return tuple(map(lambda x: int(x), version.split(".")))
+    online_last_stable_version = _get_version()
+    if online_last_stable_version is None:
+        return
     now_stable_version = re.sub(r"-beta\d+", "", VERSION)     # 现在的稳定版
     if sure_version(now_stable_version) < sure_version(online_last_stable_version):
         _print_new_version_tip(new_version=online_last_stable_version)
