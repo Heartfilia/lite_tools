@@ -183,10 +183,16 @@ class SqlString(object):
             raise NotSupportType
         return self.__clear_string(base_update)
 
-    def update_batch(self, items: Mapping[str, list], where: Mapping[str, list], table_name: str = None):
+    def update_batch(self, items: Union[Mapping[str, list], List[dict]], where: Union[Mapping[str, list], List[dict]],
+                     table_name: str = None):
         """
-        批量更新操作
+        批量更新操作 支持两种不同格式混用 但是位置顺序得对应
         """
+        if items and isinstance(items, list) and isinstance(items[0], dict):
+            items = self._handle_items_type(items)
+        if where and isinstance(where, list) and isinstance(where[0], dict):
+            where = self._handle_items_type(where)
+
         self.check_table_name(table_name)
         set_field, where_field, value_field = self._handle_update_batch(items, where)
         return f"UPDATE {table_name or self.table_name} SET {set_field} WHERE {where_field}", value_field
@@ -324,16 +330,19 @@ class SqlString(object):
     @staticmethod
     def _handle_items_type(items: List[dict]) -> Dict[str, list]:
         base_dict = {}
+        order_key = []  # 记录第一次条件的键 后续的条件都要用这个顺序 避免顺序异常对应不上
         first = True   # 第一次需要确定所有的键 后续要是对应不上或者缺少键则抛出异常
         for item in items:
             if first:
                 for key, value in item.items():
                     base_dict[key] = [value]
+                    order_key.append(key)
                 first = False
             else:
                 if len(base_dict) != len(item):
                     raise LengthError("字段长度及所占用的字符名得一致")
-                for key in base_dict.keys():
+                # for key in base_dict.keys():
+                for key in order_key:
                     base_dict[key].append(item[key])
         return base_dict
 

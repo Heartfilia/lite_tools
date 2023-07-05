@@ -24,7 +24,7 @@ get_using_line_info  这个也得调整
 
 
 def try_get(
-        renderer,
+        renderer: Union[dict, str],
         getters: Optional[str] = None, default: Any = None, expected_type: Any = None,
         log: bool = False, json: bool = False, options: dict = None
 ) -> Any:
@@ -120,9 +120,6 @@ def __main_try_get(renderer, getter: Any, default=None, expected_type=None, log=
             line, fl = get_using_line_info()
             my_logger(fl, "try_get", line, e)
     return default
-
-
-retry_bad_key = "try重试１ダ-故意(yeah)传了一个特殊的不一定重复的值来做一些额外的处理-get获取２メ_fail失败３よ"
 
 
 # ==============================================================================================================

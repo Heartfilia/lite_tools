@@ -117,7 +117,7 @@ def check_new_version():
     if sure_version(now_stable_version) < sure_version(online_last_stable_version):
         _print_new_version_tip(new_version=online_last_stable_version)
     with open(os.path.join(lite_tools_dir(), ".version"), "w", encoding='utf-8') as fp:
-        fp.write(f"{get_time()}|{online_last_stable_version}")  # "时间|版本"    至少缓存30分钟 30分钟内有变动不提示
+        fp.write(f"{get_time()}|{online_last_stable_version}")  # "时间|版本"    至少缓存10分钟 10分钟内有变动不提示
 
 
 @match_case

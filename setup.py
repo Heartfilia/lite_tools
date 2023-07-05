@@ -54,7 +54,7 @@ setup(
     packages=[
         'lite_tools',
         'lite_tools.commands',
-        'lite_tools.commands.acg',
+        # 'lite_tools.commands.acg',      # 没弄好 不是太想弄了 就不一起打包进去了
         # 'lite_tools.commands.balls',    # 还没有调整好 先不放出来
         'lite_tools.commands.dictionary',
         'lite_tools.commands.flush',

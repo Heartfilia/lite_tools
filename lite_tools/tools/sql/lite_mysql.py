@@ -273,12 +273,12 @@ class MySql:
         table_name: str = None, **kwargs
     ) -> Iterator:
         """
-        #NOTION(全库读取可以用这个，如果加了条件可能会导致每次只能读取一半的量 后面再优化)
+        #TODO(全库读取可以用这个 最多丢失一个任务 这个bug还没修复，如果加了条件可能会导致每次只能读取一半的量 后面再优化)
         通过批量的迭代获取数据 有点问题 后面再优化: 目前只能支持一个表的操作，如果是多个表关联之类的 还有别名啥的 就不行了
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
         :param pk    : 主键，只需要告诉我主键的名字就好了
         :param limit : 总共读取的数据量
-        :buffer      : 每个批次读取的数据 默认我给了 1000, Buffer的大小 方便buffer使用 如需自己设置 直接 buffer = xxx
+        :buffer (int): 每个批次读取的数据 默认我给了 1000, Buffer的大小 方便buffer使用 如需自己设置 直接 buffer = xxx
         :param mode  :
                 |_____模式: 默认 Iter: 迭代，从头到尾;
                 >可能有bug,我还没测试出来 Last:每次都从最开始位置开始,记得调整过滤条件保证从最开始拿到的是正常的, 这个模式只能结合我的Buffer使用,不支持自己添加 ORDER BY 和 GROUP BY
@@ -295,7 +295,7 @@ class MySql:
             logger.error("buffer 需要设置为数字,不设置的话默认 1000")
             return
         if mode == "Last":
-            if "buffer" not in dir():
+            if "Buffer" not in dir():
                 logger.error("这个模式需要结合Buffer使用<from lite_tools import Buffer> 这个Buffer需要结合多线程使用<建议vthread>")
                 return
             if re.search("GROUP BY|ORDER BY", origin_sql, re.I):
@@ -459,9 +459,11 @@ class MySql:
 
     def update_batch(self, items: Mapping[str, list], where: Mapping[str, list], table_name: str = None):
         """
-        批量更新操作
+        批量更新操作 >>> 支持两种格式混用 但是顺序一定得对应
         :param items : {"A_field": [1, 2, 3], "B_field": ["A", "B", "C"]} 长度得一致
+                        或者 [{"A_field": 1, "B_field": "A"}, {"A_field": 2, "B_field": "B"}]
         :param where : {"C_field": [1, 2, 3]} 后面where数组的长度得和前面items的长度一致
+                        或者 [{"C_field": 1}, {"C_field": 1}, {"C_field": 1}]
         :param table_name : 表名 这里和全局二选一 优先级这里最高
         """
         table = self._check_table(table_name)
@@ -502,24 +504,41 @@ class MySql:
         return True
 
     def _print_rate(self, mode: str, end_time, start_time: float, result: int, table: str, flag: str = "success"):
-        """因为日志太长了 这里缩减了一下长度"""
+        """
+        因为日志太长了 这里缩减了一下长度
+        :省略备注:
+        :S  Surplus  剩余
+        :Ts Tasks    任务数
+        :TR TaskRate 任务率 程序启动开始计算
+        :T  Time     总用时 程序启动开始计时
+        :LR LineRate 行效率 程序启动开始计算
+        :OK 影响的行数(成功的行数)
+        :BAD 失败的行数(未影响的行数)
+        :LC LineCost 单词执行sql耗时
+        :GT GuessTime 预估完成时间
+        :Suc Success  成功影响的行数
+        """
         all_line = self.count_conf.get_change(table, mode) + self.count_conf.get_not_change(table, mode)
         cost_time = time.time() - self.start_time
         if mode == 'update':
             cost_row = self.count_conf.get_count(table, 'total') - self.count_conf.get_count(table, 'run')
             other_log = f"【S/Ts: {cost_row}/{self.count_conf.get_count(table, 'total')} T:{cost_time:.3f}s】 "
             rate = round(self.count_conf.get_count(table, 'run') / cost_time, 3)
-            rate_str = f" TR={rate} tasks/s;"    # 剩余的行效率 TaskRate
+            rate_str = f" TR={rate:.3f} tasks/s;"    # 剩余的行效率 TaskRate
+            guess_time = round(cost_row / rate, 3)
+            guess_time_area = f"; GT:{guess_time:.3f}s;"
         elif mode == "insert":
             other_log = f"【T:{cost_time:.3f}s】 "
             rate = round(all_line / cost_time, 3)  # 平均每秒改变行
             rate_str = f" LR={rate} line/s;"       # 插入的行效率  LineRate
+            guess_time_area = ""
         else:
             other_log = " "
             rate_str = ""
+            guess_time_area = ""
         other_log += f"OK={self.count_conf.get_change(table, mode)}; BAD={self.count_conf.get_not_change(table, mode)};{rate_str}"
         sql_log(
-            f"[{table}:{mode}]{other_log} lineCost:{end_time - start_time:.3f}s Success={result}",
+            f"[{table}:{mode}]{other_log} LC:{end_time - start_time:.3f}s{guess_time_area} Suc={result}",
             "", 
             flag, 
             True, 
