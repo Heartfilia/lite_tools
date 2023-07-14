@@ -326,12 +326,9 @@ class MySql:
             if not table_name and not self.table_name:
                 table_name = self._get_select_table_name(sql, **kwargs)
             while True:
-                if first:
-                    _symbol = ">="
-                else:
-                    _symbol = ">"
+                _symbol = ">="   # 测试发现就用这个就好了
                 if "WHERE" in origin_sql:
-                    _by_rule = re.search(r"(ORDER BY|GROUP BY)", origin_sql, re.I)
+                    _by_rule = re.search(r"(ORDER BY|GROUP BY)", origin_sql, re.I)  # 这里后面的东西还没有提取出来处理
                     _sql = re.sub(
                         r" WHERE\s+(.+?)(?:ORDER BY|GROUP BY|$)",
                         rf" WHERE {pk} {_symbol} (SELECT {pk} FROM {table_name or self.table_name} WHERE \1 ORDER BY {pk} LIMIT {cursor}, 1) AND \1{_by_rule.group(1) if _by_rule else ''}",
@@ -530,7 +527,7 @@ class MySql:
         elif mode == "insert":
             other_log = f"【T:{cost_time:.3f}s】 "
             rate = round(all_line / cost_time, 3)  # 平均每秒改变行
-            rate_str = f" LR={rate} line/s;"       # 插入的行效率  LineRate
+            rate_str = f" LR={rate:.3f} line/s;"       # 插入的行效率  LineRate
             guess_time_area = ""
         else:
             other_log = " "
@@ -544,3 +541,10 @@ class MySql:
             True, 
             log=self.log
         )
+
+
+
+if __name__ == "__main__":
+    app = MySql(pool="xxx")
+    for row in app.select_iter("SELECT * FROM r_article_1 WHERE fans IS NULL", "Id", table_name="r_article_1"):
+        print(row)
