@@ -217,7 +217,7 @@ class SimpleHash(object):
 
 class BloomFilter:
     def __init__(self, redis: Union[_redis.StrictRedis, _redis.Redis], key: str,
-                 block_num: int = 1, bit_size: int = 1 << 32, seeds: List[int] = None):
+                 block_num: int = 1, bit_size: int = 1 << 31, seeds: List[int] = None):
         """
         :param redis: redis链接对象
         :param key  : 需要创建的key
@@ -244,14 +244,16 @@ class BloomFilter:
             loc = func.hash(string)
             self.server.setbit(name, loc, 1)
 
-    def exist(self, string: str) -> bool:
+    def exists(self, string: str) -> bool:
         """判断"""
         if not string:
-            return False
+            # 空直接判断为存在 这样子就没有必要跑了
+            return True
         string = get_md5(string)
         ret = True
         name = f"{self.key}{int(string[:2], 16) % self.block_num}"
         for func in self.hash_func:
             loc = func.hash(string)
             ret ^= self.server.getbit(name, loc)
-        return ret
+        # 上面判断了是否包含
+        return True if not ret else False
