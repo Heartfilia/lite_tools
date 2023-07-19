@@ -19,7 +19,8 @@ from lite_tools.exceptions.StringExceptions import BadModeException
 __ALL__ = ["get_md5", "get_sha", "get_sha3"]
 
 
-def get_md5(s: Union[str, bytes, int, float], mode: Literal[16, 32] = 32, up: bool = False, encoding='utf-8', **kwargs) -> str:
+def get_md5(s: Union[str, bytes, int, float], mode: Literal[16, 32] = 32, up: bool = False, encoding='utf-8',
+            **kwargs) -> str:
     """
     利用md5加密内容
     :param s: 加密前字符串(兼容直接操作数字和浮点数转成字符串再获取md5)

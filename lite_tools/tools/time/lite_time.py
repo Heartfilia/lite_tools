@@ -4,6 +4,7 @@
 import re
 import time
 import calendar
+import datetime
 import functools
 from typing import Union, Tuple
 try:
@@ -39,6 +40,7 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor  如果传入字符串并且满足fmt格式 将会转换为时间戳
     异常的时候默认返回当前时间
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
+           : 如果传入的是 xx前 如 1个月前 3小时前 基于此时此刻计算 如1月前 (现在是2023.7.19 17:26:05) -得到-> (2023.6.19 17:26:05)
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
     params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整 --> 可以设置 unit="ms/int" 对double后的结果取整
     params instance: 写 int/float 即可按照int或者float返回数据
@@ -46,11 +48,14 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
                    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）如 cursor="-2Y"  如果写一堆 取最大的
                    不要写一堆时间符号说 一年三个月5天前这种:只推荐 单命令 如前面就只会提取最大的一年前进行处理
     params args  : 兼容不重要参数
-    params kwargs: 兼容不重要参数
+    params kwargs: 兼容不重要参数 如果写了 timestamp=True  那么一定是把这个转时间戳的
     """
     if isinstance(fmt, bool) and isinstance(goal, str):
         goal, fmt_str = _guess_fmt(goal)
         if not fmt_str:
+            temp_goal = handle_vague_rule(goal)   # 模糊匹配时间
+            if temp_goal:
+                goal = temp_goal
             fmt_str = "%Y-%m-%d %H:%M:%S"
     elif not isinstance(goal, str) and fmt is True:
         fmt_str = "%Y-%m-%d %H:%M:%S"
@@ -62,9 +67,9 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = 
 
     if instance is not None and instance not in [int, float]:
         instance = int
-    if not isinstance(goal, str) and fmt is False:
+    if not isinstance(goal, str) and fmt is False:  # 对时间戳进行位移
         return _cal_cursor_timestamp(goal, times, instance, cursor)
-    elif goal and isinstance(goal, str):  # 转换目标格式为 时间戳
+    elif (goal and isinstance(goal, str)) or (goal and kwargs.get('timestamp') is True):  # 转换目标格式为 时间戳
         return _fmt_to_timestamp(goal, fmt_str, times, instance)
     elif goal and isinstance(goal, (float, int)) and cursor == 0:   # 转换时间戳为 目标时间格式
         return _timestamp_to_f_time(goal, fmt_str)
@@ -90,6 +95,93 @@ def _get_unit_times(unit):
     else:
         times = 1
     return times
+
+
+def handle_vague_rule(string: str):
+    """
+    新增模糊时间匹配 这里返回  符合 %Y-%m-%d %H:%M:%S 的值
+    """
+    base_time = datetime.datetime.now()
+    if "前天" in string:
+        base_time = base_time - datetime.timedelta(days=2)
+    elif "昨天" in string:
+        base_time = base_time - datetime.timedelta(days=1)
+    elif "前" in string:
+        nums = int(re.search(r"(\d+)", string).group(1))
+        if "秒" in string:
+            base_time = base_time - datetime.timedelta(seconds=nums)
+        elif "分" in string:
+            base_time = base_time - datetime.timedelta(minutes=nums)
+        elif "时" in string:
+            base_time = base_time - datetime.timedelta(hours=nums)
+        elif "天" in string:
+            base_time = base_time - datetime.timedelta(days=nums)
+        elif "周" in string:
+            base_time = base_time - datetime.timedelta(weeks=nums)
+        elif "月" in string:
+            base_time = base_time - datetime.timedelta(days=nums * 30)
+        elif "年" in string:
+            base_time = base_time - datetime.timedelta(days=nums * 365)
+        return base_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    pt_flag = False
+
+    pattern = re.search(r"(\d{2,4})[年.-](\d{1,2})[月.-](\d{1,2})日?", string.strip())
+    if pattern:
+        year_temp = pattern.group(1)
+        year = f"20{year_temp}" if len(year_temp) == 2 else year_temp   # 目前看来 写两位年的一定是20年
+        month = int(pattern.group(2))
+        day = int(pattern.group(3))
+        pt_flag = True
+    else:
+        pattern = re.search(r"(\d{1,2})[月.-](\d{1,2})日?", string.strip())
+        if pattern:
+            if "年" not in string:
+                year = base_time.year
+            else:
+                yp = re.search(r"(\d{2,4})年", string)
+                year_temp = yp.group(1)
+                year = f"20{year_temp}" if len(year_temp) == 2 else year_temp
+            month = int(pattern.group(1))
+            day = int(pattern.group(2))
+            pt_flag = True
+        else:
+            year = base_time.year
+            month = base_time.month
+            day = base_time.day
+
+    pattern = re.search(r"(\d{1,2}):(\d{1,2}):(\d{1,2})$", string.strip())
+    if pattern:
+        hour = int(pattern.group(1))
+        minute = int(pattern.group(2))
+        second = int(pattern.group(3))
+        pt_flag = True
+    else:
+        pattern = re.search(r"(\d{1,2}):(\d{1,2})$", string.strip())
+        if pattern:
+            hour = int(pattern.group(1))
+            minute = int(pattern.group(2))
+            second = 0
+            pt_flag = True
+        else:
+            hour = minute = second = 0
+    if pt_flag is True:
+        return f"{year}-{month:>02}-{day:>02} {hour:>02}:{minute:>02}:{second:>02}"
+
+    pattern = re.search(r"(\d+):(\d+):(\d+)$", string.strip())
+    if pattern:
+        hour = int(pattern.group(1))
+        minute = int(pattern.group(2))
+        second = int(pattern.group(3))
+        return f"{base_time.year}-{base_time.month}-{base_time.day} {hour:>02}:{minute:>02}:{second:>02}"
+
+    pattern = re.search(r"(\d+):(\d+)$", string.strip())
+    if pattern:   # 匹配 昨天 9:01 这种格式的数据
+        hour = int(pattern.group(1))
+        minute = int(pattern.group(2))
+        return f"{base_time.year}-{base_time.month}-{base_time.day} {hour:>02}:{minute:>02}:00"
+
+    return ""
 
 
 def _cal_cursor_timestamp(goal, times, instance, cursor):
@@ -186,8 +278,16 @@ def _guess_fmt(string: str):
     string = string.replace('T', ' ')  # 把带了时区标志的时间变成原样
     string = re.sub(r"\.\d{3}Z|Z$", "", string)  # 把带了时区标志的时间 和 秒后面 还有为微秒之类的 变成原样
 
-    for rule, sure_fmt in NORMAL_PATTERN:
+    for rule, sure_fmt, extra in NORMAL_PATTERN:
         if re.search(rule, string):
+            if extra:
+                temp = re.split(r"\W", get_time(fmt=True))
+                if extra == "Y":
+                    string = f"{temp[0]}-{string}"
+                    sure_fmt = f"%Y-{sure_fmt}"
+                elif extra == "Ymd":
+                    string = f"{temp[0]}-{temp[1]}-{temp[2]} {string}"
+                    sure_fmt = f"%Y-%m-%d {sure_fmt}"
             return string, sure_fmt
     return string, ""
 
@@ -349,5 +449,4 @@ def _check_month_day_max(year: int, month: int) -> int:
 
 
 if __name__ == "__main__":
-    print(get_time())
-
+    print(get_time("2022.3.9 14:32"))

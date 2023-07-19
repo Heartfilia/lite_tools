@@ -53,6 +53,7 @@ class Singleton(type):
                 cls._instances[cls] = instance
         return cls._instances[cls]
 
+
 """
 TODO:下面缓存区还需要加一个超时异常结束程序的操作.
 """
@@ -68,6 +69,7 @@ class Buffer(metaclass=Singleton):
     _get_count: Dict[str, int] = {}       # 从seed中拿的种子数量
     _lock: RLock = RLock()
     _task_done: bool = False              # 任务是否终止
+    _max_out: int = 300                   # 当程序阻塞后会判断300次是否需要退出
 
     @classmethod
     def reset(cls, name: str = "default"):
@@ -90,9 +92,12 @@ class Buffer(metaclass=Singleton):
     @classmethod
     def sow(cls, job, name: str = "default") -> NoReturn:
         """
-        这里是种种子 相当于 queue.put(xxx)
+        这里是种种子 相当于 queue.put(xxx) 避免阻塞 采取丢失失败任务的方案
         """
-        cls.__queues[name].put(job)
+        if not cls.__queues[name].full():
+            cls.__queues[name].put(job)
+        else:
+            logger.warning(f"因为队列已经满了，避免程序阻塞，这个任务采用了丢弃方案: {job}")
 
     @classmethod
     def seed(cls, name: str = "default") -> Any:
@@ -125,7 +130,8 @@ class Buffer(metaclass=Singleton):
             cls.__task_time[name] = time.time()
             for job in func(*args, **kwargs):
                 cls.__queues[name].put(job)
-            cls.__task_flag[name] = False
+
+            cls.__task_flag[name] = False  # 标记这个任务线程已经退出
 
         return wrapper
 
@@ -151,7 +157,8 @@ class Buffer(metaclass=Singleton):
                                 cost_time = round(time.time() - cls.__task_time[name], 3)
                                 logger.debug(
                                     f"[{name}] 队列任务种子消耗完毕,worker结束.总耗时:{cost_time}s; "
-                                    f"总调用任务种子:{cls.count(name)}条; 效率:{round(cls.count(name)/(cost_time or 1), 3)} seed/s"
+                                    f"总调用任务种子:"
+                                    f"{cls.count(name)}条; 效率:{round(cls.count(name)/(cost_time or 1), 3)} seed/s"
                                 )
                                 cls._task_done = True
                     break
@@ -161,8 +168,11 @@ class Buffer(metaclass=Singleton):
 
                 try:
                     func(*args, **kwargs)
-                except QueueEmptyNotion:
-                    pass
+                except QueueEmptyNotion:   # 如果队列持续为空 # 避免卡死
+                    cls._max_out -= 1
+                    time.sleep(1)
+                    if cls._max_out <= 0:
+                        break
 
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
@@ -188,14 +198,18 @@ class Buffer(metaclass=Singleton):
                 try:
                     await func(*args, **kwargs)
                 except QueueEmptyNotion:
-                    pass
+                    # 避免卡死
+                    cls._max_out -= 1
+                    time.sleep(1)
+                    if cls._max_out <= 0:
+                        break
 
         return async_wrapper if iscoroutinefunction(func) else wrapper
 
     @classmethod
     def __init__queue__(cls, name, rs: bool = False):
         """
-        下面尽可能的划细一点 提升效率 不用每次都要进来加锁判断一下
+        下面尽可能 划细一点 提升效率 不用每次都要进来加锁判断一下
         """
         if name not in cls.__queues:
             with cls._lock:

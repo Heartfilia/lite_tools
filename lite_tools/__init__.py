@@ -46,8 +46,8 @@ __ALL__ = [
     "dec_to_bin",   # 十进制浮数转二进制数据(返回的是字符串 注意哦)  同 toString(2)
     # 下面是一些可以对外使用的一些redis操作 等http包第一版能用的时候再放出来
     "LiteRedis",     # 这个用处不大 但是可以用一个本地文件的配置文件来初始化这个对象使用 如 rd = LiteRedis("/root/config.json")
-    "LiteProxy"      # 更方便的获取代理的操作 基于redis的set/list模式 默认set随机弹出 也可以切换为mode='list'滚动获取 使用方式可以使用 LiteRedis.help() 获取
-
+    "LiteProxy",     # 更方便的获取代理的操作 基于redis的set/list模式 默认set随机弹出 也可以切换为mode='list'滚动获取 使用方式可以使用 LiteRedis.help() 获取
+    "BloomFilter",   # 基于redis的布隆过滤器
 ]
 
 # 还有一个东西不放这里了 可以这样引用
@@ -61,7 +61,7 @@ from lite_tools.tools.time.lite_time import get_time, time_count, time_range
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_ua import get_ua
 from lite_tools.tools.sql.lite_mysql import MySql
-from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy
+from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy, BloomFilter
 from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.core.lite_match import match_case

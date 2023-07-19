@@ -35,7 +35,7 @@ def try_get(
         如 {”a|b[c.d]“: {"x": 666}}  这种我们需要写 --> "a\|b\c\.d\].x"
         如果是纯数字或者小数做主键 请不要用我这个方法 如 {12: {3.14: 666}}  真有这种需求请用json包
     如果传入一个字典 json=True 那么就是转为json字符串
-    :param renderer: 传入的需要解析的字典或者json串
+    :param renderer: 传入的需要解析的字典或者json串 或者jsonp格式串都行
     :param getters : 链式取值 -- 不传入那么就只是单纯的格式化json传 这里支持管道符多匹配辣 如: a.b.c|a.b.d[-1]|a.c.d
         这里单词前面如果是数组必须有 .  如 a[1][2].b  或者 a.[1][2].b 或者 a.[1].[2].b  请不要写a[1][2]b 否则碰到 a.b.c咋说
     :param default : 默认的返回值, 默认返回None, 可以自定义返回值
@@ -241,6 +241,9 @@ def _judge_filter_rules_unequal(renderer, unequal_options: dict):
         return right
 
 
+regex = re.compile(r"^[^(]+\((.*)\);?", flags=re.S)  # jsonP匹配模板
+
+
 def _judge_json(renderer, json=False, options=None):
     """
     判断传入进来的是json串还是字典 自动处理成字典
@@ -273,6 +276,12 @@ def _judge_json(renderer, json=False, options=None):
         try:
             if json is True:
                 return renderer
+            if (renderer.startswith('{') and renderer.endswith("}")) or (
+                    renderer.startswith('[') and renderer.endswith("]")):
+                # 标准的 json 数组串 不需要任何操作
+                pass
+            elif regex.search(renderer):  # 如果是jsonP的格式
+                renderer = regex.search(renderer).group(1)
             data = _json.loads(renderer)
         except _json.decoder.JSONDecodeError:
             return None

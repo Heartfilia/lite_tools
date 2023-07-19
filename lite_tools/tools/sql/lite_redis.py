@@ -21,7 +21,7 @@
 import json
 import time
 import random
-from typing import Union, Sequence
+from typing import Union, Sequence, List
 try:
     from typing import Literal
 except ImportError:
@@ -31,6 +31,7 @@ import yaml
 import redis as _redis
 
 from lite_tools.logs import logger
+from lite_tools.tools.core.lib_hashlib import get_md5
 from lite_tools.exceptions.CacheExceptions import FileNotFount
 
 
@@ -200,3 +201,57 @@ kwargs:
             raise FileNotFount(path)
         else:
             self.set_param(config)
+
+
+class SimpleHash(object):
+    def __init__(self, cap, seed):
+        self.cap = cap
+        self.seed = seed
+
+    def hash(self, value):
+        ret = 0
+        for i in range(len(value)):
+            ret += self.seed * ret + ord(value[i])
+        return (self.cap - 1) & ret
+
+
+class BloomFilter:
+    def __init__(self, redis: Union[_redis.StrictRedis, _redis.Redis], key: str,
+                 block_num: int = 1, bit_size: int = 1 << 32, seeds: List[int] = None):
+        """
+        :param redis: redis链接对象
+        :param key  : 需要创建的key
+        :param seeds  : 随机种子
+        :param bit_size  : 容量控制 我这里默认256M redis最大为 512M
+        :param block_num: one blockNum for about 90,000,000; if you have more strings for filtering, increase it.
+        """
+        self.server = redis
+        self.key = key
+        self.block_num = block_num
+        self.bit_size = bit_size if bit_size < 4294967296 else 4294967296   # 限制最大只能512M
+        self.seeds = [5, 7, 11, 13, 31, 37, 61] if not seeds else seeds
+        self.hash_func = [SimpleHash(self.bit_size, seed) for seed in self.seeds]  # 创建不同素材的hash函数
+
+    def remove(self):
+        """移除布隆过滤器"""
+        self.server.delete(self.key)
+
+    def insert(self, string: str) -> None:
+        """插入"""
+        string = get_md5(string)
+        name = f"{self.key}{int(string[:2], 16) % self.block_num}"
+        for func in self.hash_func:
+            loc = func.hash(string)
+            self.server.setbit(name, loc, 1)
+
+    def exist(self, string: str) -> bool:
+        """判断"""
+        if not string:
+            return False
+        string = get_md5(string)
+        ret = True
+        name = f"{self.key}{int(string[:2], 16) % self.block_num}"
+        for func in self.hash_func:
+            loc = func.hash(string)
+            ret ^= self.server.getbit(name, loc)
+        return ret
