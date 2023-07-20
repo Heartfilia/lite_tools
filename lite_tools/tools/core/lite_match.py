@@ -24,7 +24,7 @@ __ALL__ = ["match_case"]
 
 def match_case(func):
     """
-    也是一个装饰器来着
+    也是一个装饰器来着    3.10+ 版本已经本身支持 match case的语法了
     修改了原来的命名 使其更加好记 采用了如下源的代码
     新增优化,支持了类 内部函数的调用->同原方案一样 主要是 dispatches by value of the first arg""
     """

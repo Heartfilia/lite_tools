@@ -23,12 +23,10 @@
 """
 import time
 import copy
-import asyncio
 from typing import Dict, Any, NoReturn
 from functools import wraps, partial
 from queue import Queue, Empty
-from asyncio import iscoroutinefunction
-from threading import RLock, current_thread
+from threading import RLock, Lock, current_thread
 
 from lite_tools.logs import logger
 from lite_tools.exceptions.CacheExceptions import QueueEmptyNotion
@@ -158,8 +156,7 @@ class CountConfig:
 class Buffer(metaclass=Singleton):
     max_cache: int = 1000                # 最大的缓存队列大小 有些时候可以设置小一点 这样子不会一次性拿掉太多任务
     __queues: Dict[str, Queue] = {}       # 创建任务的时候初始化这个 取任务要是没有直接会报错..
-    __async_out: bool = True              # 异步日志
-    _lock: RLock = RLock()
+    _lock: Lock = Lock()
     count_config = CountConfig()
 
     @classmethod
@@ -171,6 +168,9 @@ class Buffer(metaclass=Singleton):
 
     @classmethod
     def size(cls, name: str = "default") -> int:
+        """
+        队列里面剩余的量
+        """
         return cls.__queues[name].qsize()
 
     @classmethod
@@ -226,14 +226,15 @@ class Buffer(metaclass=Singleton):
 
     @classmethod
     def _log_detail(cls, name: str):
-        if not cls.count_config.has_task(name) and not cls.count_config.get_task_done(name):
-            cost_time = round(time.time() - cls.count_config.get_task_time(name), 3)
-            logger.debug(
-                f"[{name}] 队列任务种子消耗完毕,worker结束.总耗时:{cost_time}s; "
-                f"总调用任务种子:"
-                f"{cls.count(name)}条; 效率:{round(cls.count(name) / (cost_time or 1), 3)} seed/s"
-            )
-            cls.count_config.set_task_done(name, True)
+        with cls._lock:
+            if not cls.count_config.has_task(name) and not cls.count_config.get_task_done(name):
+                cost_time = round(time.time() - cls.count_config.get_task_time(name), 3)
+                logger.debug(
+                    f"[{name}] 队列任务种子消耗完毕,worker结束.总耗时:{cost_time}s; "
+                    f"总调用任务种子:"
+                    f"{cls.count(name)}条; 效率:{round(cls.count(name) / (cost_time or 1), 3)} seed/s"
+                )
+                cls.count_config.set_task_done(name, True)
 
     @classmethod
     def worker(cls, func=None, *, name: str = "default"):
@@ -249,10 +250,11 @@ class Buffer(metaclass=Singleton):
                 if not cls.count_config.get_flag(name) and cls.__queues[name].empty():
                     if cls.count_config.exists_task(name, current_thread().name):
                         cls.count_config.remove_task(name, current_thread().name)
+                        continue
                     break
                 if cls.__queues[name].empty():
                     time.sleep(.5)
-                    if cls.count_config.get_flag(name):
+                    if not cls.count_config.get_flag(name):
                         cls.count_config.set_max_out(name, 1)
                     if cls.count_config.get_max_out(name) >= 300:
                         break
@@ -260,50 +262,17 @@ class Buffer(metaclass=Singleton):
 
                 try:
                     func(*args, **kwargs)
+                    if cls.count_config.get_max_out(name) > 0:
+                        cls.count_config.set_max_out(name, 0)
                 except QueueEmptyNotion:   # 如果队列持续为空 # 避免卡死
-                    if cls.count_config.get_flag(name):
-                        cls.count_config.set_max_out(name, 1)
-                    time.sleep(1)
-                    if cls.count_config.get_max_out(name) >= 300:
-                        break
-            cls._log_detail(name)
-
-        @wraps(func)
-        async def async_wrapper(*args, **kwargs):
-            cls.count_config.set_task_name("AsyncTask")
-            while True:
-                if not cls.count_config.get_flag(name) and cls.__queues[name].empty():
-                    with cls._lock:
-                        if cls.__async_out and not cls._task_done:
-                            logger.debug(
-                                f"[{name}] 队列任务种子消耗完毕,worker结束."
-                                f"耗时:{time.time() - cls.count_config.get_task_time(name):.3f} s"
-                            )
-                            cls._task_done = True
-
-                        if cls.count_config.has_task(name):
-                            cls.count_config.get_task_name(name)
-                            cls.__async_out = False
-                    break
-                if cls.__queues[name].empty():
-                    await asyncio.sleep(.5)
-                    if cls.count_config.get_flag(name):
-                        cls.count_config.set_max_out(name, 1)
-                    if cls.count_config.get_max_out(name) >= 300:
-                        break
-                    continue
-
-                try:
-                    await func(*args, **kwargs)
-                except QueueEmptyNotion:
-                    # 避免卡死
-                    if cls.count_config.get_flag(name):
+                    if not cls.count_config.get_flag(name):
                         cls.count_config.set_max_out(name, 1)
                         time.sleep(1)
                     if cls.count_config.get_max_out(name) >= 300:
                         break
+            cls._log_detail(name)
 
-        return async_wrapper if iscoroutinefunction(func) else wrapper
+        return wrapper
 
     @classmethod
     def __init__queue__(cls, name, rs: bool = False):
@@ -317,7 +286,9 @@ class Buffer(metaclass=Singleton):
                     cls.__queues[name] = Queue(cls.max_cache)
 
         if name not in cls.count_config.log_jar or rs is True:
-            cls.count_config.set_task_name(name)
-            cls.count_config.set_flag(name, True)
-            cls.count_config.set_task_time(name)
             cls.count_config.set_count(name, 0)
+            cls.count_config.set_task_time(name)
+            cls.count_config.set_task_name(name)
+            cls.count_config.set_max_out(name, 0)
+            cls.count_config.set_task_done(name, False)
+            cls.count_config.set_flag(name, True)
