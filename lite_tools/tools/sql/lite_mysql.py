@@ -231,13 +231,13 @@ class MySql:
                 return
             items = cursor.fetchmany(kwargs.get("buffer", 1000))
             self.count_conf.set_count(table_name, "total", len(items))
-            for row in items:
-                yield row[0] if len(row) == 1 and isinstance(row, tuple) else row
+            for item in items:
+                yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
             while items:
                 items = cursor.fetchmany(kwargs.get("buffer", 1000))
                 self.count_conf.set_count(table_name, "total", len(items))
-                for row in items:
-                    yield row[0] if len(row) == 1 and isinstance(row, tuple) else row
+                for item in items:
+                    yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
             return
         else:
             items = cursor.fetchall()
@@ -258,11 +258,11 @@ class MySql:
 
         self.count_conf.set_count(table_name, "total", all_num)
 
-        for row in items:
+        for item in items:
             if count is False:
-                yield row[0] if len(row) == 1 and isinstance(row, tuple) else row
+                yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
             else:
-                yield all_num, row[0] if len(row) == 1 and isinstance(row, tuple) else row
+                yield all_num, item[0] if len(item) == 1 and isinstance(item, tuple) else item
                 all_num -= 1
 
         if all_num < kwargs.get("_limit_num", 0):   # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
