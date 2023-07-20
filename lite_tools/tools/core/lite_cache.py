@@ -83,7 +83,8 @@ class CountConfig:
         with self.lock:
             if num == 0:
                 self.log_jar[name]["max_out"] = 0
-            self.log_jar[name]["max_out"] += num
+            else:
+                self.log_jar[name]["max_out"] += num
 
     def get_max_out(self, name: str):
         return self.log_jar[name]["max_out"]
@@ -91,9 +92,9 @@ class CountConfig:
     def set_task_name(self, name: str, item: str = None):
         self.init(name)
         with self.lock:
-            if not self.log_jar[name]["task_name"]:
+            if not item:
                 self.log_jar[name]["task_name"] = set()
-            if item:
+            else:
                 self.log_jar[name]["task_name"].add(item)
 
     def exists_task(self, name: str, item_name: str) -> bool:
@@ -129,9 +130,10 @@ class CountConfig:
     def set_count(self, name: str, num: int = 0):
         self.init(name)
         with self.lock:
-            if not self.log_jar[name]["get_count"]:
+            if num == 0:
                 self.log_jar[name]["get_count"] = 0
-            self.log_jar[name]["get_count"] += num
+            else:
+                self.log_jar[name]["get_count"] += num
 
     def get_count(self, name: str):
         return self.log_jar[name].get("get_count", 0)
