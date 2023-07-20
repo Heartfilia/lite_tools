@@ -219,11 +219,11 @@ class BloomFilter:
     def __init__(self, redis: Union[_redis.StrictRedis, _redis.Redis], key: str,
                  block_num: int = 1, bit_size: int = 1 << 31, seeds: List[int] = None):
         """
-        :param redis: redis链接对象
-        :param key  : 需要创建的key
-        :param seeds  : 随机种子
+        :param redis     : redis链接对象
+        :param key       : 需要创建的redis的key的基础名字
+        :param seeds     : 随机种子
         :param bit_size  : 容量控制 我这里默认256M redis最大为 512M
-        :param block_num: one blockNum for about 90,000,000; if you have more strings for filtering, increase it.
+        :param block_num : 分区数量 设置为其它则会创建好几个 redis分区管理
         """
         self.server = redis
         self.key = key
@@ -232,14 +232,19 @@ class BloomFilter:
         self.seeds = [5, 7, 11, 13, 31, 37, 61] if not seeds else seeds
         self.hash_func = [SimpleHash(self.bit_size, seed) for seed in self.seeds]  # 创建不同素材的hash函数
 
+    def _get_name(self, string):
+        """对结果进行分区 这样有便于 分区管理 去重"""
+        string = get_md5(string)
+        name = f"{self.key}:{int(string[:2], 16) % self.block_num}"
+        return string, name
+
     def remove(self):
         """移除布隆过滤器"""
         self.server.delete(self.key)
 
     def insert(self, string: str) -> None:
         """插入"""
-        string = get_md5(string)
-        name = f"{self.key}{int(string[:2], 16) % self.block_num}"
+        string, name = self._get_name(string)
         for func in self.hash_func:
             loc = func.hash(string)
             self.server.setbit(name, loc, 1)
@@ -249,9 +254,8 @@ class BloomFilter:
         if not string:
             # 空直接判断为存在 这样子就没有必要跑了
             return True
-        string = get_md5(string)
+        string, name = self._get_name(string)
         ret = True
-        name = f"{self.key}{int(string[:2], 16) % self.block_num}"
         for func in self.hash_func:
             loc = func.hash(string)
             ret ^= self.server.getbit(name, loc)
