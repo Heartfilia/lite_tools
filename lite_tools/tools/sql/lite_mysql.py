@@ -273,7 +273,6 @@ class MySql:
         table_name: str = None, **kwargs
     ) -> Iterator:
         """
-        #TODO(全库读取可以用这个 最多丢失一个任务 这个bug还没修复，如果加了条件可能会导致每次只能读取一半的量 后面再优化)
         通过批量的迭代获取数据 有点问题 后面再优化: 目前只能支持一个表的操作，如果是多个表关联之类的 还有别名啥的 就不行了
         :param sql   : 只需要传入主要的逻辑 limit 部分用参数管理
         :param pk    : 主键，只需要告诉我主键的名字就好了
@@ -331,13 +330,13 @@ class MySql:
                     _by_rule = re.search(r"(ORDER BY|GROUP BY)", origin_sql, re.I)  # 这里后面的东西还没有提取出来处理
                     _sql = re.sub(
                         r" WHERE\s+(.+?)(?:ORDER BY|GROUP BY|$)",
-                        rf" WHERE {pk} {_symbol} (SELECT {pk} FROM {table_name or self.table_name} WHERE \1 ORDER BY {pk} LIMIT {cursor}, 1) AND \1{_by_rule.group(1) if _by_rule else ''}",
+                        rf" WHERE {pk} {_symbol} (SELECT {pk} FROM {table_name or self.table_name} WHERE \1 ORDER BY {pk} LIMIT 1 OFFSET {cursor}) AND \1{_by_rule.group(1) if _by_rule else ''}",
                         origin_sql
                     )
                 else:
                     _sql = re.sub(
                         r" FROM\s+(\S+)",
-                        rf" FROM \1 WHERE {pk} {_symbol} (SELECT {pk} FROM {table_name or self.table_name} ORDER BY {pk} LIMIT {cursor}, 1)",
+                        rf" FROM \1 WHERE {pk} {_symbol} (SELECT {pk} FROM {table_name or self.table_name} ORDER BY {pk} LIMIT 1 OFFSET {cursor})",
                         origin_sql
                     )
 
