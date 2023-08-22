@@ -6,14 +6,13 @@ import time
 import calendar
 import datetime
 import functools
-from typing import Union, Tuple
+from typing import Union, Tuple, Any
 try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
 
 from lite_tools.logs import logger
-from lite_tools.tools.core.lite_match import match_case
 from lite_tools.utils.u_re_time import NORMAL_PATTERN
 from lite_tools.exceptions.TimeExceptions import TimeFormatException, ErrorTimeRange
 
@@ -22,66 +21,98 @@ from lite_tools.exceptions.TimeExceptions import TimeFormatException, ErrorTimeR
 TODO(my_logger 在多线程中的路径有问题 -- 我也懒得修复 这个是个小问题)
 """
 
-__ALL__ = ['get_date', 'get_time', 'time_count']
+__ALL__ = ['get_time', 'time_count', 'time_range']
 
 
-def get_date(timedelta: tuple = None):
-    """
-    这里是为了将get_time里面关于日期操作的独立出来 可以独立调用也可以由get_time调用
-    # datetime模块太复杂了 还需要考虑一下怎么合并处理 先不给用这个模块
-    """
-    _ = timedelta
-    pass
-
-
-def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str] = False, unit: Literal["ms", "s"] = "s",
-             instance: Union[None, type] = None, cursor: Union[str, int, float] = 0, **kwargs):
+def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str, Tuple[str, str]] = False,
+             unit: Literal["ms", "s"] = "s", instance: Union[None, type] = None, cursor: Union[str, int, float] = 0,
+             **kwargs):
     """
     返回时间的数值(整数) 或者 格式化好了的数据 优先级 goal > fmt > double = cursor  如果传入字符串并且满足fmt格式 将会转换为时间戳
     异常的时候默认返回当前时间
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
            : 如果传入的是 xx前 如 1个月前 3小时前 基于此时此刻计算 如1月前 (现在是2023.7.19 17:26:05) -得到-> (2023.6.19 17:26:05)
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
-    params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整 --> 可以设置 unit="ms/int" 对double后的结果取整
+               : 建议：如果是需要处理 格式化时间戳 转换成 时间戳的操作 只传入一个字符串 表示输入格式 并直接写上 ** timestamp=True **
+               : 建议：使用复合结构，来保证传入格式和输出格式正常 (传入格式, 输出格式)
+    params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整 --> 可以设置 unit="ms/s" 对double后的结果取整
     params instance: 写 int/float 即可按照int或者float返回数据
     params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串 注意是有大小写区别的
-                   更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）如 cursor="-2Y"  如果写一堆 取最大的
-                   不要写一堆时间符号说 一年三个月5天前这种:只推荐 单命令 如前面就只会提取最大的一年前进行处理
-    params args  : 兼容不重要参数
-    params kwargs: 兼容不重要参数 如果写了 timestamp=True  那么一定是把这个转时间戳的
+                   更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）如 cursor="-2Y"  如果写一堆 全部累加
+    params kwargs: 兼容不重要参数 如果写了 ** timestamp=True **  那么一定是把这个转时间戳的
     """
-    if isinstance(fmt, bool) and isinstance(goal, str):
-        goal, fmt_str = _guess_fmt(goal)
-        if not fmt_str:
-            temp_goal = handle_vague_rule(goal)   # 模糊匹配时间
+    input_fmt, output_fmt = _get_user_fmt(fmt, **kwargs)   # output_fmt 这个参数在后面 转格式化时间的时候才用得到
+    if not input_fmt and isinstance(goal, str):
+        goal, input_fmt = _guess_fmt(goal)
+        if not input_fmt:
+            temp_goal = handle_vague_rule(goal)  # 模糊匹配时间
             if temp_goal:
                 goal = temp_goal
-            fmt_str = "%Y-%m-%d %H:%M:%S"
-    elif not isinstance(goal, str) and fmt is True:
-        fmt_str = "%Y-%m-%d %H:%M:%S"
-    else:
-        fmt_str = fmt
-    times = _get_unit_times(unit)
-    if kwargs.get('double') is True:
-        instance = float
+            input_fmt = "%Y-%m-%d %H:%M:%S"
 
+    times = _get_unit_times(unit)
+    if kwargs.get('double') is True:   # 兼容老版本
+        instance = float
     if instance is not None and instance not in [int, float]:
         instance = int
-    if not isinstance(goal, str) and fmt is False:  # 对时间戳进行位移
-        return _cal_cursor_timestamp(goal, times, instance, cursor)
-    elif (goal and isinstance(goal, str)) or (goal and kwargs.get('timestamp') is True):  # 转换目标格式为 时间戳
-        return _fmt_to_timestamp(goal, fmt_str, times, instance)
-    elif goal and isinstance(goal, (float, int)) and cursor == 0:   # 转换时间戳为 目标时间格式
-        return _timestamp_to_f_time(goal, fmt_str)
-    else:    # 处理没有参数或者有游标参数的情况或者特定格式参数的情况
-        if fmt and not cursor and instance is None:
-            return time.strftime(fmt_str)
-        elif fmt and cursor:
-            return _cursor_to_f_time(cursor, fmt_str)
-        elif not fmt and cursor:
-            return _cursor_to_timestamp(instance, cursor, times)
+
+    # 先把不需要处理的格式的模板先返回
+    if not goal:
+        if fmt is False:
+            if not cursor:
+                # 没有游标处理操作的优先返回
+                return _default_now_time(instance, times)
+            else:
+                # 有游标操作的部分
+                return _cursor_to_timestamp(instance, cursor, times)
         else:
-            return _default_now_time(instance, times)
+            now = datetime.datetime.now() + datetime.timedelta(seconds=_get_offset(cursor))
+            return now.strftime(output_fmt)
+    elif goal and isinstance(goal, (float, int)) and fmt is False:
+        # 对传入的时间戳进行位移   估计很少概率会用到  返回的也是时间戳
+        return _cal_cursor_timestamp(goal, times, instance, cursor)
+    elif goal and isinstance(goal, (float, int)):
+        # 转换时间戳 转换为 格式化时间
+        return _timestamp_to_f_time(goal, output_fmt, cursor)
+    elif isinstance(goal, str) and not goal.isdigit() and (
+            not isinstance(fmt, bool) or kwargs.get('timestamp') is True) and not output_fmt:
+        # 传入了格式化的时间 然后又传了格式化时间的格式 所以这里将会返回 时间戳
+        return _fmt_to_timestamp(goal, input_fmt, times, instance)
+    # 增加一个 传入是 a 格式 处理成b格式的情况
+    elif goal and isinstance(goal, str) and input_fmt and output_fmt:  # 只有传入了输入输出格式的例子才会走到这里
+        # 依据输入格式 将传入对象 格式化为 指定的输出格式
+        return _fmt_to_fmt(goal, input_fmt, output_fmt, cursor)
+    else:
+        if fmt and cursor:  # 特殊情况 先留着
+            return _cursor_to_f_time(cursor, output_fmt)
+        else:
+            logger.critical("不兼容的格式 默认返回 None 希望能把你传入的参数发送给我 我兼容")
+
+
+def _fmt_to_fmt(goal: str, input_fmt: str, output_fmt: str, cursor: Any):
+    # A格式转换为B格式
+    date = datetime.datetime.strptime(goal, input_fmt)
+    new_date = date + datetime.timedelta(seconds=_get_offset(cursor))
+    return new_date.strftime(output_fmt)
+
+
+def _get_user_fmt(fmt, **kwargs) -> Tuple[Union[str, bool], str]:
+    """
+    三种情况
+    """
+    if isinstance(fmt, bool):     # 如果穿了bool值 那么我就来猜格式
+        if kwargs.get('timestamp') is True:
+            return "", ""
+        return "", "%Y-%m-%d %H:%M:%S"
+    elif isinstance(fmt, str):    # 如果传了一个字符串 那么输出为这个格式 输入我来猜
+        if kwargs.get('timestamp') is True:
+            return fmt, ""   # 如果指定了 需要把这个格式化时间转成 时间戳
+        return "", fmt
+    elif isinstance(fmt, tuple) and len(fmt) == 1:  # 如果穿了元组但是只有一个值 同样我来猜输入 输出为传入的格式
+        return "", fmt[0]
+    elif isinstance(fmt, tuple) and len(fmt) == 2:  # 指定传入的格式 和 输出的格式
+        return fmt[0], fmt[1]
+    return "", "%Y-%m-%d %H:%M:%S"  # 默认匹配的 输出
 
 
 def _get_unit_times(unit):
@@ -106,22 +137,23 @@ def handle_vague_rule(string: str):
         base_time = base_time - datetime.timedelta(days=2)
     elif "昨天" in string:
         base_time = base_time - datetime.timedelta(days=1)
-    elif "前" in string:
-        nums = int(re.search(r"(\d+)", string).group(1))
+    elif "前" in string or "后" in string:
+        nums = float(re.search(r"(\d+\.?\d*)", string).group(1))
+        nums = -nums if "前" in string else nums
         if "秒" in string:
-            base_time = base_time - datetime.timedelta(seconds=nums)
+            base_time = base_time + datetime.timedelta(seconds=nums)
         elif "分" in string:
-            base_time = base_time - datetime.timedelta(minutes=nums)
+            base_time = base_time + datetime.timedelta(minutes=nums)
         elif "时" in string:
-            base_time = base_time - datetime.timedelta(hours=nums)
+            base_time = base_time + datetime.timedelta(hours=nums)
         elif "天" in string:
-            base_time = base_time - datetime.timedelta(days=nums)
+            base_time = base_time + datetime.timedelta(days=nums)
         elif "周" in string:
-            base_time = base_time - datetime.timedelta(weeks=nums)
+            base_time = base_time + datetime.timedelta(weeks=nums)
         elif "月" in string:
-            base_time = base_time - datetime.timedelta(days=nums * 30)
+            base_time = base_time + datetime.timedelta(days=nums * 30)
         elif "年" in string:
-            base_time = base_time - datetime.timedelta(days=nums * 365)
+            base_time = base_time + datetime.timedelta(days=nums * 365)
         return base_time.strftime("%Y-%m-%d %H:%M:%S")
 
     pt_flag = False
@@ -238,7 +270,7 @@ def _cursor_to_f_time(cursor, fmt_str):
         return result
 
 
-def _timestamp_to_f_time(goal, fmt_str):
+def _timestamp_to_f_time(goal, fmt_str, cursor):
     """
     时间戳转换为格式化时间: 支持数字或者字符串时间戳 支持10或者13位数
     """
@@ -252,7 +284,8 @@ def _timestamp_to_f_time(goal, fmt_str):
             int_time = int(f"{limit_len_time:<010}")
         else:
             raise TimeFormatException(f"请输入正确的[ goal ]:传入的是非数字类型的则会默认当前时间的格式化样式")
-    return time.strftime(fmt_str, time.localtime(int_time))
+    date = datetime.datetime.fromtimestamp(int_time) + datetime.timedelta(seconds=_get_offset(cursor))
+    return date.strftime(fmt_str)
 
 
 def _fmt_to_timestamp(goal, fmt_str, times, instance):
@@ -275,6 +308,11 @@ def _guess_fmt(string: str):
     """
     if not string:
         return string, ""
+    # 这个方案是 微博 的时间转换 为了方便我直接放这里了  "Tue Jul 25 11:00:40 +0800 2023"
+    # 以后如果涉及了 这种英文的 记得在这个位置 单独添加一个函数处理
+    if re.search(r"^\w+ \w+ \d{2} \d{2}:\d{2}:\d{2} \+0800 \d{4}$", string.strip()):
+        return str(datetime.datetime.strptime(string.strip(), '%a %b %d %H:%M:%S +0800 %Y')), "%Y-%m-%d %H:%M:%S"
+
     string = string.replace('T', ' ')  # 把带了时区标志的时间变成原样
     string = re.sub(r"\.\d{3}Z|Z$", "", string)  # 把带了时区标志的时间 和 秒后面 还有为微秒之类的 变成原样
 
@@ -292,72 +330,28 @@ def _guess_fmt(string: str):
     return string, ""
 
 
-@match_case
-def different_mode(_, *args):
-    return 86400
-
-
-@different_mode.register("Y")
-def handle_year(_, *args):
-    """
-    一年按照 365 天算
-    """
-    cursor = args[0]
-    return int(cursor) * 86400 * 365
-
-
-@different_mode.register("m")
-def handle_month(_, *args):
-    """
-    一月按照 30 天算
-    """
-    cursor = args[0]
-    return int(cursor) * 86400 * 30
-
-
-@different_mode.register("d")
-def handle_day(_, *args):
-    cursor = args[0]
-    return int(cursor) * 86400
-
-
-@different_mode.register("H")
-def handle_hour(_, *args):
-    cursor = args[0]
-    return int(cursor) * 3600
-
-
-@different_mode.register("M")
-def handle_minutes(_, *args):
-    cursor = args[0]
-    return int(cursor) * 60
-
-
-@different_mode.register("S")
-def handle_second(_, *args):
-    cursor = args[0]
-    return int(cursor)
-
-
 def _get_offset(cursor: Union[str, int, float]) -> Union[int, float]:
     """
-    通过传入的游标标志位 来判断时间
-    从年月日到时分秒 优先级从上到下 也就是 如果一句话中出现多种状态 那么只取最大
+    通过传入的游标标志位 来判断时间  返回的是秒
     """
     offset = 0
     if isinstance(cursor, (int, float)):
         # 如果直接传数字 就按照天处理
         offset = cursor * 86400
     elif isinstance(cursor, str):
-        level_year = re.search(r"(-?\d+\.?\d*)(Y)", cursor)
-        level_month = re.search(r"(-?\d+\.?\d*)(m)", cursor)
-        level_day = re.search(r"(-?\d+\.?\d*)(d)", cursor)
-        level_hour = re.search(r"(-?\d+\.?\d*)(H)", cursor)
-        level_minute = re.search(r"(-?\d+\.?\d*)(M)", cursor)
-        level_second = re.search(r"(-?\d+\.?\d*)(S)", cursor)
-        item = level_year or level_month or level_day or level_hour or level_minute or level_second
-        if item:
-            offset = different_mode(item.group(2), item.group(1))
+        level_year = re.search(r"(-?\d+\.?\d*)Y", cursor)
+        level_month = re.search(r"(-?\d+\.?\d*)m", cursor)
+        level_day = re.search(r"(-?\d+\.?\d*)d", cursor)
+        level_hour = re.search(r"(-?\d+\.?\d*)H", cursor)
+        level_minute = re.search(r"(-?\d+\.?\d*)M", cursor)
+        level_second = re.search(r"(-?\d+\.?\d*)S", cursor)
+        year = float(level_year.group(1)) if level_year else 0
+        month = float(level_month.group(1)) if level_month else 0
+        day = (float(level_day.group(1)) if level_day else 0) + (year * 365) + (month * 30)
+        hour = float(level_hour.group(1)) if level_hour else 0
+        minute = float(level_minute.group(1)) if level_minute else 0
+        second = float(level_second.group(1)) if level_second else 0
+        return datetime.timedelta(days=day, hours=hour, minutes=minute, seconds=second).total_seconds()
     return offset
 
 
@@ -449,4 +443,19 @@ def _check_month_day_max(year: int, month: int) -> int:
 
 
 if __name__ == "__main__":
-    print(get_time("2022.3.9 14:32"))
+    print(get_time())
+    # print(get_time(instance=float))
+    # print(get_time(unit='ms'))
+    # print(get_time(unit='ms', instance=float))
+    # print(get_time(fmt=True))
+    # print(get_time(fmt="%Y年%m月%d日"))
+    # print(get_time("2天前"))
+    # print(get_time("2天前", timestamp=True))
+    print(get_time("2周前", timestamp=True))
+    print(get_time("2周前"))
+    # print(get_time("2023年11.02", fmt=("%Y年%m.%d", "%Y-%m-%d %H:%M:%S")))
+    # print(get_time("2023年11.02", fmt=("%Y年%m.%d", "%Y-%m-%d %H:%M:%S"), cursor="3.5H30S"))
+    # print(get_time("2023年11.02", fmt=("%Y年%m.%d", "%Y-%m-%d %H:%M:%S"), cursor="-3.5H"))
+    # print(get_time(fmt=True, cursor=-1))
+    # print(get_time(fmt=True, cursor="1Y2m1d"))
+    # print(get_time("Tue Jul 25 11:00:40 +0800 2023"))

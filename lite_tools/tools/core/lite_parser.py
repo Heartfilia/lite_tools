@@ -41,7 +41,7 @@ def try_get(
     :param default : 默认的返回值, 默认返回None, 可以自定义返回值
     :param expected_type: 期望获得的值类型 不是则为 default  可多传如：  expected_type=(list, str)
     :param log     :  是否打印日志
-    :param json    :  设置为True 返回值会返回默认的json串
+    :param json    :  设置为True 返回值会返回默认的json串 默认为去格式的json串
     :param options : 这里就是json.dumps的参数 变成了字典传入 不过我默认值有修改 ensure_ascii=False json那默认的是True 如果读取js文件设置见demo
                    : 如果处理文件：需要加参数 "mode": "file"  (可以额外指定的参数:encoding-默认utf-8) 具体见demo
                    : 一般不建议用我这个包搞这个 虽然可以 但是复杂
@@ -265,7 +265,7 @@ def _judge_json(renderer, json=False, options=None):
                     allow_nan=options.get('allow_nan', True),
                     cls=options.get('cls', None),
                     indent=options.get('indent', None),
-                    separators=options.get('separators', None),
+                    separators=options.get('separators', None) or (",", ":"),   # 默认无格式
                     default=options.get('default', None),
                     sort_keys=options.get('sort_keys', False)
                 )
