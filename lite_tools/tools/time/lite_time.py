@@ -74,7 +74,7 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str, Tu
     elif goal and isinstance(goal, (float, int)):
         # 转换时间戳 转换为 格式化时间
         return _timestamp_to_f_time(goal, output_fmt, cursor)
-    elif isinstance(goal, str) and not goal.isdigit() and (
+    elif isinstance(goal, str) and (len(goal) != 10 or len(goal) != 13) and (
             not isinstance(fmt, bool) or kwargs.get('timestamp') is True) and not output_fmt:
         # 传入了格式化的时间 然后又传了格式化时间的格式 所以这里将会返回 时间戳
         return _fmt_to_timestamp(goal, input_fmt, times, instance)
@@ -448,11 +448,13 @@ if __name__ == "__main__":
     # print(get_time(unit='ms'))
     # print(get_time(unit='ms', instance=float))
     # print(get_time(fmt=True))
-    # print(get_time(fmt="%Y年%m月%d日"))
+    print(get_time("20230822", fmt="%Y%m%d", timestamp=True))
+    print(get_time("230822", timestamp=True))
+    print(get_time(1692633600, fmt=True))
     # print(get_time("2天前"))
     # print(get_time("2天前", timestamp=True))
-    print(get_time("2周前", timestamp=True))
-    print(get_time("2周前"))
+    # print(get_time("2周前", timestamp=True))
+    # print(get_time("2周前"))
     # print(get_time("2023年11.02", fmt=("%Y年%m.%d", "%Y-%m-%d %H:%M:%S")))
     # print(get_time("2023年11.02", fmt=("%Y年%m.%d", "%Y-%m-%d %H:%M:%S"), cursor="3.5H30S"))
     # print(get_time("2023年11.02", fmt=("%Y年%m.%d", "%Y-%m-%d %H:%M:%S"), cursor="-3.5H"))
