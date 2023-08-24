@@ -390,7 +390,7 @@ def time_range(start_time: tuple, end_time: tuple, unit: Literal['s', 'ms'] = 's
     if start_time_fmt == end_time_fmt:
         logger.warning(f"开始时间: {start_time} 和结束时间: {end_time} 数据值一样了,不报错,但需要留意")
 
-    return get_time(start_time_fmt, unit=unit), get_time(end_time_fmt, unit=unit)
+    return get_time(start_time_fmt, unit=unit, ts=True), get_time(end_time_fmt, unit=unit, ts=True)
 
 
 def _get_fmt_time(time_limit: tuple):
@@ -448,9 +448,10 @@ if __name__ == "__main__":
     # print(get_time(unit='ms'))
     # print(get_time(unit='ms', instance=float))
     # print(get_time(fmt=True))
-    print(get_time("20230822", fmt="%Y%m%d", ts=True))
-    print(get_time("230822", ts=True))
-    print(get_time(1692633600, fmt=True))
+    # print(get_time("20230822", fmt="%Y%m%d", ts=True))
+    # print(get_time("230822", ts=True))
+    # print(get_time(1692633600, fmt=True))
+    # get_time("2022/12/12 10:11", fmt="%Y/%m/%d %H:%M")
     # print(get_time("2天前"))
     # print(get_time("2天前", timestamp=True))
     # print(get_time("2周前", timestamp=True))
@@ -461,3 +462,4 @@ if __name__ == "__main__":
     # print(get_time(fmt=True, cursor=-1))
     # print(get_time(fmt=True, cursor="1Y2m1d"))
     # print(get_time("Tue Jul 25 11:00:40 +0800 2023"))
+    print(time_range((2022,11), (2022,12,6)))    # 没有内置的格式 需要手动指定格式 转换位时间戳
