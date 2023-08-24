@@ -33,13 +33,13 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str, Tu
     params goal: 传入准确的时间戳 最好十位 额外可以设置的参数有 double fmt 如果需要把格式化时间转换为数字需要设置double=True, fmt设置为对应的格式
            : 如果传入的是 xx前 如 1个月前 3小时前 基于此时此刻计算 如1月前 (现在是2023.7.19 17:26:05) -得到-> (2023.6.19 17:26:05)
     params fmt : 返回格式化后的数据 True/False 默认%Y-%m-%d %H:%M:%S格式 传入其它格式按照其它格式转换
-               : 建议：如果是需要处理 格式化时间戳 转换成 时间戳的操作 只传入一个字符串 表示输入格式 并直接写上 ** timestamp=True **
+               : 建议：如果是需要处理 格式化时间戳 转换成 时间戳的操作 只传入一个字符串 表示输入格式 并直接写上 ** timestamp=True or ts=True **
                : 建议：使用复合结构，来保证传入格式和输出格式正常 (传入格式, 输出格式)
     params unit : 单位默认s/秒 还仅支持 ms/毫秒  这个数据默认取整 --> 可以设置 unit="ms/s" 对double后的结果取整
     params instance: 写 int/float 即可按照int或者float返回数据
     params cursor: 默认传入游标单位/天  可以是正可以是负 可以是整数可以是字符串 注意是有大小写区别的
                    更多的参数: Y:年 m:月 d:日 H:时 M:分 S:秒 （同时间那边的参数格式）如 cursor="-2Y"  如果写一堆 全部累加
-    params kwargs: 兼容不重要参数 如果写了 ** timestamp=True **  那么一定是把这个转时间戳的
+    params kwargs: 兼容不重要参数 如果写了 ** timestamp=True or ts=True **  那么一定是把这个转时间戳的
     """
     input_fmt, output_fmt = _get_user_fmt(fmt, **kwargs)   # output_fmt 这个参数在后面 转格式化时间的时候才用得到
     if not input_fmt and isinstance(goal, str):
@@ -75,7 +75,7 @@ def get_time(goal: Union[str, int, float, None] = None, fmt: Union[bool, str, Tu
         # 转换时间戳 转换为 格式化时间
         return _timestamp_to_f_time(goal, output_fmt, cursor)
     elif isinstance(goal, str) and (len(goal) != 10 or len(goal) != 13) and (
-            not isinstance(fmt, bool) or kwargs.get('timestamp') is True) and not output_fmt:
+            not isinstance(fmt, bool) or kwargs.get('timestamp') is True or kwargs.get('ts') is True) and not output_fmt:
         # 传入了格式化的时间 然后又传了格式化时间的格式 所以这里将会返回 时间戳
         return _fmt_to_timestamp(goal, input_fmt, times, instance)
     # 增加一个 传入是 a 格式 处理成b格式的情况
@@ -101,11 +101,11 @@ def _get_user_fmt(fmt, **kwargs) -> Tuple[Union[str, bool], str]:
     三种情况
     """
     if isinstance(fmt, bool):     # 如果穿了bool值 那么我就来猜格式
-        if kwargs.get('timestamp') is True:
+        if kwargs.get('timestamp') is True or kwargs.get('ts') is True:
             return "", ""
         return "", "%Y-%m-%d %H:%M:%S"
     elif isinstance(fmt, str):    # 如果传了一个字符串 那么输出为这个格式 输入我来猜
-        if kwargs.get('timestamp') is True:
+        if kwargs.get('timestamp') is True or kwargs.get('ts') is True:
             return fmt, ""   # 如果指定了 需要把这个格式化时间转成 时间戳
         return "", fmt
     elif isinstance(fmt, tuple) and len(fmt) == 1:  # 如果穿了元组但是只有一个值 同样我来猜输入 输出为传入的格式
@@ -448,8 +448,8 @@ if __name__ == "__main__":
     # print(get_time(unit='ms'))
     # print(get_time(unit='ms', instance=float))
     # print(get_time(fmt=True))
-    print(get_time("20230822", fmt="%Y%m%d", timestamp=True))
-    print(get_time("230822", timestamp=True))
+    print(get_time("20230822", fmt="%Y%m%d", ts=True))
+    print(get_time("230822", ts=True))
     print(get_time(1692633600, fmt=True))
     # print(get_time("2天前"))
     # print(get_time("2天前", timestamp=True))
