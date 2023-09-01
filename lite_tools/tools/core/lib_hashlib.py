@@ -7,7 +7,7 @@ from hashlib import (
     sha3_224, sha3_256, sha3_384, sha3_512
 )
 
-from typing import Union
+from typing import Union, List
 try:
     from typing import Literal
 except ImportError:
@@ -19,7 +19,7 @@ from lite_tools.exceptions.StringExceptions import BadModeException
 __ALL__ = ["get_md5", "get_sha", "get_sha3"]
 
 
-def get_md5(s: Union[str, bytes, int, float], mode: Literal[16, 32] = 32, up: bool = False, encoding='utf-8',
+def get_md5(s: Union[str, bytes, int, float, List[int]], mode: Literal[16, 32] = 32, up: bool = False, encoding='utf-8',
             **kwargs) -> str:
     """
     利用md5加密内容
@@ -36,6 +36,8 @@ def get_md5(s: Union[str, bytes, int, float], mode: Literal[16, 32] = 32, up: bo
     try:
         if isinstance(s, (str, int, float)):
             md5_obj.update(str(s).encode(encoding))
+        elif isinstance(s, list):
+            md5_obj.update(bytearray(s))
         elif isinstance(s, bytes):
             md5_obj.update(s)
 
