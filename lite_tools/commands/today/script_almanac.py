@@ -93,29 +93,29 @@ def get_wiki_info(mode: str = "history", time_fmt: str = "") -> dict:
 @check_cache
 def get_date_web(mode: str = "almanac") -> str:
     _ = mode
-    resp = requests.get('http://www.wannianli.cn/', headers={'user-agent': get_ua()}, timeout=5)
+    resp = requests.get('https://www.wannianli123.com/', headers={'user-agent': get_ua()}, timeout=5)
+    # http://www.wannianli.cn/    竟然倒闭了这个网站
+    # https://www.wannianli123.com/
     return resp.text
 
 
 def parse_html_today(html: etree.HTML):
-    tables = html.xpath('//table/tr')
     pt_today = PrettyTable(
-        [color_string("今日运势", **{"v": "b", "f": "b"}),
-         color_string(tables[0].xpath('./td/text()')[-1], **{"v": "b", "f": "b"})])
+        [color_string("运势", **{"v": "b", "f": "b"}),
+         color_string(" 详 ", **{"v": "b", "f": "b"})])
     pt_today.junction_char = "-"
     pt_today.vertical_char = " "
-    for tr in tables[1:]:
-        th = "".join(tr.xpath('./th[1]/text()'))
-        td = "".join(tr.xpath('./td')[-1].xpath('./text()'))
-        if th == "【宜】":
-            th = color_string(f"<green>{th}</green>")
-            td = color_string(f"<green>{td}</green>")
-        elif th == "【忌】":
-            th = color_string(f"<red>{th}</red>")
-            td = color_string(f"<red>{td}</red>")
-        elif "友情提示" in th or "彭祖百忌" in th:
-            continue
+
+    tables = html.xpath('//div[@class="detail"]/div[@class="items"]/table/tbody/tr')
+    for table in tables:
+        th = "".join(table.xpath('./td[1]/text()'))
+        td = ";".join(table.xpath('./td[2]/span/text()') or table.xpath('./td[2]/p/text()'))
         pt_today.add_row([th, td])
+
+    yi = ",".join(html.xpath('//div[@class="detail"]/div[@class="yiji"]/div[1]/div[2]/span/text()'))
+    pt_today.add_row([color_string("<red>宜</red>"), color_string(f"<red>{yi}</red>")])
+    ji = ",".join(html.xpath('//div[@class="detail"]/div[@class="yiji"]/div[2]/div[2]/span/text()'))
+    pt_today.add_row([color_string("<green>忌</green>"), color_string(f"<green>{ji}</green>")])
     print(pt_today)
 
 
@@ -130,7 +130,7 @@ def parse_html_holiday(html: etree.HTML):
     # pt_holiday.set_style(pt.PLAIN_COLUMNS)
     pt_holiday.junction_char = "-"
     pt_holiday.vertical_char = " "
-    tables = html.xpath('//div[@class="col-md-6"][2]/div/table/tbody/tr')
+    tables = html.xpath('//div[@id="jiari"]/div/table/tbody/tr')
     for tr in tables:
         name = "".join(tr.xpath('./td[1]/text()')).strip()
         holiday_range = "".join(tr.xpath('./td[2]/text()')).strip()
@@ -175,3 +175,7 @@ def _holiday_judge_range(chinese_time_range: str):
         return ""
     else:
         return ""
+
+
+if __name__ == '__main__':
+    print_today()
