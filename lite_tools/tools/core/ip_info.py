@@ -11,7 +11,7 @@ from lite_tools.logs import logger
 
 
 """
-用最简单的方法实现读取本地的网络 --> 目前仅支持中国地区
+用最简单的方法实现读取本地的网络 --> 目前仅支持中国地区 并且只支持IPV4  V6以后作为参数配置 那以后再说
 """
 
 
@@ -23,6 +23,19 @@ def get_command_result(cmd: str) -> str:
     context = r.read()
     r.close()
     return context
+
+
+class DefaultArray:
+    def __init__(self, ips: list):
+        self.ip_list = ips
+
+    def group(self, *args) -> str:
+        if "127.0.0.1" in self.ip_list:
+            self.ip_list.remove("127.0.0.1")
+        if not self.ip_list:
+            return None
+
+        return self.ip_list[0]
 
 
 def get_lan() -> str:
@@ -39,6 +52,12 @@ def get_lan() -> str:
         ip_reg_0 = re.search(r"(?=eth0|en0).*?\n\s+inet\s(\d+\.\d+\.\d+\.\d+)", txt)
         # 如果有不同情况的方案二就放这里
         ip_reg = ip_reg_0
+        if not ip_reg:
+            ip_reg_1 = re.findall(r"inet (\d+\.\d+\.\d+\.\d+)", txt)
+            arr = DefaultArray(ip_reg_1)
+            ip = arr.group()
+            if ip:
+                return ip
     if not ip_reg:
         # 如果没有匹配到内容那么就走系统自带的方法
         print('获取内网ip通过正则获取失败，希望你能把你当前pc的特殊情况发给我,我这里先返回系统方法获取的ip给到你')
