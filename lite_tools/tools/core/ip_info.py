@@ -25,19 +25,6 @@ def get_command_result(cmd: str) -> str:
     return context
 
 
-class DefaultArray:
-    def __init__(self, ips: list):
-        self.ip_list = ips
-
-    def group(self, *args) -> str:
-        if "127.0.0.1" in self.ip_list:
-            self.ip_list.remove("127.0.0.1")
-        if not self.ip_list:
-            return None
-
-        return self.ip_list[0]
-
-
 def get_lan() -> str:
     """
     获取本机内网ip
@@ -53,11 +40,14 @@ def get_lan() -> str:
         # 如果有不同情况的方案二就放这里
         ip_reg = ip_reg_0
         if not ip_reg:
-            ip_reg_1 = re.findall(r"inet (\d+\.\d+\.\d+\.\d+)", txt)
-            arr = DefaultArray(ip_reg_1)
-            ip = arr.group()
-            if ip:
-                return ip
+            ip_reg_1 = ""
+            for name, temp_ip in re.findall(r"(\w+): .*?\n.*?inet (\d+\.\d+\.\d+\.\d+)", txt):
+                if "docker" in name or name == "lo" or temp_ip == "127.0.0.1":
+                    continue
+                ip_reg_1 = temp_ip
+                break
+            if ip_reg_1:
+                return ip_reg_1
     if not ip_reg:
         # 如果没有匹配到内容那么就走系统自带的方法
         print('获取内网ip通过正则获取失败，希望你能把你当前pc的特殊情况发给我,我这里先返回系统方法获取的ip给到你')
