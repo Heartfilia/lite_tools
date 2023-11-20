@@ -31,7 +31,7 @@ def get_lan() -> str:
     """
     if platform.system() == "Windows":
         txt = get_command_result("ipconfig")
-        ip_reg_0 = re.search(r"以太网适配器.*?IPv4\s?地址.*?(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I)
+        ip_reg_0 = re.search(r"以太网适配器 以太网.*?IPv4\s?地址.*?(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I)
         # ip_reg_1 = re.search(r"(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I)
         ip_reg = ip_reg_0  # or ip_reg_1  # 如果有不同情况的方案格式如上和这里注释部分
     else:
@@ -50,7 +50,7 @@ def get_lan() -> str:
                 return ip_reg_1
     if not ip_reg:
         # 如果没有匹配到内容那么就走系统自带的方法
-        print('获取内网ip通过正则获取失败，希望你能把你当前pc的特殊情况发给我,我这里先返回系统方法获取的ip给到你')
+        logger.warning('获取内网ip通过正则获取失败，希望你能把你当前pc的特殊情况发给我,我这里先返回系统方法获取的ip给到你')
         ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
     else:
         ip = ip_reg.group(1)
