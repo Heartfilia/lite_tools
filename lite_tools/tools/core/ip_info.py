@@ -31,8 +31,6 @@ def get_lan() -> str:
     """
     if platform.system() == "Windows":
         txt = get_command_result("ipconfig")
-        # windows 这里也得用 多匹配问题 这里bug还没有改
-
         for name, temp_ip in re.findall(r"(以太网适配器.*?:).*?IPv4\s?地址.*?(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I):
             if "WSL" not in name:
                 return temp_ip
