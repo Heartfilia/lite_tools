@@ -31,9 +31,13 @@ def get_lan() -> str:
     """
     if platform.system() == "Windows":
         txt = get_command_result("ipconfig")
-        ip_reg_0 = re.search(r"以太网适配器 以太网.*?IPv4\s?地址.*?(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I)
+        # windows 这里也得用 多匹配问题 这里bug还没有改
+
+        for name, temp_ip in re.findall(r"(以太网适配器.*?:).*?IPv4\s?地址.*?(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I):
+            if "WSL" not in name:
+                return temp_ip
         # ip_reg_1 = re.search(r"(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I)
-        ip_reg = ip_reg_0  # or ip_reg_1  # 如果有不同情况的方案格式如上和这里注释部分
+        # 其它情况写这里
     else:
         txt = get_command_result("ifconfig")
         ip_reg_0 = re.search(r"(?=eth0|en0).*?\n\s+inet\s(\d+\.\d+\.\d+\.\d+)", txt)
