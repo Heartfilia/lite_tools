@@ -24,16 +24,34 @@ import re
 import threading
 import time as _time
 from collections import Counter
-from redis.typing import (
-    EncodableT,
-    ExpiryT,
-    AbsExpiryT,
-    FieldT,
-    PatternT,
-    AnyKeyT,
-    ZScoreBoundT
-)
+
+from datetime import datetime, timedelta
 from typing import Union, Sequence, List, Optional, TypeVar, Callable, Mapping, Set
+
+try:
+    from redis.typing import (
+        EncodableT,
+        ExpiryT,
+        AbsExpiryT,
+        FieldT,
+        PatternT,
+        AnyKeyT,
+        ZScoreBoundT
+    )
+except ImportError:
+    EncodedT = Union[bytes, memoryview]
+    DecodedT = Union[str, int, float]
+    EncodableT = Union[EncodedT, DecodedT]
+    _StringLikeT = Union[bytes, str, memoryview]
+    KeyT = _StringLikeT  # Main redis key space
+    PatternT = _StringLikeT
+    FieldT = EncodableT
+    AbsExpiryT = Union[int, datetime]
+    ExpiryT = Union[int, timedelta]
+    AnyKeyT = TypeVar("AnyKeyT", bytes, str, memoryview)
+    ZScoreBoundT = Union[float, str]
+
+
 try:
     from typing import Literal
 except ImportError:
