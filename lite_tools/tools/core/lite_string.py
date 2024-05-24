@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import re
-from typing import Optional
+import os
+import math
+from typing import Optional, Union
 
 from usepy import useCleanHtml
 
@@ -9,7 +11,181 @@ from lite_tools.utils.u_sub_sup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
-__ALL__ = ["clean_html", "CleanString", "color_string", "math_string"]
+__ALL__ = ["clean_html", "CleanString", "color_string", "math_string", "PrettySrt"]
+
+
+class PrettySrt:
+    _RE_RAW = re.compile(r"(\d+.*?)\n(\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3})\n(.*)\n?")
+
+    def __init__(self, srt_file: str) -> None:
+        self._srt = self._check_and_get(srt_file)
+        self._source_root = srt_file  # 记录源文件路径 或许能用到
+        self._rows = []
+        self._init_rows()
+        self._last_ind = 0  # 记录最后一个序号/会被更新 有的程序会
+        self._result = ""  # 缓存处理好的结果
+
+    def _update_last_ind(self):
+        if self._rows:
+            for row in self._rows[::-1]:  # 倒着查
+                if row and len(row) == 3:
+                    last_item = row[-1][0]
+                    sort_id_obj = re.search(r"^(\d+)", last_item)
+                    if sort_id_obj:
+                        self._last_ind = int(sort_id_obj.group(1))
+                        break
+
+    @staticmethod
+    def _check_and_get(srt: str) -> str:
+        """
+        判断文件是否存在 并获取到 文本信息
+        """
+        if not os.path.exists(srt):
+            raise Exception(f"[{srt}]文件未找到")
+        with open(srt, "r", encoding='utf-8') as fr:
+            content = fr.read()
+        return content
+
+    @staticmethod
+    def _string_time_to_ts(ot: str) -> Union[int, float]:
+        """
+        把 xx:xx:xx,xxx 的时间 换成对应的 秒 数
+        """
+        result_t = 0
+        base_time = ot.split(",")
+        if len(base_time) == 2:
+            result_t += float(f"0.{base_time[1]}")
+        h, m, s = base_time[0].split(":")
+        result_t += int(h) * 3600
+        result_t += int(m) * 60
+        result_t += int(s)
+        return result_t
+
+    @staticmethod
+    def _handle_ts_to_string(t: float) -> str:
+        """
+        这里是我用自己写的方法实现的， 没有用其它包 应该有 但是我直接用这个好了
+        :param t:
+        :return:
+        """
+        base_time_fmt = "{H:>02}:{M:>02}:{S:>02},{F:<03}"
+        new_h = t // 3600
+        new_m = (t % 3600) // 60
+        new_s = (t % 3600) % 60
+        fs = str(t).split(".")
+        fs = str(fs[-1])[:3] if len(fs) > 1 else "000"
+        return base_time_fmt.format(H=int(new_h), M=int(new_m), S=int(new_s), F=fs)
+
+    @staticmethod
+    def _trans_time(time_line: str):
+        """
+        传入的是 xx:xx:xx,xxx --> xx:xx:xx,xxx
+        """
+
+    def _init_rows(self):
+        self._rows = self._RE_RAW.findall(self._srt)
+
+    def pretty_number(self, start: int = 1, clear_other: bool = True):
+        """
+        美化每一行的序号
+        :param start       : 配置开始的序号 默认从1开始
+        :param clear_other : 清理其它信息，比如有些时候后面会跟发音人信息，是否需要清理掉 默认清理
+        """
+        if self._rows and self._rows[0] and len(self._rows[0]) == 3:
+            if not self._rows[0][0].startswith(str(start)):
+                # 如果第一行不是以需要的行号开始 那么需要更新每一行
+
+                for ind, row in enumerate(self._rows):
+                    this_row_line = row[0]
+                    this_row_line = re.sub(r"^\d+", str(start), this_row_line)
+                    new_line = (this_row_line,) + row[1:]
+                    self._rows[ind] = new_line
+
+                    start += 1
+
+            if clear_other:
+                for ind, row in enumerate(self._rows):
+                    this_row_line = row[0]
+                    if not re.search(r"^\d+$", this_row_line):
+                        sort_id = re.sub(r"^(\d+).*", r"\1", this_row_line)
+                        new_line = (sort_id,) + row[1:]
+                        self._rows[ind] = new_line
+
+        # 不管是否存在行 都需要返回对象
+        self._update_last_ind()  # 不管什么操作 都要记录一下最后的序号 用作结尾
+        return self
+
+    def pretty_words(self, max_line: int = 0, clear_back: str = ""):
+        """
+        用来美化每一行的数据
+        :param max_line  : 用来限制每一行最多多少字，超过的将会进行分行 - 同时把时间也根据字数平均分配
+        :param clear_back: 用来清理每一行结尾的特殊字符的（这里不要随便用字，容易把字去掉，用符号即可）
+        """
+        change = False
+        if self._rows:
+            new_row = []  # 缓存
+            for ind, row in self._rows:
+                if len(row) == 3:
+                    # ind 行这里不做记录 因为后面要重新排序
+                    time_line = row[1]
+                    words_line = row[2]
+
+                    if clear_back:
+                        words_line = words_line.rstrip(clear_back)  # 先清理一次 避免后面判断误伤
+
+                    if max_line and len(words_line) > max_line:
+                        # 需要分隔处理的情况
+                        split_number = math.ceil(len(words_line) / max_line)
+
+                    else:
+                        if clear_back:
+                            new_row.append((row[0], row[1], words_line))  # 因为前面已经清理了一次了
+                        else:
+                            new_row.append(row)
+
+        if change:
+            # 如果有改动 这里需要重新排行号
+
+            # 排完行号后重新记录新的尾行号
+            self._update_last_ind()
+
+        return self
+
+    def add_tail_ind(self):
+        """
+        因为有的工具 最后一行不多一个 空序号行 合成到视频里面容易丢失最后一段话 所以这里是做的兼容 补最后一行序号的
+        """
+        if self._rows and len(self._rows[-1]) != 1:
+            self._last_ind += 1
+            self._rows.append((str(self._last_ind),))  # 最后一行独立判断
+
+    def _handle_string(self):
+        result = ""
+        if not self._rows:
+            template = "{ind_line}\n{time_range}\n{words}\n\n"
+            for row in self._rows:
+                if len(row) == 3:
+                    result += template.format(ind_line=row[0], time_range=row[1], words=row[2])
+                elif len(row) == 1:
+                    result += f"{row[0]}\n"  # 结尾补空行
+        self._result = result
+
+    def show(self):
+        """
+        展示现在改好的结果
+        """
+        self._handle_string()
+        print(self._result)
+
+    def save(self, save_path: str = None, encoding: str = "utf-8"):
+        """
+        将处理好的保存下来
+        :param save_path : 如果不传入，将会是原路径覆盖
+        :param encoding  : 默认存的格式
+        """
+        self._handle_string()
+        with open(save_path, "w", encoding=encoding) as fw:
+            fw.write(save_path)
 
 
 class CleanString(object):

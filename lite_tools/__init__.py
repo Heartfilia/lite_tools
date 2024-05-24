@@ -28,7 +28,8 @@ __ALL__ = [
     "CleanString",   # 清理字符串里面的特殊字符 文本不是太大可以用
     "color_string",  # 给字体加颜色
     "SqlString",     # 获取mysql的语句 太复杂不行
-    "math_string"    # 没啥用，就是打印以下数学字符
+    "math_string",   # 没啥用，就是打印以下数学字符
+    "PrettySrt",     # 优化 srt 文件的工具
     # "x_timeout",     # 这个没有弄好 就是限制函数最大运行时间的
     "Singleton",     # @ 单例
     "Buffer",        # @ 缓存队列 + 统计
@@ -65,7 +66,7 @@ from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy, BloomFilter
 from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.core.lite_match import match_case
-from lite_tools.tools.core.lite_string import clean_html, CleanString, color_string, math_string
+from lite_tools.tools.core.lite_string import clean_html, CleanString, color_string, math_string, PrettySrt
 from lite_tools.tools.time.httpx_timeout import x_timeout
 from lite_tools.tools.core.lite_cache import Singleton, Buffer
 from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
