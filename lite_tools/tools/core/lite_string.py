@@ -15,11 +15,12 @@ __ALL__ = ["clean_html", "CleanString", "color_string", "math_string", "PrettySr
 
 
 class PrettySrt:
-    _RE_RAW = re.compile(r"(\d+.*?)\n(\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3})\n(.*)\n?")
+    _RE_RAW = re.compile(r"(\d+.*?)\n(\d{2}:\d{2}:\d{2},\d{1,3} --> \d{2}:\d{2}:\d{2},\d{1,3})\n(.*)\n?")
 
     def __init__(self, srt_file: str) -> None:
         self._srt = self._check_and_get(srt_file)
         self._source_root = srt_file  # 记录源文件路径 或许能用到
+        self._start = 1   # 会被重写
         self._rows = []
         self._init_rows()
         self._last_ind = 0  # 记录最后一个序号/会被更新 有的程序会
@@ -76,11 +77,22 @@ class PrettySrt:
         fs = str(fs[-1])[:3] if len(fs) > 1 else "000"
         return base_time_fmt.format(H=int(new_h), M=int(new_m), S=int(new_s), F=fs)
 
-    @staticmethod
-    def _trans_time(time_line: str):
+    def _combine_new_time_line(self, start_ts: float, end_ts: float) -> str:
+        """
+        把 float, float  ->  xx:xx:xx,xxx --> xx:xx:xx,xxx
+        """
+        start = self._handle_ts_to_string(start_ts)
+        end = self._handle_ts_to_string(end_ts)
+        return f"{start} --> {end}"
+
+    def _trans_time(self, time_line: str):
         """
         传入的是 xx:xx:xx,xxx --> xx:xx:xx,xxx
         """
+        time_start, time_end = time_line.split("-->")  # 需要处理前后的空格
+        start_ts = self._string_time_to_ts(time_start.strip())
+        end_ts = self._string_time_to_ts(time_end.strip())
+        return start_ts, end_ts
 
     def _init_rows(self):
         self._rows = self._RE_RAW.findall(self._srt)
@@ -91,6 +103,7 @@ class PrettySrt:
         :param start       : 配置开始的序号 默认从1开始
         :param clear_other : 清理其它信息，比如有些时候后面会跟发音人信息，是否需要清理掉 默认清理
         """
+        self._start = start    # 如果配置了这里 那么后面重新排的时候会从这里开始
         if self._rows and self._rows[0] and len(self._rows[0]) == 3:
             if not self._rows[0][0].startswith(str(start)):
                 # 如果第一行不是以需要的行号开始 那么需要更新每一行
@@ -115,28 +128,47 @@ class PrettySrt:
         self._update_last_ind()  # 不管什么操作 都要记录一下最后的序号 用作结尾
         return self
 
-    def pretty_words(self, max_line: int = 0, clear_back: str = ""):
+    def pretty_words(self, max_line: int = 0, clear_back: str = "。，！？丶、"):
         """
         用来美化每一行的数据
         :param max_line  : 用来限制每一行最多多少字，超过的将会进行分行 - 同时把时间也根据字数平均分配
         :param clear_back: 用来清理每一行结尾的特殊字符的（这里不要随便用字，容易把字去掉，用符号即可）
         """
         change = False
+        new_row = []  # 缓存
         if self._rows:
-            new_row = []  # 缓存
             for ind, row in self._rows:
                 if len(row) == 3:
                     # ind 行这里不做记录 因为后面要重新排序
+                    now_row_number = row[0]
+                    this_row_line_reg = re.search(r"^(\d+)", now_row_number)
+                    if this_row_line_reg:
+                        now_start_number = int(this_row_line_reg.group(1))
+                    else:
+                        now_start_number = 1
                     time_line = row[1]
                     words_line = row[2]
 
                     if clear_back:
-                        words_line = words_line.rstrip(clear_back)  # 先清理一次 避免后面判断误伤
+                        rule = f"[{clear_back}]+$"
+                        words_line = re.sub(rule, "", words_line)  # 先清理一次 避免后面判断误伤
 
-                    if max_line and len(words_line) > max_line:
+                    if words_line and max_line and len(words_line) > max_line:
+                        change = True
                         # 需要分隔处理的情况
                         split_number = math.ceil(len(words_line) / max_line)
+                        start_ts, end_ts = self._trans_time(time_line)
+                        ts_duration = end_ts - start_ts
+                        each_word_ts = round(ts_duration / len(words_line))   # 每一个字多少时间
 
+                        for ind_line in range(split_number):
+                            new_words = words_line[max_line * ind_line:max_line * (ind_line + 1)]
+                            spend_ts = each_word_ts * len(new_words)
+                            new_end_ts = start_ts + spend_ts
+                            new_time_row = self._combine_new_time_line(start_ts, new_end_ts)
+                            new_row.append((now_start_number, new_time_row, new_words))
+                            start_ts = min(new_end_ts, end_ts)
+                            now_start_number += 1
                     else:
                         if clear_back:
                             new_row.append((row[0], row[1], words_line))  # 因为前面已经清理了一次了
@@ -145,6 +177,11 @@ class PrettySrt:
 
         if change:
             # 如果有改动 这里需要重新排行号
+            results = []
+            new_start = self._start
+            for row in new_row:
+                results.append((str(new_start),) + row[1:])
+                new_start += 1
 
             # 排完行号后重新记录新的尾行号
             self._update_last_ind()
