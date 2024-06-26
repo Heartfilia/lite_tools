@@ -183,6 +183,7 @@ class PrettySrt:
                 results.append((str(new_start),) + row[1:])
                 new_start += 1
 
+            self._rows = results
             # 排完行号后重新记录新的尾行号
             self._update_last_ind()
 

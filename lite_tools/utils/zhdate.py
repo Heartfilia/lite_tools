@@ -22,8 +22,7 @@ from itertools import accumulate
 """
 
 
-
-CHINESEYEARCODE = [
+CHINESE_YEAR_CODE = [
     19416,
     19168, 42352, 21717, 53856, 55632, 91476, 22176, 39632,
     21970, 19168, 42422, 42192, 53840, 119381, 46400, 54944,
@@ -55,7 +54,7 @@ CHINESEYEARCODE = [
 '''
 从1900年，至2100年每年的农历春节的公历日期
 '''
-CHINESENEWYEAR = [
+CHINESE_NEW_YEAR = [
     '19000131',
     '19010219', '19020208', '19030129', '19040216', '19050204',
     '19060125', '19070213', '19080202', '19090122', '19100210',
@@ -118,8 +117,8 @@ class ZhDate(object):
         self.lunar_month = lunar_month
         self.lunar_day = lunar_day
         self.leap_month = leap_month
-        self.year_code = CHINESEYEARCODE[self.lunar_year - 1900]
-        self.newyear = datetime.strptime(CHINESENEWYEAR[self.lunar_year - 1900], '%Y%m%d')
+        self.year_code = CHINESE_YEAR_CODE[self.lunar_year - 1900]
+        self.newyear = datetime.strptime(CHINESE_NEW_YEAR[self.lunar_year - 1900], '%Y%m%d')
 
     def to_datetime(self):
         """农历日期转换称公历日期
@@ -140,11 +139,11 @@ class ZhDate(object):
             ZhDate -- 生成的农历日期对象
         """
         lunar_year = dt.year
-        if (datetime.strptime(CHINESENEWYEAR[lunar_year - 1900], '%Y%m%d') - dt).days > 0:
+        if (datetime.strptime(CHINESE_NEW_YEAR[lunar_year - 1900], '%Y%m%d') - dt).days > 0:
             lunar_year -= 1
-        newyear_dt = datetime.strptime(CHINESENEWYEAR[lunar_year - 1900], '%Y%m%d')
+        newyear_dt = datetime.strptime(CHINESE_NEW_YEAR[lunar_year - 1900], '%Y%m%d')
         days_passed = (dt - newyear_dt).days
-        year_code = CHINESEYEARCODE[lunar_year - 1900]
+        year_code = CHINESE_YEAR_CODE[lunar_year - 1900]
         month_days = ZhDate.decode(year_code)
 
         for pos, days in enumerate(accumulate(month_days)):
@@ -290,7 +289,7 @@ class ZhDate(object):
         if not (1900 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 30):
             return False
 
-        year_code = CHINESEYEARCODE[year - 1900]
+        year_code = CHINESE_YEAR_CODE[year - 1900]
 
         # 有闰月标志
         if leap:
@@ -339,5 +338,5 @@ class ZhDate(object):
             [int] -- 农历年份所对应的农历月份天数列表
         """
         return ZhDate.decode(
-            CHINESEYEARCODE[year - 1900]
+            CHINESE_YEAR_CODE[year - 1900]
         )
