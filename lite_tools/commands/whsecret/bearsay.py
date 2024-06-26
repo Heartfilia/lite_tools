@@ -68,3 +68,7 @@ def roar_decode(string: str) -> str:
         a += chr(int(e, 16))
 
     return a
+
+
+if __name__ == '__main__':
+    print(roar_encode("不要告诉我，这里东西太多了"))
