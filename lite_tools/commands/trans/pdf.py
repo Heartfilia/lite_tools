@@ -8,6 +8,7 @@
 import os
 import re
 import sys
+from math import ceil
 from typing import Union, Optional
 
 try:
@@ -35,7 +36,7 @@ def _generate_pdf(filename: str, page_sizes: tuple = None) -> canvas.Canvas:
 def _save_img_to_pdf(
 		pdf: canvas.Canvas, image_path: str,
 		x: Union[int, float], y: Union[int, float], w: Union[int, float], h: Union[int, float],
-		set_size: bool = False, first_page: bool = False) -> None:
+		set_size: bool = False) -> None:
 	"""
 	把图片绘制进pdf对象
 	:param pdf       : 当然是pdf的canvas对象
@@ -45,15 +46,11 @@ def _save_img_to_pdf(
 	:param w         : 图片的宽像素
 	:param h         : 图片的高像素
 	:param set_size  : 图片的高像素
-	:param first_page: 是否是第一页
 	"""
-	if not first_page:
-		pdf.showPage()
 	if set_size is False:       # 没有设置全局尺寸的情况下
 		pdf._pagesize = (w, h)  # 配置当前页的大小
 	pdf.drawImage(image_path, x, y, w, h)
-	if first_page:
-		pdf.showPage()
+	pdf.showPage()
 
 
 def lite_pdf(file_dir: str, out_name: str, width: int = -1, height: int = -1) -> None:
@@ -83,29 +80,54 @@ def lite_pdf(file_dir: str, out_name: str, width: int = -1, height: int = -1) ->
 	len_file = len(file_list)
 
 	first_pic = True
-	first_page = True
+	temp_folder = []
 	for ind, filename in enumerate(file_list):
 		if not re.search(r"\.jpg$|\.jpeg$|\.png$", filename, re.I):
 			continue
 		if file_dir == filename:
 			file_dir = os.getcwd()
-		img = Image.open(os.path.join(file_dir, filename))
+		pic_root = os.path.join(file_dir, filename)
+		img = Image.open(pic_root)
 		img_w, img_h = img.size   # 原始图片的尺寸
 		if first_pic and my_pdf is None:
 			# my_pdf = _generate_pdf(out_dir, (img_w, img_h))
 			my_pdf = _generate_pdf(out_dir)
 			first_pic = False
-		# img_x = (landscape(pdf_size)[1] - img_w)/2
-		# img_y = (landscape(pdf_size)[0] - img_h) / 2
+
+		x = 0
+		y = 0
 		if not my_pdf:
 			print("初始话pdf模板错误,可以尝试手动添加模板尺寸")
 			exit(0)
-		_save_img_to_pdf(my_pdf, os.path.join(file_dir, filename), x=0, y=0, w=img_w, h=img_h, set_size=set_size, first_page=first_page)
-		first_page = False
-		print(f'\r[{ind+1:>03}/{len_file:>03}] image--{filename}--saved      ', end="")
+		if set_size:  # 如果是设置了尺寸 需要做到适配尺寸
+			if img_w > width or img_h > height:  # 如果两个边有一边比预设的大
+				w_rate = round(width / img_w, 2)
+				h_rate = round(height / img_h, 2)
+				goal_rate = min(w_rate, h_rate)   # 哪个变化大取哪个
+				new_w = ceil(img_w * goal_rate)
+				new_h = ceil(img_h * goal_rate)
+				# 先把宽度对齐，然后看看高度是否需要调整
+				img = img.resize(size=(new_w, new_h))
+				temp_name = os.path.join(file_dir, f"~temp_lite_image_{filename}")
+				img.save(temp_name)
+				temp_folder.append(temp_name)
+				x = abs((width - new_w) // 2)
+				y = abs((height - new_h) // 2)
+				img_w = new_w
+				img_h = new_h
+				pic_root = temp_name
+			else:
+				x = abs((width - img_w) // 2)
+				y = abs((height - img_h) // 2)
+
+		img.close()
+		_save_img_to_pdf(my_pdf, pic_root, x=x, y=y, w=img_w, h=img_h, set_size=set_size)
+		print(f'\r[{ind+1:>03}/{len_file:>03}] image--{filename}--saved ', end="")
 	my_pdf.save()
 	print()
 	logger.success("转换完成")
+	for temp_name in temp_folder:
+		os.remove(temp_name)
 
 
 def _split_folder(folder: str) -> str:
@@ -244,3 +266,12 @@ def pdf_run(args):
 
 	else:
 		_print_pdf_base()
+
+
+if __name__ == '__main__':
+	lite_pdf(
+		r"C:\Users\Heartfilia\Desktop\fsdownload\test",
+		"test.pdf",
+		1920,
+		1080
+	)

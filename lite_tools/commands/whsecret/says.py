@@ -68,7 +68,7 @@ def bear_mode():
         else:
             if not key or key in ['quit()', 'exit()']:
                 break
-            key = key.strip().replace(" ", "")
+            key = key.strip().replace(" ", "").replace("\n", "").replace("\r", "")
             mode = check_say_mode(key)
             if mode == 0:
                 s = roar_encode(key)  # 加密
