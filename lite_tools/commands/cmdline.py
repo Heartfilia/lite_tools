@@ -108,7 +108,7 @@ def _get_version():
     return online_last_stable_version
 
 
-def check_new_version():
+def check_new_version(check: bool = True):
     def sure_version(version: str):
         return tuple(map(lambda x: int(x), version.split(".")))
     online_last_stable_version = _get_version()
@@ -264,8 +264,9 @@ def execute():
         return
 
     command = args.pop(1)
+    check = True if command != "update" else False
     chose_option(command, args)
-    check_new_version()
+    check_new_version(check)
 
 
 if __name__ == "__main__":
