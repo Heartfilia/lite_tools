@@ -21,6 +21,7 @@
 import os.path
 import re
 import sys
+import pip
 
 import requests
 from lite_tools.version import VERSION
@@ -231,6 +232,11 @@ def get_hot_news(_, *args):
 
     from lite_tools.commands.news.news_cmd import news_cmdline
     news_cmdline(args)
+
+
+@chose_option.register("update")
+def update_lite_tools(_, *args):
+    pip.main(["install", "--upgrade", "lite-tools"])
 
 
 @chose_option.register("acg")
