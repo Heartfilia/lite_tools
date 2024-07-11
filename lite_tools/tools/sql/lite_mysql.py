@@ -69,7 +69,7 @@ class MySql:
         elif not pool and config and isinstance(config, MySqlConfig):
             self.pool = None
             self.config = config
-            self.table_name = self.config.table_name
+            self.table_name = table_name or self.config.table_name
             self._init_mysql(
                 self.config.database, self.config.maxconnections,
                 self.config.host, self.config.port, self.config.user, self.config.password, self.config.charset,
