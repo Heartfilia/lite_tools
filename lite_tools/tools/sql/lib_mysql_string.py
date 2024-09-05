@@ -29,34 +29,42 @@ class SqlString(object):
             raise ValueError("缺少表名")
 
     @staticmethod
-    def _parse_dict(item: dict, origin_keys: list = None, mode: str = "key"):
+    def _parse_dict(item: Union[dict, str], origin_keys: list = None, mode: str = "key"):
         keys = []
         now_value = []
-        if origin_keys:   # 如果有明确的key的顺序提取值传入
-            for key in origin_keys:
-                value = item[key]
-                if isinstance(value, bool):
-                    value = 1 if value else 0
-                elif value is None and mode == "key":
-                    value = ""
-                elif value is None and mode == "where":
-                    value = " IS NULL "
-                now_value.append(value)
-            return origin_keys, now_value
-        else:
-            for key, value in item.items():
-                keys.append(key)
-                if isinstance(value, bool):
-                    value = 1 if value else 0
-                elif value is None and mode == "key":
-                    value = ""
-                elif value is None and mode == "where":
-                    value = " IS NULL "
+        if isinstance(item, dict):
+            if origin_keys:   # 如果有明确的key的顺序提取值传入
+                for key in origin_keys:
+                    value = item[key]
+                    if isinstance(value, bool):
+                        value = 1 if value else 0
+                    elif value is None and mode == "key":
+                        value = ""
+                    elif value is None and mode == "where":
+                        value = " IS NULL "
+                    now_value.append(value)
+                return origin_keys, now_value
+            else:
+                for key, value in item.items():
+                    keys.append(key)
+                    if isinstance(value, bool):
+                        value = 1 if value else 0
+                    elif value is None and mode == "key":
+                        value = ""
+                    elif value is None and mode == "where":
+                        value = " IS NULL "
 
-                now_value.append(value)
+                    now_value.append(value)
+        else:
+            keys.append(item)
+
         return keys, now_value
 
-    def _handle_items(self, item: Union[dict, Mapping[str, any]], mode: str = "key") -> Tuple[List[str], List[any]]:
+    def _handle_items(
+            self,
+            item: Union[dict, Mapping[str, any], str],
+            mode: str = "key"
+    ) -> Tuple[List[str], List[any]]:
         keys = []
         values = []
 
@@ -73,74 +81,95 @@ class SqlString(object):
                 values.append(value)
         return keys, values
 
-    def _create_insert_sql(
-            self, item: Union[dict, Mapping[str, any]], table_name: str,
-            duplicate_except: list = None, ignore: bool = False) -> Tuple[str, List[any]]:
+    def insert(
+            self,
+            item: Union[Mapping[str, any], List[Mapping[str, any]]],
+            table_name: str = "",
+            duplicate_except: list = None,
+            ignore: bool = False
+    ) -> Tuple[str, List[any]]:
         """
         创建数据模板 和对应的数据结果
-        :param item -> dict模式 直接处理为单条 {"a": 1, "b": False} -> a=1,b=0
-                    -> list模式 传入的是多组[{"a": 1, "b": False}, {"a": 1, "b": False}]
-        :param table_name: 表名
-        :duplicate_except: 这里是排除法一般这里建议把你不需要替换的字段名称写上去 None的话就不 insert... on duplicate
+        :param item  : -> dict模式 直接处理为单条 {"a": 1, "b": False} -> a=1,b=0
+                       -> list模式 传入的是多组[{"a": 1, "b": False}, {"a": 1, "b": False}]
+        :param table_name      : 表名,这里优先级高于全局
+        :param duplicate_except: 这里是排除法一般这里建议把你不需要替换的字段名称写上去 None的话就不 insert... on duplicate
+        :param ignore          : 一般这里是忽略表里已经存在的时候 这里优先级高于上面 这个和上面都写了的话 是直接忽略重复异常
         """
+        assert table_name or self.table_name, "请至少在一个入口位置传入table_name"
         keys, values = self._handle_items(item)
 
         key_string = ", ".join(map(lambda x: f"`{x}`", keys))
         value_string = ", ".join("%s" for _ in keys)
-        if duplicate_except:
-            if "_create_time" in keys:
-                duplicate_except.append("_create_time")
-            if "_is_deleted" in keys:
-                duplicate_except.append("_is_deleted")
-            up = ", ".join(f"`{key}`=VALUES(`{key}`)" for key in keys if key not in duplicate_except)
-            dup = f"ON DUPLICATE KEY UPDATE {up}"
-        else:
-            dup = ""
         if ignore:
             ignore = " IGNORE"
+            dup = ""
         else:
+            if duplicate_except:
+                if "_create_time" in keys:
+                    duplicate_except.append("_create_time")
+                if "_is_deleted" in keys:
+                    duplicate_except.append("_is_deleted")
+                up = ", ".join(f"`{key}`=VALUES(`{key}`)" for key in keys if key not in duplicate_except)
+                dup = f"ON DUPLICATE KEY UPDATE {up}"
+            else:
+                dup = ""
             ignore = ""
 
-        return f"INSERT{ignore} INTO `{table_name}` ({key_string}) VALUES ({value_string}) {dup};", values
+        return (
+            f"INSERT{ignore} INTO `{table_name or self.table_name}` ({key_string}) VALUES ({value_string}) {dup};",
+            values
+        )
 
-    def _create_update_sql(self, item: Union[dict, Mapping[str, any]], where: Union[dict, Mapping[str, any]],
-                           table_name: str):
-        keys, values = self._handle_items(item)
-        where_keys, where_values = self._handle_items(where, mode="where")
-        file_string = ", ".join(map(lambda x: f"`{x}` = %s", keys))
-        base_update = "UPDATE "
-        where_string = " AND ".join(map(lambda x: f"`{x}` = %s", where_keys))
-
-        res_values = values + where_values
-        result_where = "" if not where_string else f" WHERE {where_string}"
-        return f"{base_update} {table_name} SET {file_string}{result_where};", res_values
-
-    def insert(
+    def update(
             self,
-            keys: Union[dict, list, tuple],
-            values: list = None,
-            table_name: str = None,
-            ignore: bool = False
-        ) -> Optional[str]:
+            item: Union[List[Mapping[str, any]], Mapping[str, any]],
+            where: Union[str, List[str], Mapping[str, any], List[Mapping[str, any]]],
+            table_name: str = ""
+    ):
         """
-        如果是拼接单条sql: keys传入字典 自动提取键值  values不需要传
-        如果是多值拼接   : keys传入需要插入的字段命 可以列表 可以元组
-                        : values传入对应的值得列表 里面放元组 如: [(1, "a"), (99, "test")]  / 也可以[1, "a"] 这样就是单条插入
-        :param keys
-        :param values
-        :param table_name
-        :param ignore   : 是否忽略插入中的重复值之类的
+        :param item      : 需要更新的字段
+        :param where     : 条件，如果不是dict，那么这里就是直接用了拼接上 不需要构造模板 | 如果是批量更新 只能用等的情况 要不然批量没意义
+        :param table_name: 表名,这里优先级高于全局
         """
-        self.check_table_name(table_name)
-        if not keys:
-            return None
-        whether_ignore = "IGNORE " if ignore is True else ""
-        base_insert = f"INSERT {whether_ignore}INTO {table_name or self.table_name}"
-        key_string, value_string = self.__handle_insert_data(keys, values)
-        if key_string == "":
-            return None
-        insert_string = f"{base_insert} {self._handle_key(key_string)} VALUES {value_string};"
-        return self.__clear_string(insert_string)
+        assert table_name or self.table_name, "请至少在一个入口位置传入table_name"
+        if isinstance(item, list) and isinstance(where, (dict, str)):
+            raise Exception("批量更新,where位置需要传入列表,里面的每一个元素对应更新值的位置")
+
+        keys, values = self._handle_items(item)
+        where_values = []
+
+        if isinstance(where, dict):
+            where_keys, where_values = self._handle_items(where, mode="where")
+            where_string = " AND ".join(map(lambda x: f"`{x}` = %s", where_keys))
+        elif isinstance(item, dict) and isinstance(where, dict):   # 如果前面是单个条件的情况
+            where_string = " AND ".join(where)
+        elif isinstance(item, list) and isinstance(where, list) and where and isinstance(where[0], dict):   # 前后都是列表
+            # 批量更新 不能用其它情况 只能用 xxx=xxx  多个条件也得，但是一定是等值
+            assert len(set(map(lambda x: len(x), where))) == 1, "批量更新,where位置的元素长度不一致"
+            other_keys = []
+            for each_where in where:
+                round_key, round_value = self._parse_dict(each_where, other_keys, "where")
+                if not other_keys:
+                    other_keys = round_key
+                where_values.append(round_value)
+            where_string = " AND ".join(map(lambda x: f"`{x}` = %s", other_keys))
+        elif isinstance(where, str):
+            where_string = where
+        else:
+            raise Exception(f"错误的参数值类型: item<{type(item)}> where<{type(where)}>")
+
+        file_string = ", ".join(map(lambda x: f"`{x}` = %s", keys))
+        base_update = "UPDATE"
+
+        new_values = []
+        if where_values:
+            for ind, value in enumerate(values):
+                new_values.append(value + where_values[ind])
+        else:
+            new_values = values
+        result_where = "" if not where_string else f" WHERE {where_string}"
+        return f"{base_update} {table_name or self.table_name} SET {file_string}{result_where};", new_values
 
     @staticmethod
     def __clear_string(string: str) -> str:
@@ -185,20 +214,6 @@ class SqlString(object):
             return None
         insert_string = f"{base_create} ({self._handle_key(key_string)}) ENGINE={engine} DEFAULT CHARSET={charset};"
         return self.__clear_string(insert_string)
-
-    def update(self, keys: dict, where: Union[dict, list, tuple, str], table_name: str = None) -> Optional[str]:
-        """
-        更新数据操作, 传入需要更新的字典即可
-        :param keys :  传入的更新部分的键值对啦
-        :param where: 当然是筛选条件 -->
-            如果用字典传入-> 相当于 "=" , 多个值会AND拼接 : True 会被替换为1 False会被替换为0 None 会被替换为NULL
-            # 想实现更加精准的条件就在下面自己写 推荐==>字符串的传入方式
-            --> 如果是列表传入按照 ['test<5', 'hello=1', 'tt LIKES "%VV%"'] 这样传入
-            --> 如果是字符串: 'test < 5 AND hello = 1'   这样传入
-        :param table_name: 表名 优先级 高于全局那个
-        """
-
-        return
 
     def replace(self, keys: Union[dict, list, tuple], values: list = None, table_name: str = None) -> Optional[str]:
         """
@@ -322,14 +337,11 @@ class SqlString(object):
 
 
 if __name__ == "__main__":
-    base = SqlString("b_longtail")
-    # s, v = base.insert_batch({"comment": [1, 2, 3], "B": [2, 3, 4]})
-    # print("s-->", s, '    v--->', v)
-    # s, v = base.insert_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, duplicate='ignore')
-    # print("s-->", s, '    v--->', v)
-    # s, v = base.insert_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, duplicate='update', update_field=["comment"])
-    # print("s-->", s, '    v--->', v)
-    # s, v = base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"C": ["a", "b", "c"]})
-    # print("s-->", s, '    v--->', v)
-    # s, v = base.update_batch({"comment": [1, 2, 3], "B": [2, 3, 4]}, {"C": ["a", "b", "c"], "D": ["x", "y", "z"]})
-    # print("s-->", s, '    v--->', v)
+    base = SqlString("t_talent")
+    # print(base.insert({"a": 1, "b": False, "c": "xxx"}))
+    # print(base.insert([{"a": 1, "b": False, "c": "xxx"}, {"a": 2, "b": True, "c": "yyy"}], duplicate_except=['a']))
+    # print(base.update({"a": 1, "b": 2}, {"c": 5}))
+    # print(base.update({"a": 1, "b": 2}, "c IS NULL AND d > 50"))
+    # print(base.update({"a": 1, "b": 2}, ["c IS NULL", "d > 50"]))
+    # print(base.update([{"a": 1}, {"a": 2}, {"a": 3}], [{"d": 5}, {"d": 1}, {"d": 10}]))
+
