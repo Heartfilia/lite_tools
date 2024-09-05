@@ -31,11 +31,9 @@ from pymysql import cursors
 from dbutils.pooled_db import PooledDB
 
 from lite_tools.tools.sql.config import MySqlConfig, CountConfig
-from lite_tools.logs.sql import logger
-from lite_tools.logs.sql import log as sql_log
-from lite_tools.tools.core.lite_cache import Buffer
+from lite_tools.logs.sql import x as sql_log
 from lite_tools.tools.sql.lib_mysql_string import SqlString
-from lite_tools.exceptions.SqlExceptions import DuplicateEntryException, IterNotNeedRun
+from lite_tools.exceptions.SqlExceptions import IterNotNeedRun
 
 
 class MySql:
@@ -159,9 +157,10 @@ class MySql:
                         self.count_conf.add_time(table_name, mode, _end_time-_start_time)
                         _all_row = self.count_conf.add_line(table_name, mode, effect_count)
                         _rate = self.count_conf.get_rate(table_name, mode)
-                        logger.success(
+                        sql_log(
                             f"{mode}[{table_name} <{_all_row}:{time.time()-self.start_time:.2f}s>] "
-                            f"this_ts={_end_time-_start_time:.3f}s avg_rate={_rate} -> {effect_count}"
+                            f"this_ts={_end_time-_start_time:.3f}s avg_rate={_rate} -> {effect_count}",
+                            "success"
                         )
                     return effect_count   # 如果是插入 更新操作的话 需要获得 影响的行数
                 elif fetch == "one":
@@ -171,7 +170,7 @@ class MySql:
                 else:
                     return cursor.fetchall()
         except Exception as err:
-            logger.error(f"[{err.__traceback__.tb_lineno}]{sql} : {err} ")
+            sql_log(f"[{err.__traceback__.tb_lineno}]{sql} : {err} ", "error")
             if not fetch:
                 conn.rollback()
                 return 0
@@ -200,6 +199,8 @@ class MySql:
                     ------> 设置 many 的时候有点类似批量读取 每次读取 buffer 的量 这里 count 无效 将不再打印日志
         :return:
         """
+        if self.cur == "stream" or self.cur == "dict_stream":
+            yield from self.select_iter(sql, log=query_log, **kwargs)
         start_time = time.time()
         conn = self.connection()
         table_name = self._get_select_table_name(sql, **kwargs)
@@ -210,15 +211,13 @@ class MySql:
             items = [item]
         elif fetch == "many":
             if not isinstance(kwargs.get('buffer', 1000), int):
-                logger.warning("需要设置的 buffer 为数字....")
+                sql_log("需要设置的 buffer 为数字....", "error")
                 return
             items = cursor.fetchmany(kwargs.get("buffer", 1000))
-            # self.count_conf.set_count(table_name, "total", len(items))
             for item in items:
                 yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
             while items:
                 items = cursor.fetchmany(kwargs.get("buffer", 1000))
-                # self.count_conf.set_count(table_name, "total", len(items))
                 for item in items:
                     yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
             return
@@ -229,17 +228,13 @@ class MySql:
         all_num = len(items)
         if query_log is True:
             sql_log(
-                f"{table_name} - SELECT[{fetch}] 耗时: {end_time-start_time:.3f}s 获取到内容行数有: [ {all_num} ]",
-                sql,
+                f"[{table_name} <{all_num}:{end_time-start_time:.3f}s>] - SELECT[{fetch}] SQL-> {sql}",
                 "success",
-                _log=self.log
             )
         if all_num == 0:  # 如果这次结果是 0 那就是没有数据了
             if kwargs.get("_function_use") is True:
                 raise IterNotNeedRun
             return
-
-        # self.count_conf.set_count(table_name, "total", all_num)
 
         for item in items:
             if count is False:
@@ -254,7 +249,6 @@ class MySql:
     def select_iter(self, sql: str, args: Union[list, tuple] = None, log: bool = False, **kwargs):
         """
         这里属于流式的读取位置 这里只能fetchone
-        log 把获取到的内容打印出来
         max_num  一般用于测试 就是获取的数据量到了这个值后 就停止继续遍历
         """
         assert sql, f"传入了空sql语句--> sql:[ {sql} ]"
@@ -263,7 +257,8 @@ class MySql:
             cur = pymysql.cursors.SSCursor
         else:
             cur = pymysql.cursors.Cursor
-        ok = 0
+        table_name = self.table_name or self._get_select_table_name(sql)
+        _start_time = time.perf_counter()
         try:
             with conn.cursor(cur) as cursor:
                 if args:    # 批量操作的时候
@@ -276,17 +271,26 @@ class MySql:
 
                 result = cursor.fetchone()
                 while result is not None:
-                    ok += 1
+                    _duration_time = time.perf_counter() - _start_time
+                    ok = self.count_conf.add_line(table_name, "S", 1)
                     yield result
-                    if log:
-                        print(f"[{ok}] {result}")
+                    if (log or self.log) and (ok % 500 == 0):
+                        sql_log(
+                            f"S[{table_name} <{_duration_time:.2f}s>] 程序运行 lines={ok} "
+                            f"avg_rate={ok/_duration_time:.3f} line/s")
                     if ok >= kwargs.get("max_num", -1):
                         break
                     result = cursor.fetchone()
         except Exception as err:
-            logger.error(f"[{err.__traceback__.tb_lineno}]{sql} : {err} ")
+            sql_log(f"[{err.__traceback__.tb_lineno}]{sql} : {err} ", "error")
         finally:
             conn.close()
+            if log or self.log:
+                all_line = self.count_conf.get_line(table_name, "S")
+                _duration_time = time.perf_counter() - _start_time
+                sql_log(
+                    f"S[{table_name} <{_duration_time:.2f}s>] 运行结束 lines={all_line} "
+                    f"avg_rate={all_line / _duration_time:.3f} line/s", "info")
 
     def exists(self, where: Union[dict, str], table_name: str = None) -> bool:
         """
@@ -377,39 +381,21 @@ class MySql:
             )
         return table_name or self.table_name
 
-    def _secure_check(self, string: str) -> bool:
+    @staticmethod
+    def _secure_check(string: str) -> bool:
         """
         安全检查-->程序里面不给你操作drop操作的
         """
         if string.upper().startswith("DROP"):
-            sql_log(f"SQL: {string}  确定要删除操作吗? Y/N", "", "warning", _log=self.log)
+            sql_log(f"SQL: {string}  确定要删除操作吗? Y/N", "warning")
             flag = input(">>> ")
             if flag.upper() == "Y":
                 sql_log(
                     f"哈哈哈 这里是唬你的 程序里面不给你--DROP--操作的 我肯定直接报错啦 ( •̀ ω •́ )y",
-                    "",
-                    "success",
-                    _log=self.log)
+                    "success")
                 return False
         return True
 
 
 if __name__ == "__main__":
-    mysql = MySql(config=MySqlConfig(
-        host="10.1.1.26",
-        user="centers_spider",
-        password="wCwpcrpzadW5cwyw",
-        database="centers_spider",
-        # cursor="dict_stream"
-    ))
-
-    mysql.insert(
-        [
-            {"hashtag_id": "1222", "hashtag_name": "test1111", "is_commerce": 1},
-            {"hashtag_id": "1111", "hashtag_name": "test2222", "is_commerce": 0},
-        ],
-        duplicate_except=["hashtag_id", "_create_time"],
-        table_name="z_text_tag",
-        # ignore=True,
-        log=True
-    )
+    pass

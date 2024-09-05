@@ -39,7 +39,7 @@ class MySqlConfig:
         cursor: Literal['tuple', 'dict', 'stream', 'dict_stream'] = "tuple",
         max_connections: int = 20,
         table_name: str = None,
-        log: Literal[True, False, "all"] = True
+        log: bool = True
     ):
         """
         mysql的配置文件 这里只有默认的配置 要改其他的可以自己传pool配置
@@ -112,3 +112,6 @@ class CountConfig:
         self.init(table, mode)
         return self.log_jar[table][mode]["change"]
 
+    def get_line(self, table: str, mode: str):
+        self.init(table, mode)
+        return self.log_jar[table][mode]["line"]
