@@ -4,7 +4,7 @@ try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
-from typing import Union, Optional, Mapping, List, Dict
+from typing import Union, Optional, Mapping, List, Dict, Tuple
 
 from lite_tools.utils.u_sql_base_string import MysqlKeywordsList
 from lite_tools.exceptions.SqlExceptions import NotSupportType, LengthError
@@ -28,7 +28,100 @@ class SqlString(object):
         if not table_name and not self.table_name:
             raise ValueError("缺少表名")
 
-    def insert(self, keys: Union[dict, list, tuple], values: list = None, table_name: str = None, ignore: bool = False) -> Optional[str]:
+    @staticmethod
+    def _parse_dict(item: dict, origin_keys: list = None, mode: str = "key"):
+        keys = []
+        now_value = []
+        if origin_keys:   # 如果有明确的key的顺序提取值传入
+            for key in origin_keys:
+                value = item[key]
+                if isinstance(value, bool):
+                    value = 1 if value else 0
+                elif value is None and mode == "key":
+                    value = ""
+                elif value is None and mode == "where":
+                    value = " IS NULL "
+                now_value.append(value)
+            return origin_keys, now_value
+        else:
+            for key, value in item.items():
+                keys.append(key)
+                if isinstance(value, bool):
+                    value = 1 if value else 0
+                elif value is None and mode == "key":
+                    value = ""
+                elif value is None and mode == "where":
+                    value = " IS NULL "
+
+                now_value.append(value)
+        return keys, now_value
+
+    def _handle_items(self, item: Union[dict, Mapping[str, any]], mode: str = "key") -> Tuple[List[str], List[any]]:
+        keys = []
+        values = []
+
+        if isinstance(item, dict):
+            keys, value = self._parse_dict(item, mode=mode)
+            values.append(value)
+        elif isinstance(item, list):  # 如果这种情况的话 里面每个值的顺序必须得一致
+            origin_keys = []
+            for row in item:
+                key, value = self._parse_dict(row, origin_keys, mode=mode)
+                if not keys:
+                    keys = key
+                    origin_keys = key
+                values.append(value)
+        return keys, values
+
+    def _create_insert_sql(
+            self, item: Union[dict, Mapping[str, any]], table_name: str,
+            duplicate_except: list = None, ignore: bool = False) -> Tuple[str, List[any]]:
+        """
+        创建数据模板 和对应的数据结果
+        :param item -> dict模式 直接处理为单条 {"a": 1, "b": False} -> a=1,b=0
+                    -> list模式 传入的是多组[{"a": 1, "b": False}, {"a": 1, "b": False}]
+        :param table_name: 表名
+        :duplicate_except: 这里是排除法一般这里建议把你不需要替换的字段名称写上去 None的话就不 insert... on duplicate
+        """
+        keys, values = self._handle_items(item)
+
+        key_string = ", ".join(map(lambda x: f"`{x}`", keys))
+        value_string = ", ".join("%s" for _ in keys)
+        if duplicate_except:
+            if "_create_time" in keys:
+                duplicate_except.append("_create_time")
+            if "_is_deleted" in keys:
+                duplicate_except.append("_is_deleted")
+            up = ", ".join(f"`{key}`=VALUES(`{key}`)" for key in keys if key not in duplicate_except)
+            dup = f"ON DUPLICATE KEY UPDATE {up}"
+        else:
+            dup = ""
+        if ignore:
+            ignore = " IGNORE"
+        else:
+            ignore = ""
+
+        return f"INSERT{ignore} INTO `{table_name}` ({key_string}) VALUES ({value_string}) {dup};", values
+
+    def _create_update_sql(self, item: Union[dict, Mapping[str, any]], where: Union[dict, Mapping[str, any]],
+                           table_name: str):
+        keys, values = self._handle_items(item)
+        where_keys, where_values = self._handle_items(where, mode="where")
+        file_string = ", ".join(map(lambda x: f"`{x}` = %s", keys))
+        base_update = "UPDATE "
+        where_string = " AND ".join(map(lambda x: f"`{x}` = %s", where_keys))
+
+        res_values = values + where_values
+        result_where = "" if not where_string else f" WHERE {where_string}"
+        return f"{base_update} {table_name} SET {file_string}{result_where};", res_values
+
+    def insert(
+            self,
+            keys: Union[dict, list, tuple],
+            values: list = None,
+            table_name: str = None,
+            ignore: bool = False
+        ) -> Optional[str]:
         """
         如果是拼接单条sql: keys传入字典 自动提取键值  values不需要传
         如果是多值拼接   : keys传入需要插入的字段命 可以列表 可以元组
@@ -55,59 +148,6 @@ class SqlString(object):
         string = re.sub("= ?[Tt]rue", "= 1", string)
         string = re.sub("= ?[Ff]alse", "= 0", string)
         return string.replace(",) VALUES", ") VALUES").replace(',);', ');')
-
-    def __handle_insert_data(self, key, value):
-        if isinstance(key, dict) and value is None:
-            keys = []
-            values = []
-            for key, name in key.items():
-                keys.append(key if key.upper() not in MysqlKeywordsList else f"`{key}`")
-                values.append(name)
-            values_string = '('
-            for each_value in values:
-                if isinstance(each_value, str):
-                    each_value = self._handle_value(each_value)
-                values_string += f'{each_value}, '
-            values_string = values_string.rstrip(', ') + ')'
-            return f"{tuple(keys)}", values_string
-        elif isinstance(key, (list, tuple)) and not value and isinstance(key[0], dict):
-            result_dict = {}
-            # 第一步构造键值对
-            for item in key:
-                for k, v in item.items():
-                    if isinstance(v, str):
-                        v = self._handle_value(v, decorate=False)
-                    if k not in result_dict:
-                        result_dict[k] = [v]
-                    else:
-                        result_dict[k].append(v)
-            # 第二步校验值的长度是否一致
-            assert len(set(map(lambda x: len(x), result_dict.values()))) == 1, \
-                f"传入的键个数为: {len(result_dict)}, 而传入的值个数不等;"
-            keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in result_dict.keys()]
-            # 开始拼接
-            return f"{tuple(keys)}", \
-                   f"{list(zip(*result_dict.values()))}"[1:-1]
-        elif isinstance(key, (list, tuple)) and isinstance(value, list):
-            keys = [k if k.upper() not in MysqlKeywordsList else f"`{k}`" for k in key]
-            if value and isinstance(value[0], (list, tuple)):
-                # 这里是批量插入
-                values = '('
-                for value_jar in value:
-                    for each_value in value_jar:
-                        each_value = self._handle_value(each_value)
-                        values += each_value + ', '
-                values = values.rstrip(', ') + ')'
-            else:
-                # 这里只是兼容另外一种格式而已 推荐的还是字典
-                values = '('
-                for each_value in value:
-                    each_value = self._handle_value(each_value, decorate=False)
-                    values += each_value + ', '
-                values = values.rstrip(', ') + ')'
-            return f"{tuple(keys)}", values
-        else:
-            raise NotSupportType
 
     def __handle_create_data(self, keys):
         """
@@ -157,69 +197,8 @@ class SqlString(object):
             --> 如果是字符串: 'test < 5 AND hello = 1'   这样传入
         :param table_name: 表名 优先级 高于全局那个
         """
-        self.check_table_name(table_name)
-        if not keys or not isinstance(keys, dict) or not where:
-            raise NotSupportType
 
-        base_update = f"UPDATE {table_name or self.table_name} SET "
-        for key, value in keys.items():
-            base_update += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
-                           f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)}, '
-        base_update = base_update.rstrip(', ') + " WHERE "
-        if isinstance(where, dict):
-            base_update = base_update + self._handle_where_dict(where)
-        elif isinstance(where, (list, tuple)):
-            for value in where:
-                if isinstance(value, dict):
-                    for w_k, w_v in value.items():
-                        base_update += f'{w_k if w_k.upper() not in MysqlKeywordsList else f"`{w_k}`"} = ' \
-                                       f'{w_v if isinstance(w_v, (int, float, bool)) or w_v is None else self._handle_value(w_v)} AND '
-                else:
-                    base_update += f"{value} AND "
-            base_update = base_update.rstrip(' AND ') + ";"
-        elif isinstance(where, str):
-            base_update += where + ";"
-        else:
-            raise NotSupportType
-        return self.__clear_string(base_update)
-
-    def update_batch(self, items: Union[Mapping[str, list], List[dict]], where: Union[Mapping[str, list], List[dict]],
-                     table_name: str = None):
-        """
-        批量更新操作 支持两种不同格式混用 但是位置顺序得对应
-        """
-        if items and isinstance(items, list) and isinstance(items[0], dict):
-            items = self._handle_items_type(items)
-        if where and isinstance(where, list) and isinstance(where[0], dict):
-            where = self._handle_items_type(where)
-
-        self.check_table_name(table_name)
-        set_field, where_field, value_field = self._handle_update_batch(items, where)
-        return f"UPDATE {table_name or self.table_name} SET {set_field} WHERE {where_field}", value_field
-
-    def insert_batch(self, items: Union[Mapping[str, list], List[dict]], duplicate: Literal['ignore', 'update', None] = None, *,
-                     update_field: List[str] = None, table_name: str = None):
-        self.check_table_name(table_name)
-        if items and isinstance(items, list) and isinstance(items[0], dict):
-            # 兼容 [{}, {}] 这个格式
-            new_items = self._handle_items_type(items)
-        else:
-            new_items = items
-        key, field, values = self._handle_batch(new_items)
-        if duplicate == "ignore":
-            ignore_field, duplicate_field, update_string = "IGNORE ", "", ""
-        elif duplicate == "update":
-            if not update_field:
-                raise LengthError("更新模式需要补充 update_field 字段数据")
-            else:
-                if all([x in new_items.keys() for x in update_field]):
-                    update_string = ", ".join([f"{name} = VALUES({name})" for name in update_field])
-                else:
-                    raise LengthError("可更新字段不在传入的数据表里面")
-            ignore_field, duplicate_field = "", " ON DUPLICATE KEY UPDATE "
-        else:
-            ignore_field, duplicate_field, update_string = "", "", ""
-        return f"INSERT {ignore_field}INTO {table_name or self.table_name} {key} VALUES {field}{duplicate_field}{update_string}", values
+        return
 
     def replace(self, keys: Union[dict, list, tuple], values: list = None, table_name: str = None) -> Optional[str]:
         """
@@ -243,9 +222,9 @@ class SqlString(object):
         base_delete += " WHERE "
         if isinstance(where, dict):
             for key, value in where.items():
-                base_delete += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
-                               f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)} ' \
-                               f'AND '
+                base_delete += (f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = '
+                                f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)} '
+                                f'AND ')
             base_delete = base_delete.rstrip(' AND ') + ";"
         elif isinstance(where, str):
             base_delete += where + ";"
@@ -305,72 +284,6 @@ class SqlString(object):
         """
         #(^_^)这东西太复杂了 不想写
         """
-
-    @staticmethod
-    def _handle_update_batch(items: Mapping[str, list], where: Mapping[str, list]):
-        if not items or not where:
-            raise LengthError("错误的键长度")
-        items_order = [key for key in items.keys()] + [value for value in where.keys()]   # 这里是后续键的顺序，避免顺序异常
-        key_length = set(map(lambda x: len(x), items.values()))
-        if len(key_length) != 1 or len(set(map(lambda x: len(x), where.values()))) != 1:
-            raise LengthError("传入的数据长度不一致")
-        set_field = ", ".join([f"{key}=%s" for key in items_order if key in items])
-        where_field = " AND ".join([f"{key}=%s" for key in items_order if key in where])
-        value_field = []
-        for ind in range(key_length.pop()):  # 依次提取每个位置的数据
-            value = []
-            for key in items_order:
-                if key in items:
-                    value.append(items[key][ind])
-                if key in where:
-                    value.append(where[key][ind])
-            value_field.append(tuple(value))
-        return set_field, where_field, value_field
-
-    @staticmethod
-    def _handle_items_type(items: List[dict]) -> Dict[str, list]:
-        base_dict = {}
-        order_key = []  # 记录第一次条件的键 后续的条件都要用这个顺序 避免顺序异常对应不上
-        first = True   # 第一次需要确定所有的键 后续要是对应不上或者缺少键则抛出异常
-        for item in items:
-            if first:
-                for key, value in item.items():
-                    base_dict[key] = [value]
-                    order_key.append(key)
-                first = False
-            else:
-                if len(base_dict) != len(item):
-                    raise LengthError("字段长度及所占用的字符名得一致")
-                # for key in base_dict.keys():
-                for key in order_key:
-                    base_dict[key].append(item[key])
-        return base_dict
-
-    @staticmethod
-    def _handle_batch(items: Mapping[str, list]):
-        """
-        批量操作的拼接 格式为 {"A": [1, 2, 3], "B": [6, 7, 8]}
-        --> A, B    (1, 6), (2, 7), (3, 8)
-        """
-        if not items:
-            raise LengthError("没有输入有效数据,传入了空数据")
-        # 第一步，校验value的长度是否一致
-        key_length = set(map(lambda x: len(x), items.values()))
-        if len(key_length) != 1:
-            raise LengthError("传入的值长度不一致")
-        key_order = items.keys()   # 后续将用这个的顺序保证后续值的顺序一致
-        value_list = []
-        for ind in range(key_length.pop()):  # 依次提取每个位置的数据
-            value = []
-            for key in key_order:
-                value.append(items[key][ind])
-            value_list.append(tuple(value))
-        new_key = []
-        value_field = []
-        for key in key_order:
-            new_key.append(key if key.upper() not in MysqlKeywordsList else f"`{key}`")
-            value_field.append("%s")
-        return f'({", ".join(new_key)})', f"({', '.join(value_field)})", value_list
 
     @staticmethod
     def _handle_key(key_string: str) -> str:

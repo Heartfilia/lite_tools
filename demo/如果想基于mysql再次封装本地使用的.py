@@ -30,7 +30,7 @@ class MySql(LiteMySql):
     def __init__(
             self,
             database: str = "这里传入你要操作的数据库",
-            maxconnections: int = 20,   # 这里设置你要的默认链接数
+            max_connections: int = 20,   # 这里设置你要的默认链接数
             host: str = "这里设置你mysql的host",
             port: int = 3306,   # 这里设置你mysql的端口
             user: str = "mysql的用户名",
@@ -61,7 +61,7 @@ class MySql(LiteMySql):
             password=password,
             port=port,
             charset=charset,
-            maxconnections=maxconnections,
+            max_connections=max_connections,
             table_name=table_name,
             cursor=cursor,
             log=log))
