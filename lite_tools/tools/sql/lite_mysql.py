@@ -142,22 +142,28 @@ class MySql:
             with conn.cursor() as cursor:    # 这里是返回影响的行数
                 if args:    # 批量操作的时候
                     if not isinstance(args[0], (list, tuple)):   # 判断内容里面 里面是否是列表或者元组，如果是的话那么就是批量的
-                        cur = cursor.execute(sql, args)    # 这里是单行操作套用模板的情况
+                        cursor.execute(sql, args)    # 这里是单行操作套用模板的情况
                     else:
-                        cur = cursor.executemany(sql, args)   # 批量操作套用模板
+                        cursor.executemany(sql, args)   # 批量操作套用模板
                 else:
-                    cur = cursor.execute(sql)
+                    cursor.execute(sql)
 
-                _end_time = time.time()
+                _end_time = time.perf_counter()
 
                 if not fetch and not sql.upper().startswith("SELECT"):
                     conn.commit()
-                    if log:
+                    if log or self.log:
+                        effect_count = cursor.rowcount
+                        if "ON DUPLICATE KEY UPDATE" in sql:
+                            effect_count //= 2
+                        self.count_conf.add_time(table_name, mode, _end_time-_start_time)
+                        _all_row = self.count_conf.add_line(table_name, mode, effect_count)
+                        _rate = self.count_conf.get_rate(table_name, mode)
                         logger.success(
-                            f"{mode}[{table_name}] <{time.time()-self.start_time:.3f}s> "
-                            f"line={_end_time-_start_time:.3f}s -> {cur}"
+                            f"{mode}[{table_name} <{_all_row}:{time.time()-self.start_time:.2f}s>] "
+                            f"this_ts={_end_time-_start_time:.3f}s avg_rate={_rate} -> {effect_count}"
                         )
-                    return cur   # 如果是插入 更新操作的话 需要获得 影响的行数
+                    return effect_count   # 如果是插入 更新操作的话 需要获得 影响的行数
                 elif fetch == "one":
                     return cursor.fetchone()
                 elif fetch == "many":
@@ -207,12 +213,12 @@ class MySql:
                 logger.warning("需要设置的 buffer 为数字....")
                 return
             items = cursor.fetchmany(kwargs.get("buffer", 1000))
-            self.count_conf.set_count(table_name, "total", len(items))
+            # self.count_conf.set_count(table_name, "total", len(items))
             for item in items:
                 yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
             while items:
                 items = cursor.fetchmany(kwargs.get("buffer", 1000))
-                self.count_conf.set_count(table_name, "total", len(items))
+                # self.count_conf.set_count(table_name, "total", len(items))
                 for item in items:
                     yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
             return
@@ -233,7 +239,7 @@ class MySql:
                 raise IterNotNeedRun
             return
 
-        self.count_conf.set_count(table_name, "total", all_num)
+        # self.count_conf.set_count(table_name, "total", all_num)
 
         for item in items:
             if count is False:
@@ -311,7 +317,8 @@ class MySql:
             item: Union[Mapping[str, any], List[Mapping[str, any]]],
             table_name: str = "",
             duplicate_except: list = None,
-            ignore: bool = False
+            ignore: bool = False,
+            log: bool = False,
     ) -> None:
         """
         创建数据模板 和对应的数据结果
@@ -320,21 +327,29 @@ class MySql:
         :param table_name      : 表名,这里优先级高于全局
         :param duplicate_except: 这里是排除法一般这里建议把你不需要替换的字段名称写上去 None的话就不 insert... on duplicate
         :param ignore          : 一般这里是忽略表里已经存在的时候 这里优先级高于上面 这个和上面都写了的话 是直接忽略重复异常
+        :param log             : 打印日志
         """
         table = self._check_table(table_name)
         _sql, values = self.sql_base.insert(item, table, duplicate_except, ignore)
-        self.execute(_sql, values, table_name=table)
+        self.execute(_sql, values, log=log, table_name=table)
 
-    def update(self, items: dict, where: Union[dict, str], table_name: str = None) -> None:
+    def update(
+            self,
+            item: Union[List[Mapping[str, any]], Mapping[str, any]],
+            where: Union[str, List[str], Mapping[str, any], List[Mapping[str, any]]],
+            table_name: str = "",
+            log: bool = False
+    ) -> None:
         """
         更新数据
-        :param items: 更新的结果 字典表示
+        :param item: 更新的结果 字典表示
         :param where: 需要更新数据的时候使用的条件
         :param table_name: 表名 这里和全局二选一 优先级这里最高
+        :param log       : 打印日志
         """
         table = self._check_table(table_name)
-        _sql, values = self.sql_base.update(items, where, table_name=table)
-        self.execute(_sql, values, table_name=table)
+        _sql, values = self.sql_base.update(item, where, table_name=table)
+        self.execute(_sql, values, log=log, table_name=table)
 
     def delete(self, where: Union[dict, str], table_name: str = None) -> None:
         """
@@ -380,4 +395,21 @@ class MySql:
 
 
 if __name__ == "__main__":
-    pass
+    mysql = MySql(config=MySqlConfig(
+        host="10.1.1.26",
+        user="centers_spider",
+        password="wCwpcrpzadW5cwyw",
+        database="centers_spider",
+        # cursor="dict_stream"
+    ))
+
+    mysql.insert(
+        [
+            {"hashtag_id": "1222", "hashtag_name": "test1111", "is_commerce": 1},
+            {"hashtag_id": "1111", "hashtag_name": "test2222", "is_commerce": 0},
+        ],
+        duplicate_except=["hashtag_id", "_create_time"],
+        table_name="z_text_tag",
+        # ignore=True,
+        log=True
+    )

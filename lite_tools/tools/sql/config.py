@@ -66,22 +66,10 @@ class MySqlConfig:
         self.log = log
 
 
-# 以下统计均是 统计一个实例运行周期的操作
-BASE_TEMPLATE = {
-    "change": {
-        "insert": 0,
-        "update": 0,
-        "delete": 0,
-    },   # 记录一下改变的行数
-    "not_change": {
-        "insert": 0,
-        "update": 0,
-        "delete": 0,
-    },   # 操作了 但是没有改变的行数
-    "count": {
-        "total": 0,
-        "run": 0
-    }    # 总行数  surplus
+_base_field = {
+    "line": 0,     # 操作了多少行
+    "change": 0,   # 操作行的时候改变了多少行
+    "time": 0,     # 操作行的时间累积
 }
 
 
@@ -90,31 +78,37 @@ class CountConfig:
         self.log_jar = {}
         self.lock = RLock()
 
-    def init(self, table):
+    def init(self, table: str, mode: str):
         """初始化模板数据字段"""
         if table not in self.log_jar:
-            self.log_jar[table] = copy.deepcopy(BASE_TEMPLATE)
+            self.log_jar[table] = {}
+        if mode not in self.log_jar[table]:
+            self.log_jar[table][mode] = copy.deepcopy(_base_field)
 
-    def set_change(self, table: str, mode: str, num: int = 0):
-        self.init(table)
+    def add_line(self, table: str, mode: str, num: int = 0) -> int:
+        self.init(table, mode)
         with self.lock:
-            self.log_jar[table]["change"][mode] += num
+            self.log_jar[table][mode]["line"] += num
+        return self.log_jar[table][mode]["line"]
+
+    def add_change(self, table: str, mode: str, num: int = 0) -> int:
+        self.init(table, mode)
+        with self.lock:
+            self.log_jar[table][mode]["change"] += num
+        return self.log_jar[table][mode]["change"]
+
+    def add_time(self, table: str, mode: str, ts: float = 0) -> float:
+        self.init(table, mode)
+        with self.lock:
+            self.log_jar[table][mode]["time"] += ts
+        return self.log_jar[table][mode]["time"]
+
+    def get_rate(self, table: str, mode: str):
+        self.init(table, mode)
+        this_round = self.log_jar[table][mode]
+        return f"{this_round['line']/(this_round['time'] or 1):.2f} line/s"
 
     def get_change(self, table: str, mode: str):
-        return self.log_jar[table]["change"][mode]
+        self.init(table, mode)
+        return self.log_jar[table][mode]["change"]
 
-    def set_not_change(self, table: str, mode: str, num: int = 0):
-        self.init(table)
-        with self.lock:
-            self.log_jar[table]["not_change"][mode] += num
-
-    def get_not_change(self, table: str, mode: str):
-        return self.log_jar[table]["not_change"][mode]
-
-    def set_count(self, table: str, mode: str, num: int = 0):
-        self.init(table)
-        with self.lock:
-            self.log_jar[table]["count"][mode] += num
-
-    def get_count(self, table: str, mode: str):
-        return self.log_jar[table]["count"][mode]

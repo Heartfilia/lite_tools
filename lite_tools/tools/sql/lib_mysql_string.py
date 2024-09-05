@@ -105,19 +105,15 @@ class SqlString(object):
             ignore = " IGNORE"
             dup = ""
         else:
-            if duplicate_except:
-                if "_create_time" in keys:
-                    duplicate_except.append("_create_time")
-                if "_is_deleted" in keys:
-                    duplicate_except.append("_is_deleted")
+            if duplicate_except and isinstance(duplicate_except, list):
                 up = ", ".join(f"`{key}`=VALUES(`{key}`)" for key in keys if key not in duplicate_except)
-                dup = f"ON DUPLICATE KEY UPDATE {up}"
+                dup = f" ON DUPLICATE KEY UPDATE {up}"
             else:
                 dup = ""
             ignore = ""
 
         return (
-            f"INSERT{ignore} INTO `{table_name or self.table_name}` ({key_string}) VALUES ({value_string}) {dup};",
+            f"INSERT{ignore} INTO `{table_name or self.table_name}` ({key_string}) VALUES ({value_string}){dup};",
             values
         )
 
@@ -157,7 +153,7 @@ class SqlString(object):
         elif isinstance(where, str):
             where_string = where
         else:
-            raise Exception(f"错误的参数值类型: item<{type(item)}> where<{type(where)}>")
+            raise Exception(f"错误的参数值类型: item{type(item)} where{type(where)}")
 
         file_string = ", ".join(map(lambda x: f"`{x}` = %s", keys))
         base_update = "UPDATE"
