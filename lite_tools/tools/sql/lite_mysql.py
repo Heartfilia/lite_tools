@@ -380,12 +380,4 @@ class MySql:
 
 
 if __name__ == "__main__":
-    app = MySql(config=MySqlConfig(
-        host="10.1.1.26",
-        user="centers_spider",
-        password="wCwpcrpzadW5cwyw",
-        database="centers_spider",
-        # cursor="dict_stream"
-    ))
-    for rowx in app.select_iter("SELECT * FROM jk_dy_userinfo_base", max_num=10):
-        print(rowx)
+    pass
