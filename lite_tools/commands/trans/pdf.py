@@ -77,6 +77,8 @@ def lite_pdf(file_dir: str, out_name: str, width: int = -1, height: int = -1) ->
 		file_list = [file_dir]
 	else:
 		file_list = os.listdir(file_dir)
+
+	file_list.sort()   # 修复乱序问题
 	len_file = len(file_list)
 
 	first_pic = True
@@ -270,8 +272,8 @@ def pdf_run(args):
 
 if __name__ == '__main__':
 	lite_pdf(
-		r"C:\Users\Heartfilia\Desktop\fsdownload\test",
+		r"/Users/lodge/TmpFiles/pics/xu",
 		"test.pdf",
-		1920,
-		1080
+		1080,
+		1920
 	)
