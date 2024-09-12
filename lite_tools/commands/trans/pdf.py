@@ -162,7 +162,7 @@ def _check_legal(out_dir):
 		logger.warning("检查输出的文件路径是否正确")
 		sys.exit(0)
 	# 判断字符是否合法
-	if not re.search(r"[/\\\?:\*\"<>\|]+", out_dir) or re.search(r"^\w:\\", out_dir) or re.search(r"^\w:/", out_dir):
+	if not re.search(r"[?:*\"<>|\\]+", out_dir) or re.search(r"^\w:\\", out_dir) or re.search(r"^\w:/", out_dir):
 		return out_dir
 	else:
 		return None
@@ -193,6 +193,7 @@ def _judge_file_or_folder(location_name: str, out_name: str = None):
 	判断传入的是文件还是文件夹
 	"""
 	cmd_cwd = os.getcwd()
+
 	if os.path.exists(location_name) and not os.path.isfile(location_name):
 		full_path = location_name
 	elif os.path.exists(os.path.join(cmd_cwd, location_name)):
@@ -209,6 +210,7 @@ def _judge_file_or_folder(location_name: str, out_name: str = None):
 		logger.warning("需要传入准确的文件或者文件夹路径或者名称")
 		sys.exit(0)
 	result = new_out_name if not re.search(r"^\.\S+", new_out_name) else f"lite_pdf_{new_out_name}"
+
 	return result
 
 
@@ -249,6 +251,7 @@ def pdf_run(args):
 		default_height = -1
 		out_dir = None
 		input_info = _input_string.group(1)
+
 		if _output_string:
 			out_dir = _output_string.group(1)
 		output_info = _judge_file_or_folder(input_info, out_dir)
@@ -271,9 +274,11 @@ def pdf_run(args):
 
 
 if __name__ == '__main__':
-	lite_pdf(
-		r"/Users/lodge/TmpFiles/pics/xu",
-		"test.pdf",
-		1080,
-		1920
-	)
+	# lite_pdf(
+	# 	r"/Users/lodge/TmpFiles/pics/xu",
+	# 	"test.pdf",
+	# 	1080,
+	# 	1920
+	# )
+
+	_judge_file_or_folder("xu", None)
