@@ -162,7 +162,7 @@ def _check_legal(out_dir):
 		logger.warning("检查输出的文件路径是否正确")
 		sys.exit(0)
 	# 判断字符是否合法
-	if not re.search(r"[?:*\"<>|\\]+", out_dir) or re.search(r"^\w:\\", out_dir) or re.search(r"^\w:/", out_dir):
+	if not re.search(r"[?:*\"<>|']+", out_dir) or re.search(r"^\w:\\", out_dir) or re.search(r"^\w:/", out_dir):
 		return out_dir
 	else:
 		return None
