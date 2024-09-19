@@ -1,5 +1,11 @@
 import re
-from pydantic import BaseModel
+try:
+    from pydantic import BaseModel
+except ImportError:
+    import pip
+    pip.main(["install", "pydantic"])
+
+    from pydantic import BaseModel
 
 
 class Rule(BaseModel):

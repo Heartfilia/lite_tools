@@ -15,18 +15,17 @@ with open("README.md", "r", encoding='utf-8') as fd:
     long_description = fd.read()
 
 base_requires = [
+    # 'pip',
     'loguru',          # 基本的日志打印相关的调用
-    # "tls-client",      # 替换requests用的
-    "pydantic",        # 神器,不多说 一般你装其它的包这个也会被装，我这里只是避免提示
-    'colorama',        # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
     "prettytable",     # 基本的展示一些操作的模块
     "datetime",        # 谁没有一个datetime模块啊
-    # "func_timeout",    # 用一个try上面 但是这个包没有封装好
-    # 'httpx[http2]',    # 封装一个更加方便的请求模块的时候兼容h2 所以这里被迫装了一个 暂时没有用到
 ]
 
 # 所有和网络有关的包可能都要判断一下了
 net_requires = [
+    # "func_timeout",    # 用一个try上面 但是这个包没有封装好
+    # 'httpx[http2]',    # 封装一个更加方便的请求模块的时候兼容h2 所以这里被迫装了一个 暂时没有用到
+    # "tls-client",      # 替换requests用的
     'pymysql',         # mysql包全靠它 如果对版本介意 可以不管我这个  最好大于1.0.2
     "pyyaml",          # redis 那里读取配置文件要用这个
     "redis",           # redis 的一个东西需要用这个
@@ -39,6 +38,8 @@ net_requires = [
 
 # 这里暂时没有用到 等以后搞文件操作的时候再完善这里
 file_requires = [
+    'colorama',        # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西  << 这个写这里不用单独装了
+    "pydantic",        # 神器,不多说 一般你装其它的包这个也会被装，我这里只是避免提示 节约空间 放这里了
     "reportlab",    # 这个是生成pdf的
     "Pillow",       # 这个是图像处理的
     # "pandas",       # 这东西没有用到
