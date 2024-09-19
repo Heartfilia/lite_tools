@@ -17,20 +17,24 @@ with open("README.md", "r", encoding='utf-8') as fd:
 base_requires = [
     'loguru',          # 基本的日志打印相关的调用
     # "tls-client",      # 替换requests用的
-    "requests",        # 请求模块，本来不想安装那么多东西的，现在谁没有一个requests啊
     "pydantic",        # 神器,不多说 一般你装其它的包这个也会被装，我这里只是避免提示
-    'urllib3',         # 安装requests自动装的,主要是有个地方用到了它里面的解析模块,不写这里ide会提示
     'colorama',        # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西
     "prettytable",     # 基本的展示一些操作的模块
     "datetime",        # 谁没有一个datetime模块啊
+    # "func_timeout",    # 用一个try上面 但是这个包没有封装好
+    # 'httpx[http2]',    # 封装一个更加方便的请求模块的时候兼容h2 所以这里被迫装了一个 暂时没有用到
+]
+
+# 所有和网络有关的包可能都要判断一下了
+net_requires = [
+    'pymysql',         # mysql包全靠它 如果对版本介意 可以不管我这个  最好大于1.0.2
+    "pyyaml",          # redis 那里读取配置文件要用这个
+    "redis",           # redis 的一个东西需要用这个
+    "requests",        # 请求模块，本来不想安装那么多东西的，现在谁没有一个requests啊
+    'urllib3',         # 安装requests自动装的,主要是有个地方用到了它里面的解析模块,不写这里ide会提示
     "usepy",           # >> 米乐大佬的工具包，我只是用里面的部分功能二次封装，很多操作直接引用他的包就好了
     "lxml",            # 提取一些静态页面内容的时候要用这个
-    "redis",           # redis 的一个东西需要用这个
-    "pyyaml",          # redis 那里读取配置文件要用这个
-    'pymysql',         # mysql包全靠它 如果对版本介意 可以不管我这个  最好大于1.0.2
     'dbutils',         # MySQL池需要用  最好大于3.0.2
-    "func_timeout",    # 用一个try上面 但是这个包没有封装好
-    # 'httpx[http2]',    # 封装一个更加方便的请求模块的时候兼容h2 所以这里被迫装了一个 暂时没有用到
 ]
 
 # 这里暂时没有用到 等以后搞文件操作的时候再完善这里
@@ -81,7 +85,8 @@ setup(
     ]},
     python_requires=">=3.6",
     extras_require={
-        "all": file_requires,
+        "net": net_requires,
+        "all": file_requires + net_requires,
     },
     classifiers=[
         'Intended Audience :: Developers',

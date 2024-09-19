@@ -154,7 +154,11 @@ def flush_local(_, *args):
 
 @chose_option.register("dict")
 def flush_local(_, *args):
-    from lite_tools.commands.dictionary.dict_cmd import dict_cmdline
+    try:
+        from lite_tools.commands.dictionary.dict_cmd import dict_cmdline
+    except ImportError:
+        logger.warning("dict 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
+        sys.exit(0)
     dict_cmdline()
 
 
@@ -167,13 +171,22 @@ def fresh_something(_, *args):
 
 @chose_option.register("ball")
 def get_ball(_, *args):
-    from lite_tools.commands.balls.ball_cmd import ball_cmdline
+    try:
+        from lite_tools.commands.balls.ball_cmd import ball_cmdline
+    except ImportError:
+        logger.warning("ball 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
+        sys.exit(0)
     ball_cmdline(args[0])
 
 
 @chose_option.register("weather")
 def get_weather(_, *args):
-    from lite_tools.commands.weather.weather_cmd import weather_cmdline
+    try:
+        from lite_tools.commands.weather.weather_cmd import weather_cmdline
+    except ImportError:
+        logger.warning("weather 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
+        sys.exit(0)
+
     weather_cmdline(args[0])
 
 
@@ -182,8 +195,12 @@ def get_today_info(_, *args):
     if len(args) > 0:
         args = args[0]
 
-    from lite_tools.commands.today.oil_price import print_oil
-    from lite_tools.commands.today.script_almanac import print_today, print_today_history
+    try:
+        from lite_tools.commands.today.oil_price import print_oil
+        from lite_tools.commands.today.script_almanac import print_today, print_today_history
+    except ImportError:
+        logger.warning("today 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
+        sys.exit(0)
 
     if len(args) < 2:
         print_today()
@@ -229,8 +246,11 @@ def get_hot_news(_, *args):
         args = args[0]
     else:
         args = []
-
-    from lite_tools.commands.news.news_cmd import news_cmdline
+    try:
+        from lite_tools.commands.news.news_cmd import news_cmdline
+    except ImportError:
+        logger.warning("news 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
+        sys.exit(0)
     news_cmdline(args)
 
 
