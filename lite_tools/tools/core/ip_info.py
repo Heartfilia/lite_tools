@@ -29,22 +29,25 @@ def get_lan() -> str:
     """
     获取本机内网ip
     """
+    ip_reg = None
     if platform.system() == "Windows":
         txt = get_command_result("ipconfig")
-        for name, temp_ip in re.findall(r"(以太网适配器.*?:).*?IPv4\s?地址.*?(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I):
+        for name, temp_ip in re.findall(
+                r"(以太网适配器.*?:).*?IPv4\s?地址.*?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", txt, re.S | re.I
+        ):
             if "WSL" not in name:
                 return temp_ip
         # ip_reg_1 = re.search(r"(\d+\.\d+\.\d+\.\d+)", txt, re.S | re.I)
         # 其它情况写这里
     else:
         txt = get_command_result("ifconfig")
-        ip_reg_0 = re.search(r"(?=eth0|en0).*?\n\s+inet\s(\d+\.\d+\.\d+\.\d+)", txt)
+        ip_reg_0 = re.search(r"(?=eth0|en0).*?\n\s+inet\s(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", txt)
         # 如果有不同情况的方案二就放这里
         ip_reg = ip_reg_0
         if not ip_reg:
             ip_reg_1 = ""
-            for name, temp_ip in re.findall(r"(\w+): .*?\n.*?inet (\d+\.\d+\.\d+\.\d+)", txt):
-                if "docker" in name or name == "lo" or temp_ip == "127.0.0.1":
+            for temp_ip in re.findall(r"inet (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) ", txt):
+                if temp_ip == "127.0.0.1":
                     continue
                 ip_reg_1 = temp_ip
                 break
