@@ -165,7 +165,11 @@ def flush_local(_, *args):
 @chose_option.register("fresh")
 def fresh_something(_, *args):
     # 联网更新一些资源 这里是手动操作
-    from lite_tools.commands.fresh.fresh_cmd import fresh_cmdline
+    try:
+        from lite_tools.commands.fresh.fresh_cmd import fresh_cmdline
+    except ImportError:
+        logger.warning("fresh 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
+        sys.exit(0)
     fresh_cmdline(args[0])
 
 
@@ -256,7 +260,7 @@ def get_hot_news(_, *args):
 
 @chose_option.register("update")
 def update_lite_tools(_, *args):
-    pip.main(["install", "--upgrade", "lite-tools"])
+    pip.main(["install", "--upgrade", "lite-tools", "-i", "https://pypi.org/simple"])
 
 
 @chose_option.register("acg")
