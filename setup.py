@@ -37,11 +37,11 @@ net_requires = [
 ]
 
 # 这里暂时没有用到 等以后搞文件操作的时候再完善这里
-file_requires = [
-    'colorama',        # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西  << 这个写这里不用单独装了
-    "pydantic",        # 神器,不多说 一般你装其它的包这个也会被装，我这里只是避免提示 节约空间 放这里了
-    "reportlab",    # 这个是生成pdf的
-    "Pillow",       # 这个是图像处理的
+all_requires = [
+    'colorama',       # 其实colorama也是包含在了loguru里面的 这里不写 ide自检测会提示我没有这东西  << 这个写这里不用单独装了
+    "pydantic",       # 神器,不多说 一般你装其它的包这个也会被装，我这里只是避免提示 节约空间 放这里了
+    "reportlab",      # 这个是生成pdf的
+    "Pillow",         # 这个是图像处理的
     # "pandas",       # 这东西没有用到
     # "xlsxwriter",   # 这东西也是只有pandas用到的时候才会用到
     # "numpy"         # 也米有用到
@@ -87,7 +87,7 @@ setup(
     python_requires=">=3.6",
     extras_require={
         "net": net_requires,
-        "all": file_requires + net_requires,
+        "all": all_requires + net_requires,
     },
     classifiers=[
         'Intended Audience :: Developers',

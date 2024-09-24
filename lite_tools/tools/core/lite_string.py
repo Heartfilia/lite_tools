@@ -541,3 +541,25 @@ def math_string(string: str) -> str:
         if getter:
             new_string = new_string.replace(rule, getter)
     return new_string
+
+
+def cookie_s2d(cookie: str) -> dict:
+    """
+    把字符串cookie转换成字典格式 a=1;b=2 -> {"a": "1", "b": "2"}
+    """
+    if not cookie:
+        return {}
+    return dict(map(
+        lambda x: (x.strip().split('=', 1)[0], x.strip().split('=', 1)[1]),
+        cookie.split(';')
+    ))
+
+
+def cookie_d2s(cookie: dict) -> str:
+    """
+    把字典格式的cookie转换成字符串格式 {"a": "1", "b": "2"} -> a=1;b=2
+    """
+    if not cookie:
+        return ""
+    return f';'.join(map(lambda x: f"{x[0]}={x[1]}", cookie.items()))
+
