@@ -41,17 +41,20 @@ def print_oil():
 
 @check_cache
 def get_html_info(mode: str = "oil"):
-    _ = mode
-    resp = requests.get(
-        'http://www.qiyoujiage.com/',
-        headers={
-            "user-agent": get_ua(),
-            "Referer": "http://www.qiyoujiage.com",
-            "Host": "www.qiyoujiage.com",
-        }
-    )
-    resp.encoding = resp.apparent_encoding
-    return resp.text
+    # _ = mode
+    # resp = requests.get(
+    #     'http://www.qiyoujiage.com/',
+    #     headers={
+    #         "user-agent": get_ua(),
+    #         "Referer": "http://www.qiyoujiage.com",
+    #         "Host": "www.qiyoujiage.com",
+    #     }
+    # )
+    # resp.encoding = resp.apparent_encoding
+    # return resp.text
+
+    # https://www.tuanyou.net/youjia/   <<<-- 换成这个试试
+    return ""
 
 
 def parse_oil_data(html_obj):
