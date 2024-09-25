@@ -63,8 +63,14 @@ from lite_tools.tools.core.lib_hashlib import get_md5, get_sha, get_sha3, get_5d
 from lite_tools.tools.time.lite_time import get_time, time_count, time_range
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_ua import get_ua
-from lite_tools.tools.sql.lite_mysql import MySql
-from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy, BloomFilter
+try:
+    from lite_tools.tools.sql.lite_mysql import MySql
+except ImportError:  # 这里是忽略这里面的包异常的
+    pass
+try:
+    from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy, BloomFilter
+except ImportError:
+    pass
 from lite_tools.tools.sql.config import MySqlConfig
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.core.lite_match import match_case
@@ -72,7 +78,7 @@ from lite_tools.tools.core.lite_string import (
     clean_html, CleanString, color_string, math_string, PrettySrt,
     cookie_s2d, cookie_d2s
 )
-from lite_tools.tools.time.httpx_timeout import x_timeout
+# from lite_tools.tools.time.httpx_timeout import x_timeout
 from lite_tools.tools.core.lite_cache import Singleton, Buffer
 from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
 

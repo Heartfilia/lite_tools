@@ -2,13 +2,18 @@
 # @Time   : 2021-04-06 15:26
 # @Author : Lodge
 import re
+import pip
 import copy
 import json as _json
 from typing import Any, Optional, Iterator, Union
 try:
     from typing import Literal
 except ImportError:
-    from typing_extensions import Literal
+    try:
+        from typing_extensions import Literal
+    except ImportError:
+        pip.main(['install', 'typing_extensions'])
+        from typing_extensions import Literal
 
 from lite_tools.logs import my_logger, get_using_line_info, logger
 from lite_tools.exceptions.DictExceptions import (

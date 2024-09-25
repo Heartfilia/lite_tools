@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 import re
 import os
+import pip
 import math
 from typing import Optional, Union
-
-from usepy import useCleanHtml
 
 from lite_tools.utils.u_code_range import u_range_list, U_range_list
 from lite_tools.utils.u_sub_sup_string import SUB_SUP_WORDS_HASH
@@ -326,6 +325,11 @@ def clean_html(html: str, white_tags: list = None) -> str:
     """
     采用了米乐大佬的包 usepy
     """
+    try:
+        from usepy import useCleanHtml
+    except ImportError:
+        pip.main(['install', 'usepy'])
+        from usepy import useCleanHtml
     content = useCleanHtml(html, white_tags)
     return content
 

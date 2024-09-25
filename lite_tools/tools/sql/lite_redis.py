@@ -18,9 +18,10 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
+import re
+import pip
 import json
 import random
-import re
 import threading
 import time as _time
 from collections import Counter
@@ -55,7 +56,11 @@ except ImportError:
 try:
     from typing import Literal
 except ImportError:
-    from typing_extensions import Literal
+    try:
+        from typing_extensions import Literal
+    except ImportError:
+        pip.main(['install', 'typing_extensions'])
+        from typing_extensions import Literal
 
 import yaml
 import redis as _redis

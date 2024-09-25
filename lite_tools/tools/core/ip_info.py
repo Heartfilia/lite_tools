@@ -1,11 +1,10 @@
 import os
 import re
+import pip
 import socket
 import platform
 import telnetlib
 from typing import Tuple
-
-import requests
 
 from lite_tools.logs import logger
 
@@ -74,6 +73,11 @@ def get_wan(vps: bool = False) -> str:
     global wan_ip
     if vps and wan_ip:
         return wan_ip
+    try:
+        import requests
+    except ImportError:
+        pip.main(['install', 'requests'])
+        import requests
     try:
         resp = requests.get('http://httpbin.org/ip', timeout=5)
         result = resp.json()
