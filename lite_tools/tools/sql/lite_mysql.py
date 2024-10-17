@@ -273,7 +273,7 @@ class MySql:
                 while result is not None:
                     _duration_time = time.perf_counter() - _start_time
                     ok = self.count_conf.add_line(table_name, "S", 1)
-                    yield result
+                    yield result if len(result) > 1 else result[0]
                     if (log or self.log) and (ok % 500 == 0):
                         sql_log(
                             f"S[{table_name} <{_duration_time:.2f}s>] 程序运行 lines={ok} "
