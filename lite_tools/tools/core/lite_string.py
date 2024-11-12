@@ -555,7 +555,7 @@ def cookie_s2d(cookie: str) -> dict:
         return {}
     return dict(map(
         lambda x: (x.strip().split('=', 1)[0], x.strip().split('=', 1)[1]),
-        cookie.rstrip(';').split(';')
+        cookie.strip().rstrip(';').split(';')
     ))
 
 
