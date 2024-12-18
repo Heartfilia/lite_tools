@@ -400,19 +400,3 @@ class MySql:
                     "success")
                 return False
         return True
-
-
-if __name__ == "__main__":
-    mysql = MySql(config=MySqlConfig(host='10.1.1.26',
-                         user='centers_spider',
-                         password='wCwpcrpzadW5cwyw',
-                         database='centers_spider'))
-    mysql.execute(sql="""
-    SELECT
-        test
-        , xxx
-    FROM tttt
-    WHERE 
-         xxx = 1
-    """)
-
