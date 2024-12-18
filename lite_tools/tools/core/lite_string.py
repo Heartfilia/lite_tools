@@ -568,12 +568,13 @@ def cookie_d2s(cookie: dict) -> str:
     return f';'.join(map(lambda x: f"{x[0]}={x[1]}", cookie.items()))
 
 
-def pretty_indent(s: str, indent: int = 2, remove_empty_line: bool = True):
+def pretty_indent(s: str, indent: int = 2, remove_empty_line: bool = True, strict_indent: bool = False):
     """
     这个地方主要是把 那种大缩进的代码去掉空格 这样子更加好看啊
-    :param s      传入的多行字符串
-    :param indent 默认最小缩进是 2 空格
-    :param remove_empty_line: 是否移除空白行
+    :param s         : 传入的多行字符串
+    :param indent    : 默认最小缩进是 2 空格
+    :param remove_empty_line : 是否移除空白行
+    :param strict_indent     : 严格缩进 为（True的话一定得是以每一行的最小共同空格数进行缩进） (默认False:已经顶格的数据跳过，处理其它的)
     """
     each_row = s.split("\n")
     min_space = 0   # 最小需要剔除的空格数量
@@ -591,6 +592,8 @@ def pretty_indent(s: str, indent: int = 2, remove_empty_line: bool = True):
             continue
         else:
             empty_len = len(row) - len(row.lstrip())
+            if strict_indent and empty_len == 0:   # 严格模式 必须保证用最小单位进行处理
+                break
             if min_space == 0 or empty_len < min_space:
                 min_space = empty_len
             temp_slice.append(row)   #
