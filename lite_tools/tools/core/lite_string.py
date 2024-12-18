@@ -593,6 +593,7 @@ def pretty_indent(s: str, indent: int = 2, remove_empty_line: bool = True, stric
         else:
             empty_len = len(row) - len(row.lstrip())
             if strict_indent and empty_len == 0:   # 严格模式 必须保证用最小单位进行处理
+                min_space = 0   # 这时候直接就不需要处理了 后续流程也不走了
                 break
             if min_space == 0 or empty_len < min_space:
                 min_space = empty_len
