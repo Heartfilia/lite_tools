@@ -30,10 +30,11 @@ import pymysql
 from pymysql import cursors
 from dbutils.pooled_db import PooledDB
 
-from lite_tools.tools.sql.config import MySqlConfig, CountConfig
 from lite_tools.logs.sql import x as sql_log
+from lite_tools.tools.core.lite_string import pretty_indent
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.exceptions.SqlExceptions import IterNotNeedRun
+from lite_tools.tools.sql.config import MySqlConfig, CountConfig
 
 
 class MySql:
@@ -170,7 +171,11 @@ class MySql:
                 else:
                     return cursor.fetchall()
         except Exception as err:
-            sql_log(f"[{err.__traceback__.tb_lineno}]{sql} : {err} ", "error")
+            sql_log(f"[{err.__traceback__.tb_lineno}]"
+                    f"\n-----------------< sql start >--------------------\n"
+                    f"{pretty_indent(sql)}"
+                    f"\n------------------< sql end >---------------------\n"
+                    f">>> {err} ", "error")
             if not fetch:
                 conn.rollback()
                 return 0
@@ -398,4 +403,16 @@ class MySql:
 
 
 if __name__ == "__main__":
-    pass
+    mysql = MySql(config=MySqlConfig(host='10.1.1.26',
+                         user='centers_spider',
+                         password='wCwpcrpzadW5cwyw',
+                         database='centers_spider'))
+    mysql.execute(sql="""
+    SELECT
+        test
+        , xxx
+    FROM tttt
+    WHERE 
+         xxx = 1
+    """)
+
