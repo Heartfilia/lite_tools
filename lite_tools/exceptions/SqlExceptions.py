@@ -20,6 +20,11 @@
 """
 
 
+class NeedPoolOrConfig(Exception):
+    def __init__(self):
+        pass
+
+
 class DuplicateEntryException(Exception):
     def __init__(self):
         pass

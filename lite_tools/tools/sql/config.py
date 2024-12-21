@@ -65,6 +65,9 @@ class MySqlConfig:
         self.cursor = cursor
         self.log = log
 
+    def new(self, *args, **kwargs):
+        pass
+
 
 _base_field = {
     "line": 0,     # 操作了多少行

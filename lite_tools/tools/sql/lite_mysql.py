@@ -27,14 +27,15 @@ except ImportError:
     from typing_extensions import Literal
 
 import pymysql
+import aiomysql
 from pymysql import cursors
 from dbutils.pooled_db import PooledDB
 
 from lite_tools.logs.sql import x as sql_log
 from lite_tools.tools.core.lite_string import pretty_indent
 from lite_tools.tools.sql.lib_mysql_string import SqlString
-from lite_tools.exceptions.SqlExceptions import IterNotNeedRun
 from lite_tools.tools.sql.config import MySqlConfig, CountConfig
+from lite_tools.exceptions.SqlExceptions import IterNotNeedRun, NeedPoolOrConfig
 
 
 class MySql:
@@ -400,3 +401,80 @@ class MySql:
                     "success")
                 return False
         return True
+
+
+class AioMySql:
+    """
+    这个支持的功能不多
+    """
+    def __init__(self, pool: aiomysql.pool = None, config: MySqlConfig = None):
+        if pool:
+            self._pool = pool
+        else:
+            self._pool = None
+
+        self._config = config
+
+    async def __init(self):
+        if not self._pool and (not self._config or not isinstance(self._config, MySqlConfig)):
+            raise NeedPoolOrConfig
+        self._pool = await aiomysql.create_pool(
+            host=self._config.host,
+            port=self._config.port,
+            user=self._config.user,
+            password=self._config.password,
+            db=self._config.database,
+            minsize=1,
+            maxsize=self._config.max_connections
+        )
+
+    def pool_status(self) -> bool:
+        return False if not self._pool else True
+
+    async def close_pool(self):
+        try:
+            if self._pool:
+                self._pool.close()
+                await self._pool.wait_closed()
+                self._pool = None
+        except Exception as err:
+            sql_log(f"关闭链接池异常:{err}", "warning")
+
+    async def execute(
+            self, sql: str, args: Union[list, tuple] = None, fetch: Literal['one', 'all', ''] = '',
+            _log: bool = False
+    ):
+        """
+        """
+        if not self._pool:
+            await self.__init()
+        if _log:
+            sql_log(f"{sql=}  {args=}", "debug")
+
+        try:
+            async with self._pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cursor:   # 默认返回dict
+                    if args:    # 批量操作的时候
+                        if not isinstance(args[0], (list, tuple)):   # 判断内容里面 里面是否是列表或者元组，如果是的话那么就是批量的
+                            cur = await cursor.execute(sql, args)    # 这里是单行操作套用模板的情况
+                        else:
+                            cur = await cursor.executemany(sql, args)   # 批量操作套用模板
+                    else:
+                        cur = await cursor.execute(sql)
+                    if not fetch and not sql.upper().startswith("SELECT"):
+                        await conn.commit()
+                        return cur   # 如果是插入 更新操作的话 需要获得 影响的行数
+                    elif fetch == "one":
+                        return await cursor.fetchone()
+                    else:
+                        return await cursor.fetchall()
+        except Exception as err:
+            sql_log(f"[{err.__traceback__.tb_lineno}]"
+                    f"\n-----------------< sql start >--------------------\n"
+                    f"{pretty_indent(sql)}"
+                    f"\n------------------< sql end >---------------------\n"
+                    f">>> {err} ", "error")
+            if not fetch:
+                await conn.rollback()
+                return 0
+
