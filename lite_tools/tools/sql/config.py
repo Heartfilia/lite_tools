@@ -80,9 +80,9 @@ class MySqlConfig:
         if not host:
             raise KeyFieldNeedError("host")
 
-        user = try_get(config, "user")
+        user = try_get(config, "user|username")
         if not user:
-            raise KeyFieldNeedError("user")
+            raise KeyFieldNeedError("user or username")
 
         password = try_get(config, "password|pass")
         if not password:
@@ -103,7 +103,7 @@ class MySqlConfig:
         if charset:
             this.charset = charset
 
-        max_connections = try_get(config, "max_connections")
+        max_connections = try_get(config, "max_connections|maxsize")
         if max_connections:
             this.max_connections = max_connections
 
@@ -111,7 +111,7 @@ class MySqlConfig:
         if table_name:
             this.table_name = table_name
 
-        cursor = try_get(config, "cursor")
+        cursor = try_get(config, "cursor|cursorclass")
         if cursor:
             this.cursor = cursor
 
