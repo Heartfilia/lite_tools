@@ -20,7 +20,7 @@ __ALL__ = [
     "try_key",       # 可根据键/值 取值/键
     "MySql",         # MySql 连接池对象
     "AioMySql",      # mysql 异步链接池
-    "MySqlConfig",   # mysql -- 专属配置
+    "MySqlConfig",   # mysql -- 专属配置 可以直接用 或者  MySqlConfig.new(dict 相关配置)
     "FlattenJson",   # 把json平坦化
     # "JsJson",        # 从js里面提取json内容,这个目前不可以泛用
     "WrapJson",      # 把一个json按照指定模板折叠
