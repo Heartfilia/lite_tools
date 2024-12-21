@@ -420,9 +420,22 @@ class AioMySql:
 
     async def __init(self):
         if not self._pool and (not self._config or not isinstance(self._config, (MySqlConfig, dict))):
-            if isinstance(self._config, dict):
-                self._config = MySqlConfig.new(self._config)
             raise NeedPoolOrConfig
+
+        if isinstance(self._config, dict):
+            self._config = MySqlConfig.new(self._config)
+
+        cursor = self._config.cursor
+
+        if cursor == "dict":
+            cursor_type = aiomysql.DictCursor
+        elif cursor == "stream":
+            cursor_type = aiomysql.SSCursor  # 流式 建议单条处理
+        elif cursor == "dict_stream":
+            cursor_type = aiomysql.SSDictCursor
+        else:
+            cursor_type = aiomysql.Cursor
+
         self._pool = await aiomysql.create_pool(
             host=self._config.host,
             port=self._config.port,
@@ -430,7 +443,8 @@ class AioMySql:
             password=self._config.password,
             db=self._config.database,
             minsize=1,
-            maxsize=self._config.max_connections
+            maxsize=self._config.max_connections,
+            cursorclass=cursor_type
         )
 
     def pool_status(self) -> bool:
@@ -449,8 +463,6 @@ class AioMySql:
             self, sql: str, args: Union[list, tuple] = None, fetch: Literal['one', 'all', ''] = '',
             _log: bool = False
     ):
-        """
-        """
         if not self._pool:
             await self.__init()
         if _log:
@@ -458,7 +470,7 @@ class AioMySql:
 
         try:
             async with self._pool.acquire() as conn:
-                async with conn.cursor(aiomysql.DictCursor) as cursor:   # 默认返回dict
+                async with conn.cursor() as cursor:   # 默认返回dict
                     if args:    # 批量操作的时候
                         if not isinstance(args[0], (list, tuple)):   # 判断内容里面 里面是否是列表或者元组，如果是的话那么就是批量的
                             cur = await cursor.execute(sql, args)    # 这里是单行操作套用模板的情况

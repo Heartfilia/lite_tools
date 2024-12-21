@@ -84,9 +84,9 @@ class MySqlConfig:
         if not user:
             raise KeyFieldNeedError("user")
 
-        password = try_get(config, "password")
+        password = try_get(config, "password|pass")
         if not password:
-            raise KeyFieldNeedError("password")
+            raise KeyFieldNeedError("password or pass")
 
         this = cls(
             database=database,
