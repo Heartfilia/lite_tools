@@ -13,4 +13,4 @@ def install(package_name: str, update: bool = False, source: str = ""):
     if source:
         exec_args.extend(["-i", source])
 
-    subprocess.check_call(exec_args)
+    subprocess.run(exec_args)
