@@ -460,8 +460,8 @@ class AioMySql:
             sql_log(f"关闭链接池异常:{err}", "warning")
 
     async def execute(
-            self, sql: str, args: Union[list, tuple] = None, fetch: Literal['one', 'all', ''] = '',
-            _log: bool = False
+            self, sql: str, args: Union[list, tuple] = None, fetch: Literal['one', 'all', 'many', ''] = '',
+            _log: bool = False, **kwargs
     ):
         if not self._pool:
             await self.__init()
@@ -483,6 +483,8 @@ class AioMySql:
                         return cur   # 如果是插入 更新操作的话 需要获得 影响的行数
                     elif fetch == "one":
                         return await cursor.fetchone()
+                    elif fetch == "many":
+                        return cursor.fetchmany(kwargs.get('buffer', 1000))
                     else:
                         return await cursor.fetchall()
         except Exception as err:
