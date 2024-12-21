@@ -19,7 +19,6 @@
           ┗━┻━┛   ┗━┻━┛
 """
 import re
-import pip
 import json
 import random
 import threading
@@ -59,7 +58,8 @@ except ImportError:
     try:
         from typing_extensions import Literal
     except ImportError:
-        pip.main(['install', 'typing_extensions'])
+        from lite_tools.utils.pip_ import install
+        install('typing_extensions')
         from typing_extensions import Literal
 
 import yaml

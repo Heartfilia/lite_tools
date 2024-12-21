@@ -1,6 +1,5 @@
 import os
 import re
-import pip
 import socket
 import platform
 import telnetlib
@@ -76,7 +75,8 @@ def get_wan(vps: bool = False) -> str:
     try:
         import requests
     except ImportError:
-        pip.main(['install', 'requests'])
+        from lite_tools.utils.pip_ import install
+        install('requests')
         import requests
     try:
         resp = requests.get('http://httpbin.org/ip', timeout=5)

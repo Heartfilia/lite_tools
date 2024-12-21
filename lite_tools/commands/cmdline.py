@@ -21,7 +21,6 @@
 import os.path
 import re
 import sys
-import pip
 
 import requests
 from lite_tools.version import VERSION
@@ -260,7 +259,9 @@ def get_hot_news(_, *args):
 
 @chose_option.register("update")
 def update_lite_tools(_, *args):
-    pip.main(["install", "--upgrade", "lite-tools", "-i", "https://pypi.org/simple"])
+    from lite_tools.utils.pip_ import install
+
+    install('lite-tools', update=True, source="https://pypi.org/simple")
 
 
 @chose_option.register("acg")

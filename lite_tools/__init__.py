@@ -19,6 +19,7 @@ __ALL__ = [
     "try_get",       # jsonPath 方式取字典值
     "try_key",       # 可根据键/值 取值/键
     "MySql",         # MySql 连接池对象
+    "AioMySql",      # mysql 异步链接池
     "MySqlConfig",   # mysql -- 专属配置
     "FlattenJson",   # 把json平坦化
     # "JsJson",        # 从js里面提取json内容,这个目前不可以泛用
@@ -65,7 +66,7 @@ from lite_tools.tools.time.lite_time import get_time, time_count, time_range
 from lite_tools.tools.core.lite_try import try_catch
 from lite_tools.tools.core.lite_ua import get_ua
 try:
-    from lite_tools.tools.sql.lite_mysql import MySql
+    from lite_tools.tools.sql.lite_mysql import MySql, AioMySql
 except ImportError:  # 这里是忽略这里面的包异常的
     pass
 try:
