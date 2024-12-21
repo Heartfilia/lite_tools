@@ -45,3 +45,15 @@ class NotSupportType(Exception):
 
 class LengthError(Exception):
     pass
+
+
+class EmptyConfigException(Exception):
+    pass
+
+
+class KeyFieldNeedError(Exception):
+    def __init__(self, key: str):
+        self.error = f"缺少关键的字段: {key}"
+
+    def __str__(self):
+        return self.error

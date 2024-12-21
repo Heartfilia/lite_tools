@@ -43,7 +43,7 @@ class MySql:
             self,
             pool: PooledDB = None,
             *,
-            config: MySqlConfig = None,
+            config: Union[MySqlConfig, dict] = None,
             table_name: str = None,
             log_rule: Literal['default', 'each'] = 'default'
     ):
@@ -60,6 +60,7 @@ class MySql:
                         cursor: str = 'tuple',
                         max_connections: int = 20,
                         table_name: str = None,
+            | 或者 --> {"database": "", "host": "", "user": "", "password": "" .....} 上面的参数这里面都能放
         table_name: 如果是自己传入pool 那么就需要传入这个参数
         log_rule  : 打印日志的模式，默认是每隔一段时间或者一定的量打印一下，可以设置为each 每条打印
         """
@@ -68,8 +69,10 @@ class MySql:
             self.log = True   # 默认肯定是要打印日志的啦
             self.pool = pool
             self.table_name = table_name
-        elif not pool and config and isinstance(config, MySqlConfig):
+        elif not pool and config and isinstance(config, (MySqlConfig, dict)):
             self.pool = None
+            if isinstance(config, dict):
+                config = MySqlConfig.new(config)
             self.config = config
             self.table_name = table_name or self.config.table_name
             self.cur = self.config.cursor   # 记录这个 因为流式处理地方不太一样
@@ -407,7 +410,7 @@ class AioMySql:
     """
     这个支持的功能不多
     """
-    def __init__(self, pool: aiomysql.pool = None, config: MySqlConfig = None):
+    def __init__(self, pool: aiomysql.pool = None, config: Union[MySqlConfig, dict] = None):
         if pool:
             self._pool = pool
         else:
@@ -416,7 +419,9 @@ class AioMySql:
         self._config = config
 
     async def __init(self):
-        if not self._pool and (not self._config or not isinstance(self._config, MySqlConfig)):
+        if not self._pool and (not self._config or not isinstance(self._config, (MySqlConfig, dict))):
+            if isinstance(self._config, dict):
+                self._config = MySqlConfig.new(self._config)
             raise NeedPoolOrConfig
         self._pool = await aiomysql.create_pool(
             host=self._config.host,

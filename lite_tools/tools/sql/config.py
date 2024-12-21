@@ -26,6 +26,9 @@ try:
 except ImportError:
     from typing_extensions import Literal
 
+from lite_tools.tools.core.lite_parser import try_get
+from lite_tools.exceptions.SqlExceptions import EmptyConfigException, KeyFieldNeedError
+
 
 class MySqlConfig:
     def __init__(
@@ -33,7 +36,7 @@ class MySqlConfig:
         database: str,
         host: str,
         user: str,
-        password: str = "",
+        password: str,
         port: int = 3306,
         charset: str = "utf8mb4",
         cursor: Literal['tuple', 'dict', 'stream', 'dict_stream'] = "tuple",
@@ -65,8 +68,58 @@ class MySqlConfig:
         self.cursor = cursor
         self.log = log
 
-    def new(self, *args, **kwargs):
-        pass
+    @classmethod
+    def new(cls, config: dict):
+        if not config:
+            raise EmptyConfigException
+        database = try_get(config, "database|db")
+        if not database:
+            raise KeyFieldNeedError("database or db")
+
+        host = try_get(config, "host")
+        if not host:
+            raise KeyFieldNeedError("host")
+
+        user = try_get(config, "user")
+        if not user:
+            raise KeyFieldNeedError("user")
+
+        password = try_get(config, "password")
+        if not password:
+            raise KeyFieldNeedError("password")
+
+        this = cls(
+            database=database,
+            host=host,
+            user=user,
+            password=password
+        )
+
+        port = try_get(config, "port")
+        if port:
+            this.port = port
+
+        charset = try_get(config, "charset")
+        if charset:
+            this.charset = charset
+
+        max_connections = try_get(config, "max_connections")
+        if max_connections:
+            this.max_connections = max_connections
+
+        table_name = try_get(config, "table_name")
+        if table_name:
+            this.table_name = table_name
+
+        cursor = try_get(config, "cursor")
+        if cursor:
+            this.cursor = cursor
+
+        log = try_get(config, "log")
+        if log:
+            this.log = log
+
+        return this
 
 
 _base_field = {
