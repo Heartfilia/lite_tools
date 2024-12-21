@@ -76,9 +76,9 @@ class MySqlConfig:
         if not database:
             raise KeyFieldNeedError("database or db")
 
-        host = try_get(config, "host")
+        host = try_get(config, "host|hostname")
         if not host:
-            raise KeyFieldNeedError("host")
+            raise KeyFieldNeedError("host or hostname")
 
         user = try_get(config, "user|username")
         if not user:
