@@ -53,6 +53,7 @@ __ALL__ = [
     "LiteRedis",     # 这个用处不大 但是可以用一个本地文件的配置文件来初始化这个对象使用 如 rd = LiteRedis("/root/config.json")
     "LiteProxy",     # 更方便的获取代理的操作 基于redis的set/list模式 默认set随机弹出 也可以切换为mode='list'滚动获取 使用方式可以使用 LiteRedis.help() 获取
     "BloomFilter",   # 基于redis的布隆过滤器
+    "install",       # 实现pip install 的操作
 ]
 
 # 还有一个东西不放这里了 可以这样引用
@@ -89,7 +90,7 @@ from lite_tools.tools.js import (
     to_string_2, to_string_16, to_string_36,
     xor, unsigned_right_shift, left_shift, dec_to_bin
 )
-
+from lite_tools.utils.pip_ import install
 from lite_tools.version import VERSION
 
 
