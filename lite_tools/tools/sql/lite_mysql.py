@@ -77,11 +77,7 @@ class MySql:
             self.config = config
             self.table_name = table_name or self.config.table_name
             self.cur = self.config.cursor   # 记录这个 因为流式处理地方不太一样
-            self._init_mysql(
-                self.config.database, self.config.max_connections,
-                self.config.host, self.config.port, self.config.user, self.config.password, self.config.charset,
-                self.config.cursor
-            )
+            self._init_mysql()
             self.log = self.config.log
         else:
             raise ValueError
@@ -92,7 +88,16 @@ class MySql:
         self.start_time = time.time()
         self.log_rule = log_rule
 
-    def _init_mysql(self, database, max_connections, host, port, user, password, charset, cursor, *args, **kwargs):
+    def _init_mysql(self):
+        database = self.config.database
+        max_connections = self.config.max_connections
+        host = self.config.host
+        port = self.config.port
+        user = self.config.user
+        password = self.config.password
+        charset = self.config.charset
+        cursor = self.config.cursor
+
         if self.pool is None:
             if cursor == "dict":
                 cursor_type = pymysql.cursors.DictCursor
@@ -119,20 +124,17 @@ class MySql:
                 database=database,
                 charset=charset,
                 cursorclass=cursor_type,   # 调整返回结果的样式
-                *args,
-                **kwargs
             )
 
-    def pool_status(self) -> bool:
-        return False if not self.pool else True
-
-    def close_pool(self):
+    def close_pool(self) -> bool:
         try:
             if self.pool:
                 self.pool.close()
                 self.pool = None
+                return True
         except Exception as err:
             sql_log(f"关闭链接池失败:{err}", "error")
+        return False
 
     def execute(
             self,
@@ -172,7 +174,7 @@ class MySql:
                     if log or self.log:
                         effect_count = cursor.rowcount
                         if "ON DUPLICATE KEY UPDATE" in sql:
-                            effect_count //= 2
+                            effect_count //= 2    # 这里是有问题的  所以这里只是看个大概
                         self.count_conf.add_time(table_name, mode, _end_time-_start_time)
                         _all_row = self.count_conf.add_line(table_name, mode, effect_count)
                         _rate = self.count_conf.get_rate(table_name, mode)
@@ -458,7 +460,26 @@ class AioMySql:
             db=self._config.database,
             minsize=1,
             maxsize=self._config.max_connections,
-            cursorclass=cursor_type
+            cursorclass=cursor_type,
+
+            unix_socket=self._config.unix_socket,
+            charset=self._config.charset,
+            sql_mode=self._config.sql_mode,
+            read_default_file=self._config.read_default_file,
+            conv=self._config.conv,
+            use_unicode=self._config.use_unicode,
+            client_flag=self._config.client_flag,
+            init_command=self._config.init_command,
+            connect_timeout=self._config.connect_timeout,
+            read_default_group=self._config.read_default_group,
+            autocommit=self._config.autocommit,
+            echo=self._config.echo,
+            local_infile=self._config.local_infile,
+            loop=self._config.loop,
+            ssl=self._config.ssl,
+            auth_plugin=self._config.auth_plugin,
+            program_name=self._config.program_name,
+            server_public_key=self._config.server_public_key,
         )
 
     async def close_pool(self) -> bool:

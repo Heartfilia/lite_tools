@@ -77,7 +77,7 @@ class MySqlConfig:
         :param table_name (str)   : 这个是给insert  update  delete 用的
         :param log        (bool)   : 是否打印日志 不建议关闭 要不然成不成功都不知道 如果要每一条都打印输入 all
 
-        # 其它的虽然添加了 但是我目前还没用到 以后再说   todo
+        # 其它的虽然添加了 但是我目前还没用到 以后再说
         """
         if conv is None:
             self.conv = decoders
@@ -111,6 +111,7 @@ class MySqlConfig:
         self.auth_plugin = auth_plugin
         self.program_name = program_name
         self.server_public_key = server_public_key
+        self._other = {}
 
     @classmethod
     def new(cls, config: dict):
@@ -231,7 +232,21 @@ class MySqlConfig:
         if server_public_key is not None:
             this.server_public_key = server_public_key
 
+        this._other = config or {}
         return this
+
+    def to_dict(self):
+        """
+        获取字典部分
+        """
+        obj = copy.deepcopy(self.__dict__)
+
+        other = obj['_other']
+        del obj['_other']
+        if other:
+            obj.update(other)
+
+        return obj
 
 
 _base_field = {
