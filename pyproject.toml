@@ -73,33 +73,33 @@ all = [
 [tool.setuptools]
 packages = [
     'lite_tools',
-    'lite_tools.commands',
-    # 'lite_tools.commands.acg',      # 没弄好 不是太想弄了 就不一起打包进去了
-    # 'lite_tools.commands.balls',    # 还没有调整好 先不放出来
-    'lite_tools.commands.dictionary',
-    'lite_tools.commands.flush',
-    'lite_tools.commands.fresh',
-    'lite_tools.commands.news',       # 新闻模块功能比较多 单独抽出来一个包搞
-    'lite_tools.commands.today',
-    'lite_tools.commands.trans',
-    'lite_tools.commands.weather',
-    'lite_tools.commands.whsecret',
-    'lite_tools.exceptions',
-    'lite_tools.logs',
-    'lite_tools.tools',
-    'lite_tools.tools.js',
-    'lite_tools.tools.sql',
-    'lite_tools.tools.core',
-    'lite_tools.tools.time',
-    # 'lite_tools.tools.http',   # 这个还在研发中
-    'lite_tools.utils',
+    'lite_tools/commands',
+    # 'lite_tools/commands/acg',      # 没弄好 不是太想弄了 就不一起打包进去了
+    # 'lite_tools/commands/balls',    # 还没有调整好 先不放出来
+    'lite_tools/commands/dictionary',
+    'lite_tools/commands/flush',
+    'lite_tools/commands/fresh',
+    'lite_tools/commands/news',       # 新闻模块功能比较多 单独抽出来一个包搞
+    'lite_tools/commands/today',
+    'lite_tools/commands/trans',
+    'lite_tools/commands/weather',
+    'lite_tools/commands/whsecret',
+    'lite_tools/exceptions',
+    'lite_tools/logs',
+    'lite_tools/tools',
+    'lite_tools/tools/js',
+    'lite_tools/tools/sql',
+    'lite_tools/tools/core',
+    'lite_tools/tools/time',
+    # 'lite_tools/tools/http',   # 这个还在研发中
+    'lite_tools/utils',
 ]
 # 或者使用 find 来自动发现包
 # packages = { find = { where = ["your_package", "your_package/submodule"] } }
 
 
 [project.scripts]
-lite-tools = "lite_tools.commands.cmdline:execute"
+lite-tools = "lite_tools/commands/cmdline:execute"
 
 # 下面的和上面一样 我试试
 #[tool.setuptools.entry-points]
