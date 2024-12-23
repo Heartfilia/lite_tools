@@ -76,6 +76,8 @@ class MySqlConfig:
         :param cursor  (tuple): cursorclass 的参数 名字简化一下 默认返回数据样式就是元组，可以设置 dict 为字典样式返回 stream流式返回
         :param table_name (str)   : 这个是给insert  update  delete 用的
         :param log        (bool)   : 是否打印日志 不建议关闭 要不然成不成功都不知道 如果要每一条都打印输入 all
+
+        # 其它的虽然添加了 但是我目前还没用到 以后再说   todo
         """
         if conv is None:
             self.conv = decoders

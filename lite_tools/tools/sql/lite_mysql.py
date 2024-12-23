@@ -92,7 +92,7 @@ class MySql:
         self.start_time = time.time()
         self.log_rule = log_rule
 
-    def _init_mysql(self, database, max_connections, host, port, user, password, charset, cursor):
+    def _init_mysql(self, database, max_connections, host, port, user, password, charset, cursor, *args, **kwargs):
         if self.pool is None:
             if cursor == "dict":
                 cursor_type = pymysql.cursors.DictCursor
@@ -118,8 +118,21 @@ class MySql:
                 password=password,
                 database=database,
                 charset=charset,
-                cursorclass=cursor_type   # 调整返回结果的样式
+                cursorclass=cursor_type,   # 调整返回结果的样式
+                *args,
+                **kwargs
             )
+
+    def pool_status(self) -> bool:
+        return False if not self.pool else True
+
+    def close_pool(self):
+        try:
+            if self.pool:
+                self.pool.close()
+                self.pool = None
+        except Exception as err:
+            sql_log(f"关闭链接池失败:{err}", "error")
 
     def execute(
             self,
