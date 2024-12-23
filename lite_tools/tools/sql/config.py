@@ -26,6 +26,7 @@ try:
 except ImportError:
     from typing_extensions import Literal
 
+from pymysql.converters import decoders
 from lite_tools.tools.core.lite_parser import try_get
 from lite_tools.exceptions.SqlExceptions import EmptyConfigException, KeyFieldNeedError
 
@@ -42,7 +43,26 @@ class MySqlConfig:
         cursor: Literal['tuple', 'dict', 'stream', 'dict_stream'] = "tuple",
         max_connections: int = 20,
         table_name: str = None,
-        log: bool = True
+        log: bool = True,
+
+        unix_socket=None,
+        conv=None,
+        sql_mode=None,
+        read_default_file=None,
+        use_unicode=None,
+        client_flag=0,
+        init_command=None,
+        connect_timeout=None,
+        read_default_group=None,
+        autocommit=False,
+        echo=False,
+        local_infile=False,
+        loop=None,
+        ssl=None,
+        auth_plugin='',
+        program_name='',
+        server_public_key=None,
+        **kwargs
     ):
         """
         mysql的配置文件 这里只有默认的配置 要改其他的可以自己传pool配置
@@ -57,6 +77,11 @@ class MySqlConfig:
         :param table_name (str)   : 这个是给insert  update  delete 用的
         :param log        (bool)   : 是否打印日志 不建议关闭 要不然成不成功都不知道 如果要每一条都打印输入 all
         """
+        if conv is None:
+            self.conv = decoders
+        else:
+            self.conv = conv
+
         self.database = database
         self.host = host
         self.user = user
@@ -67,6 +92,23 @@ class MySqlConfig:
         self.table_name = table_name
         self.cursor = cursor
         self.log = log
+
+        self.unix_socket = unix_socket
+        self.sql_mode = sql_mode
+        self.read_default_file = read_default_file
+        self.use_unicode = use_unicode
+        self.client_flag = client_flag
+        self.init_command = init_command
+        self.connect_timeout = connect_timeout
+        self.read_default_group = read_default_group
+        self.autocommit = autocommit
+        self.echo = echo
+        self.local_infile = local_infile
+        self.loop = loop
+        self.ssl = ssl
+        self.auth_plugin = auth_plugin
+        self.program_name = program_name
+        self.server_public_key = server_public_key
 
     @classmethod
     def new(cls, config: dict):
@@ -96,28 +138,96 @@ class MySqlConfig:
         )
 
         port = try_get(config, "port")
-        if port:
+        if port is not None:
             this.port = port
 
         charset = try_get(config, "charset")
-        if charset:
+        if charset is not None:
             this.charset = charset
 
         max_connections = try_get(config, "max_connections|maxsize")
-        if max_connections:
+        if max_connections is not None:
             this.max_connections = max_connections
 
         table_name = try_get(config, "table_name")
-        if table_name:
+        if table_name is not None:
             this.table_name = table_name
 
         cursor = try_get(config, "cursor|cursorclass")
-        if cursor:
+        if cursor is not None:
             this.cursor = cursor
 
         log = try_get(config, "log")
-        if log:
+        if log is not None:
             this.log = log
+
+        conv = try_get(config, "conv")
+        if conv is not None:
+            this.conv = conv
+
+        unix_socket = try_get(config, "unix_socket")
+        if unix_socket is not None:
+            this.unix_socket = unix_socket
+
+        sql_mode = try_get(config, "sql_mode")
+        if sql_mode is not None:
+            this.sql_mode = sql_mode
+
+        read_default_file = try_get(config, "read_default_file")
+        if read_default_file is not None:
+            this.read_default_file = read_default_file
+
+        use_unicode = try_get(config, "use_unicode")
+        if use_unicode is not None:
+            this.use_unicode = use_unicode
+
+        client_flag = try_get(config, "client_flag")
+        if client_flag is not None:
+            this.client_flag = client_flag
+
+        init_command = try_get(config, "init_command")
+        if init_command is not None:
+            this.init_command = init_command
+
+        connect_timeout = try_get(config, "connect_timeout")
+        if connect_timeout is not None:
+            this.connect_timeout = connect_timeout
+
+        read_default_group = try_get(config, "read_default_group")
+        if read_default_group is not None:
+            this.read_default_group = read_default_group
+
+        autocommit = try_get(config, "autocommit")
+        if autocommit is not None:
+            this.autocommit = autocommit
+
+        echo = try_get(config, "echo")
+        if echo is not None:
+            this.echo = echo
+
+        local_infile = try_get(config, "local_infile")
+        if local_infile is not None:
+            this.local_infile = local_infile
+
+        loop = try_get(config, "loop")
+        if loop is not None:
+            this.loop = loop
+
+        ssl = try_get(config, "ssl")
+        if ssl is not None:
+            this.ssl = ssl
+
+        auth_plugin = try_get(config, "auth_plugin")
+        if auth_plugin is not None:
+            this.auth_plugin = auth_plugin
+
+        program_name = try_get(config, "program_name")
+        if program_name is not None:
+            this.program_name = program_name
+
+        server_public_key = try_get(config, "server_public_key")
+        if server_public_key is not None:
+            this.server_public_key = server_public_key
 
         return this
 

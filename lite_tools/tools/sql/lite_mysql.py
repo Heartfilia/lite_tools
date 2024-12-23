@@ -20,6 +20,7 @@
 """
 import re
 import time
+import asyncio
 from typing import Iterator, Union, Mapping, List
 try:
     from typing import Literal
@@ -451,9 +452,29 @@ class AioMySql:
         return False if not self._pool else True
 
     async def close_pool(self):
+        """
+        这个地方在你用的地方最后位置调用 不要在服务里面用 如：在fastapi里面用 可以用lifespan
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def lifespan(app_tasker: FastAPI):
+            # 启动时操作
+            yield   # 不能丢
+            # 关闭后操作
+            if async_mysql.pool_status():
+                await async_mysql.close_pool()
+                logger.warning("已经关闭mysql链接池")
+            mysql.close_all_pool()
+
+        app = FastAPI(
+            ...,
+            lifespan=lifespan      # 其它参数忽略   这里加上就可以
+        )
+        """
         try:
             if self._pool:
                 self._pool.close()
+                await asyncio.sleep(1)
                 await self._pool.wait_closed()
                 self._pool = None
         except Exception as err:
