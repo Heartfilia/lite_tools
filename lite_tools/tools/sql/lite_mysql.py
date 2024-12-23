@@ -471,8 +471,7 @@ class AioMySql:
             # 启动时操作
             yield   # 不能丢
             # 关闭后操作
-            status = await async_mysql.close_pool()
-            if status:
+            if await async_mysql.close_pool():
                 logger.warning("已经关闭mysql链接池")
 
         app = FastAPI(
