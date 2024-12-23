@@ -461,10 +461,7 @@ class AioMySql:
             cursorclass=cursor_type
         )
 
-    def pool_status(self) -> bool:
-        return False if not self._pool else True
-
-    async def close_pool(self):
+    async def close_pool(self) -> bool:
         """
         这个地方在你用的地方最后位置调用 不要在服务里面用 如：在fastapi里面用 可以用lifespan
         from contextlib import asynccontextmanager
@@ -474,10 +471,9 @@ class AioMySql:
             # 启动时操作
             yield   # 不能丢
             # 关闭后操作
-            if async_mysql.pool_status():
-                await async_mysql.close_pool()
+            status = await async_mysql.close_pool()
+            if status:
                 logger.warning("已经关闭mysql链接池")
-            mysql.close_all_pool()
 
         app = FastAPI(
             ...,
@@ -490,8 +486,10 @@ class AioMySql:
                 await asyncio.sleep(1)
                 await self._pool.wait_closed()
                 self._pool = None
+                return True
         except Exception as err:
             sql_log(f"关闭链接池异常:{err}", "warning")
+        return False
 
     async def execute(
             self, sql: str, args: Union[list, tuple] = None, fetch: Literal['one', 'all', 'many', ''] = '',
