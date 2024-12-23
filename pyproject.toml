@@ -99,7 +99,7 @@ packages = [
 
 
 [project.scripts]
-lite-tools = "lite_tools/commands/cmdline:execute"
+lite-tools = "lite_tools.commands.cmdline:execute"
 
 # 下面的和上面一样 我试试
 #[tool.setuptools.entry-points]
