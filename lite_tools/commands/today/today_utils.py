@@ -22,8 +22,8 @@ import os
 import json
 from typing import Literal
 
-from tools.time.lite_time import get_time
-from utils.lite_dir import lite_tools_dir
+from lite_tools.tools.time.lite_time import get_time
+from lite_tools.utils.lite_dir import lite_tools_dir
 
 
 def today_cache_dir(file_name: Literal['oil', 'almanac', 'history']) -> str:

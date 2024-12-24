@@ -21,13 +21,13 @@
 from prettytable import PrettyTable
 
 import requests
-# from utils.tls import requests
-from tools.core.lite_ua import get_ua, lite_ua
-from tools.time.lite_time import get_time
-from tools.core.lite_try import try_catch
-from tools.core.lite_parser import try_get
-from commands.news.z_sfg import my_temp_host as mh
-from commands.news.get_global_news import get_china_news
+# from lite_tools.utils.tls import requests
+from lite_tools.tools.core.lite_ua import get_ua, lite_ua
+from lite_tools.tools.time.lite_time import get_time
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.tools.core.lite_parser import try_get
+from lite_tools.commands.news.z_sfg import my_temp_host as mh
+from lite_tools.commands.news.get_global_news import get_china_news
 
 
 def print_hot_news():

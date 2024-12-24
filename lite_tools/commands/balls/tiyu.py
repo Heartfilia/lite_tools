@@ -19,7 +19,7 @@
           ┗━┻━┛   ┗━┻━┛
 """
 import sys
-from logs import logger
+from lite_tools.logs import logger
 
 try:
     import requests
@@ -27,11 +27,11 @@ except ImportError:
     logger.error("需要安装requests和lxml才可以")
     sys.exit(0)
 
-from tools.core.lite_ua import get_ua
-from tools.core.lite_try import try_catch
-from utils.lite_table import print_head
-from tools.core.lite_parser import try_get
-from tools.core.lite_string import color_string
+from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.utils.lite_table import print_head
+from lite_tools.tools.core.lite_parser import try_get
+from lite_tools.tools.core.lite_string import color_string
 
 
 @try_catch(log="需要网络,可以重试,也可能网站数据源变更")

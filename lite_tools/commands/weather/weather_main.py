@@ -27,12 +27,12 @@ from prettytable import PrettyTable
 import requests
 from loguru import logger
 
-from tools.core.lite_ua import get_ua
-from tools.time.lite_time import get_time
-from tools.core.lite_try import try_catch
-from utils.json_download import get_goal_dir
-from tools.core.lite_string import color_string
-from tools.core.lite_parser import try_key, JsJson, try_get
+from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.time.lite_time import get_time
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.utils.json_download import get_goal_dir
+from lite_tools.tools.core.lite_string import color_string
+from lite_tools.tools.core.lite_parser import try_key, JsJson, try_get
 
 print_template = """<yellow>【今日天气】</yellow>[更新时间 {fresh_time}]
 <cyan>{city}</cyan>当前: <red>{temp} ℃</red> {weather} {date}

@@ -23,14 +23,14 @@ import re
 import sys
 
 import requests
-from version import VERSION
-from logs import logger
-from utils.lite_dir import lite_tools_dir
-from tools.core.lite_string import color_string
-from tools.core.lite_match import match_case
-from tools.time.lite_time import get_time
-from tools.core.lite_try import try_catch
-from commands.today.fisher_date import print_date
+from lite_tools.utils import VERSION
+from lite_tools.logs import logger
+from lite_tools.utils.lite_dir import lite_tools_dir
+from lite_tools.tools.core.lite_string import color_string
+from lite_tools.tools.core.lite_match import match_case
+from lite_tools.tools.time.lite_time import get_time
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.commands.today.fisher_date import print_date
 
 
 # _my_image = """
@@ -141,20 +141,20 @@ def get_fish_date(_, *args):
 @chose_option.register("say")
 def bear_say(_, *args):
     _ = args
-    from commands.whsecret.says import cmd_say
+    from lite_tools.commands.whsecret.says import cmd_say
     cmd_say(args[0])
 
 
 @chose_option.register("flush")
 def flush_local(_, *args):
-    from commands.flush.flush_cmd import flush_cmdline
+    from lite_tools.commands.flush.flush_cmd import flush_cmdline
     flush_cmdline(args[0])
 
 
 @chose_option.register("dict")
 def flush_local(_, *args):
     try:
-        from commands.dictionary.dict_cmd import dict_cmdline
+        from lite_tools.commands.dictionary.dict_cmd import dict_cmdline
     except ImportError:
         logger.warning("dict 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
         sys.exit(0)
@@ -165,7 +165,7 @@ def flush_local(_, *args):
 def fresh_something(_, *args):
     # 联网更新一些资源 这里是手动操作
     try:
-        from commands.fresh.fresh_cmd import fresh_cmdline
+        from lite_tools.commands.fresh.fresh_cmd import fresh_cmdline
     except ImportError:
         logger.warning("fresh 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
         sys.exit(0)
@@ -175,7 +175,7 @@ def fresh_something(_, *args):
 @chose_option.register("ball")
 def get_ball(_, *args):
     try:
-        from commands.balls.ball_cmd import ball_cmdline
+        from lite_tools.commands.balls.ball_cmd import ball_cmdline
     except ImportError:
         logger.warning("ball 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
         sys.exit(0)
@@ -185,7 +185,7 @@ def get_ball(_, *args):
 @chose_option.register("weather")
 def get_weather(_, *args):
     try:
-        from commands.weather.weather_cmd import weather_cmdline
+        from lite_tools.commands.weather.weather_cmd import weather_cmdline
     except ImportError:
         logger.warning("weather 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
         sys.exit(0)
@@ -199,8 +199,8 @@ def get_today_info(_, *args):
         args = args[0]
 
     try:
-        from commands.today.oil_price import print_oil
-        from commands.today.script_almanac import print_today, print_today_history
+        from lite_tools.commands.today.oil_price import print_oil
+        from lite_tools.commands.today.script_almanac import print_today, print_today_history
     except ImportError:
         logger.warning("today 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
         sys.exit(0)
@@ -220,10 +220,10 @@ def trans_files(_, *args):
     if len(args) > 0:
         args = args[0]
     try:
-        from commands.trans.pdf import pdf_run
-        from commands.trans.excel import excel_run
-        from commands.trans.pic import pic_run
-        from commands.trans.word import word_run
+        from lite_tools.commands.trans.pdf import pdf_run
+        from lite_tools.commands.trans.excel import excel_run
+        from lite_tools.commands.trans.pic import pic_run
+        from lite_tools.commands.trans.word import word_run
     except ImportError:
         logger.warning("trans 需要一些额外的包[reportlab][Pillow] 也可以使用安装>> lite-tools[all]")
         sys.exit(0)
@@ -250,7 +250,7 @@ def get_hot_news(_, *args):
     else:
         args = []
     try:
-        from commands.news.news_cmd import news_cmdline
+        from lite_tools.commands.news.news_cmd import news_cmdline
     except ImportError:
         logger.warning("news 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
         sys.exit(0)
@@ -259,7 +259,7 @@ def get_hot_news(_, *args):
 
 @chose_option.register("update")
 def update_lite_tools(_, *args):
-    from utils.pip_ import install
+    from lite_tools.utils.pip_ import install
 
     install('lite-tools', update=True, source="https://pypi.org/simple")
 
@@ -274,7 +274,7 @@ def handle_video_logs(_, *args):
     else:
         args = []
     try:
-        from commands.acg.main import main_animation
+        from lite_tools.commands.acg.main import main_animation
     except ImportError:
         sys.exit(0)
     else:

@@ -1,10 +1,6 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "lite-tools"
-version = "0.4.11.5-beta1"  # 您可以根据实际的 VERSION 内容替换
+version = "0.4.11.5-beta5"  # 您可以根据实际的 VERSION 内容替换
 description = "一些让你效率提升的小工具集合包[还在持续增加及优化]"
 readme = "README.md"
 requires-python = ">=3.6"
@@ -12,7 +8,7 @@ license = { text = "MIT" }
 authors = [
     { name = "Lodge", email = "lodgeheartfilia@163.com" }
 ]
-homepage = "https://github.com/Heartfilia/lite_tools"
+
 classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
@@ -20,10 +16,14 @@ classifiers = [
     "Programming Language :: Python :: 3"
 ]
 
-[project.dependencies]
-loguru = "*"
-prettytable = "*"
-datetime = "*"
+dependencies = [
+    "loguru",
+    "prettytable",
+    "datetime"
+]
+
+[project.urls]
+homepage = "https://github.com/Heartfilia/lite_tools"
 
 [project.optional-dependencies]
 net = [
@@ -50,7 +50,8 @@ all = [
     "usepy",
     "lxml",
     "dbutils",
-    "aiomysql"
+    "aiomysql",
+    "python-multipart"
 ]
 
 [project.scripts]

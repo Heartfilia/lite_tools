@@ -6,8 +6,8 @@ except ImportError:
     from typing_extensions import Literal
 from typing import Union, Optional, Mapping, List, Dict, Tuple
 
-from utils.u_sql_base_string import MysqlKeywordsList
-from exceptions.SqlExceptions import NotSupportType, LengthError
+from lite_tools.utils.u_sql_base_string import MysqlKeywordsList
+from lite_tools.exceptions.SqlExceptions import NotSupportType, LengthError
 
 
 __ALL__ = ["SqlString"]

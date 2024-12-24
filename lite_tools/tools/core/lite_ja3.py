@@ -18,9 +18,9 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-from utils.RequestsAdapter import ssl_gen as sync_ja3
-from utils.AiohttpAdapter import ssl_gen as aio_ja3
-from utils.HttpxAdapter import ssl_gen as httpx_ja3
+from lite_tools.utils.RequestsAdapter import ssl_gen as sync_ja3
+from lite_tools.utils.AiohttpAdapter import ssl_gen as aio_ja3
+from lite_tools.utils.HttpxAdapter import ssl_gen as httpx_ja3
 
 """
 食用方案：headers 均为正常的headers

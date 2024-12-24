@@ -3,9 +3,9 @@ import os
 import requests
 from loguru import logger
 
-from tools.core.lib_hashlib import get_md5
-from tools.core.lite_try import try_catch
-from utils.lite_dir import lite_tools_dir
+from lite_tools.tools.core.lib_hashlib import get_md5
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.utils.lite_dir import lite_tools_dir
 
 
 def fresh_dictionary():

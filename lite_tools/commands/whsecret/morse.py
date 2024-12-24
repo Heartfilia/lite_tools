@@ -2,7 +2,7 @@ import re
 try:
     from pydantic import BaseModel
 except ImportError:
-    from utils.pip_ import install
+    from lite_tools.utils.pip_ import install
 
     install('pydantic')
     from pydantic import BaseModel

@@ -5,7 +5,7 @@ import platform
 import telnetlib
 from typing import Tuple
 
-from logs import logger
+from lite_tools.logs import logger
 
 
 """
@@ -75,7 +75,7 @@ def get_wan(vps: bool = False) -> str:
     try:
         import requests
     except ImportError:
-        from utils.pip_ import install
+        from lite_tools.utils.pip_ import install
         install('requests')
         import requests
     try:

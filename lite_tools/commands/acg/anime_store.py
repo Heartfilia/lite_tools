@@ -27,16 +27,16 @@ from typing import Optional, Iterator
 
 from prettytable import PrettyTable
 
-from logs import logger
-from tools.time.lite_time import get_time, TimeFormatException
-from tools.core.lib_hashlib import get_md5
-from tools.core.lite_string import color_string
-from tools.sql.lib_mysql_string import SqlString
-from exceptions.AnimeExceptions import QuitEarly
-from commands.acg.anime_utils import input_data
-from utils.lite_dir import lite_tools_dir
-from commands.acg.anime_utils import week_hash
-from commands.acg.anime_cache import check_cache, print_cache
+from lite_tools.logs import logger
+from lite_tools.tools.time.lite_time import get_time, TimeFormatException
+from lite_tools.tools.core.lib_hashlib import get_md5
+from lite_tools.tools.core.lite_string import color_string
+from lite_tools.tools.sql.lib_mysql_string import SqlString
+from lite_tools.exceptions.AnimeExceptions import QuitEarly
+from lite_tools.commands.acg.anime_utils import input_data
+from lite_tools.utils.lite_dir import lite_tools_dir
+from lite_tools.commands.acg.anime_utils import week_hash
+from lite_tools.commands.acg.anime_cache import check_cache, print_cache
 
 base_sql = SqlString("video")
 conn_obj: sqlite3.connect = None

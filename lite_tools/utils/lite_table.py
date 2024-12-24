@@ -4,7 +4,7 @@ import sys
 """
 这里只先实现基础的打印功能  后面再添加
 """
-from tools.core.lite_string import color_string
+from lite_tools.tools.core.lite_string import color_string
 
 
 class LiteTable:

@@ -27,8 +27,9 @@ except ImportError:
     from typing_extensions import Literal
 
 from pymysql.converters import decoders
-from tools.core.lite_parser import try_get
-from exceptions.SqlExceptions import EmptyConfigException, KeyFieldNeedError
+
+from lite_tools.tools.core.lite_parser import try_get
+from lite_tools.exceptions.SqlExceptions import EmptyConfigException, KeyFieldNeedError
 
 
 class MySqlConfig:

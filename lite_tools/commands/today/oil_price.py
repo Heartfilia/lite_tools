@@ -22,11 +22,11 @@ from lxml import etree
 from prettytable import PrettyTable
 
 import requests
-# from utils.tls import requests
-from tools.core.lite_ua import get_ua
-from tools.core.lite_try import try_catch
-from tools.core.lite_string import color_string
-from commands.today.today_utils import check_cache
+# from lite_tools.utils.tls import requests
+from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.tools.core.lite_string import color_string
+from lite_tools.commands.today.today_utils import check_cache
 
 
 @try_catch(log="本功能为在线功能,需要网络。如有网络不要频繁请求，[如果网页数据版式有改动,这样的话这个功能暂时就废了需要修复]")

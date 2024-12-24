@@ -3,10 +3,10 @@ import json
 from typing import Optional, Tuple
 
 from prettytable import PrettyTable
-from logs import logger
-from utils.json_download import get_goal_dir
-from utils.lite_table import clear_screen, print_head
-from tools.core.lite_string import color_string
+from lite_tools.logs import logger
+from lite_tools.utils.json_download import get_goal_dir
+from lite_tools.utils.lite_table import clear_screen, print_head
+from lite_tools.tools.core.lite_string import color_string
 
 
 def get_dict():

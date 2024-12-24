@@ -26,12 +26,12 @@ import requests
 from lxml import etree
 from prettytable import PrettyTable
 
-from tools.core.lite_ua import get_ua
-from tools.time.lite_time import get_time
-from tools.core.lite_try import try_catch
-from tools.core.lite_parser import try_get
-from tools.core.lite_string import color_string, CleanString
-from commands.today.today_utils import check_cache
+from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.time.lite_time import get_time
+from lite_tools.tools.core.lite_try import try_catch
+from lite_tools.tools.core.lite_parser import try_get
+from lite_tools.tools.core.lite_string import color_string, CleanString
+from lite_tools.commands.today.today_utils import check_cache
 urllib3.disable_warnings()
 clean_string = CleanString(mode="s")
 

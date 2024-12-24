@@ -18,7 +18,7 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-from commands.weather.weather_main import get_weather
+from lite_tools.commands.weather.weather_main import get_weather
 
 
 def _print_weather_base():

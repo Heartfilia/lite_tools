@@ -27,7 +27,7 @@
 #
 # from func_timeout import func_set_timeout, FunctionTimedOut
 #
-# from exceptions.TimeExceptions import HttpXTimeOutError
+# from lite_tools.exceptions.TimeExceptions import HttpXTimeOutError
 
 
 # def x_timeout(seconds: Union[int, float], error_message: str = 'Timed Out'):

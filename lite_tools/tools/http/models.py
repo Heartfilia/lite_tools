@@ -23,7 +23,7 @@ from typing import Literal, Union, TypeVar, Mapping
 import httpx
 import requests
 
-from tools.time.lite_time import get_time
+from lite_tools.tools.time.lite_time import get_time
 
 
 T = TypeVar('T')
