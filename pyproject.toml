@@ -1,10 +1,10 @@
 [project]
 name = "lite-tools"
-version = "0.4.11.5-beta5"  # 您可以根据实际的 VERSION 内容替换
+version = "0.4.11.5"    # 您可以根据实际的 记得utils.__init__里面也有
 description = "一些让你效率提升的小工具集合包[还在持续增加及优化]"
 readme = "README.md"
 requires-python = ">=3.6"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 authors = [
     { name = "Lodge", email = "lodgeheartfilia@163.com" }
 ]
@@ -56,6 +56,10 @@ all = [
 
 [project.scripts]
 lite-tools = "lite_tools.commands.cmdline:execute"
+
+[tool.setuptools]
+metadata-version = "2.4"
+
 
 [tool.setuptools.packages.find]
 where = ["."]
