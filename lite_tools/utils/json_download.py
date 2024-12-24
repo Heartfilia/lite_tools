@@ -1,8 +1,8 @@
 import os
 import requests
 
-from lite_tools.tools.core.lite_try import try_catch
-from lite_tools.utils.lite_dir import lite_tools_dir
+from tools.core.lite_try import try_catch
+from utils.lite_dir import lite_tools_dir
 
 
 def get_goal_dir(folder_name: str, json_name: str, file_url: str) -> str:

@@ -4,8 +4,8 @@ import os
 import math
 from typing import Optional, Union
 
-from lite_tools.utils.u_code_range import u_range_list, U_range_list
-from lite_tools.utils.u_sub_sup_string import SUB_SUP_WORDS_HASH
+from utils.u_code_range import u_range_list, U_range_list
+from utils.u_sub_sup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
@@ -327,7 +327,7 @@ def clean_html(html: str, white_tags: list = None) -> str:
     try:
         from usepy import useCleanHtml
     except ImportError:
-        from lite_tools.utils.pip_ import install
+        from utils.pip_ import install
 
         install('usepy')
         from usepy import useCleanHtml

@@ -1,4 +1,4 @@
-from lite_tools.logs import logger
+from logs import logger
 
 
 log_level = {

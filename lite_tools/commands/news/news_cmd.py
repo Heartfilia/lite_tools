@@ -21,13 +21,13 @@
 from typing import List
 
 from prettytable import PrettyTable
-from lite_tools.commands.news.script_hot_news import print_hot_news, crawl_detail_from_paper
-from lite_tools.commands.news.get_blog_rank import blog_rank
-from lite_tools.commands.news.get_global_news import get_china_news, get_world_news
+from commands.news.script_hot_news import print_hot_news, crawl_detail_from_paper
+from commands.news.get_blog_rank import blog_rank
+from commands.news.get_global_news import get_china_news, get_world_news
 
-from lite_tools.tools.core.lite_match import match_case
-from lite_tools.tools.core.lite_string import color_string
-from lite_tools.utils.base_cmd import circle_cmd, input_option
+from tools.core.lite_match import match_case
+from tools.core.lite_string import color_string
+from utils.base_cmd import circle_cmd, input_option
 
 
 all_tabs = {

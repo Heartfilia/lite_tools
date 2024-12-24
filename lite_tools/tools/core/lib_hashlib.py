@@ -13,7 +13,7 @@ try:
 except ImportError:
     from typing_extensions import Literal
 
-from lite_tools.exceptions.StringExceptions import BadModeException
+from exceptions.StringExceptions import BadModeException
 
 
 __ALL__ = ["get_md5", "get_sha", "get_sha3"]

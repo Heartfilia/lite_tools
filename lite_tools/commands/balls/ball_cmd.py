@@ -18,10 +18,10 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-from lite_tools.commands.balls.fuli import get_fuli
-from lite_tools.commands.balls.tiyu import get_tiyu
+from commands.balls.fuli import get_fuli
+from commands.balls.tiyu import get_tiyu
 
-from lite_tools.tools.core.lite_match import match_case
+from tools.core.lite_match import match_case
 
 
 def _print_ball_option():

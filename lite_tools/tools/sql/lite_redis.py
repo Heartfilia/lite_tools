@@ -58,16 +58,16 @@ except ImportError:
     try:
         from typing_extensions import Literal
     except ImportError:
-        from lite_tools.utils.pip_ import install
+        from utils.pip_ import install
         install('typing_extensions')
         from typing_extensions import Literal
 
 import yaml
 import redis as _redis
 
-from lite_tools.logs import logger
-from lite_tools.tools.core.lib_hashlib import get_md5
-from lite_tools.exceptions.CacheExceptions import FileNotFount
+from logs import logger
+from tools.core.lib_hashlib import get_md5
+from exceptions.CacheExceptions import FileNotFount
 
 
 lock = threading.Lock()

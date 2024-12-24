@@ -21,10 +21,10 @@
 后续会添加其它加密的 默认就这个东西
 """
 import re
-from lite_tools.commands.whsecret.bearsay import roar_decode, roar_encode
-from lite_tools.commands.whsecret.morse import Rule, morse_decode, morse_encode
-from lite_tools.utils.lite_table import get_terminal_long
-from lite_tools.tools.core.lite_string import color_string
+from commands.whsecret.bearsay import roar_decode, roar_encode
+from commands.whsecret.morse import Rule, morse_decode, morse_encode
+from utils.lite_table import get_terminal_long
+from tools.core.lite_string import color_string
 
 
 def check_say_mode(string: str) -> int:

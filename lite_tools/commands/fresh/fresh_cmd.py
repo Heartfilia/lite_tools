@@ -21,7 +21,7 @@ def fresh_cmdline(args: tuple):
         _print_fresh_base()
     elif isinstance(args[1], str) and args[1].lower() in ["ua", "useragent"]:
         try:
-            from lite_tools.commands.fresh.useragent import fresh_useragent
+            from commands.fresh.useragent import fresh_useragent
         except ImportError:
             logger.warning("fresh 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
             sys.exit(0)
@@ -29,7 +29,7 @@ def fresh_cmdline(args: tuple):
             fresh_useragent()
     elif isinstance(args[1], str) and args[1].lower() in ["dict"]:
         try:
-            from lite_tools.commands.fresh.dictionary import fresh_dictionary
+            from commands.fresh.dictionary import fresh_dictionary
         except ImportError:
             logger.warning("fresh 需要安装额外的包 <bash>>> pip install --upgrade lite-tools[net]")
             sys.exit(0)

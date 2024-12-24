@@ -57,41 +57,41 @@ __ALL__ = [
 ]
 
 # 还有一个东西不放这里了 可以这样引用
-# from lite_tools.tools.core.lite_ja3 import sync_ja3, async_ja3
+from tools.core.lite_ja3 import sync_ja3, aio_ja3
 
-from lite_tools.tools.core.ip_info import get_lan, get_wan, check_proxy
-from lite_tools.tools.core.lib_base64 import get_b64d, get_b64e
-from lite_tools.tools.core.lite_parser import try_get, try_key, FlattenJson, JsJson, WrapJson
-from lite_tools.tools.core.lib_hashlib import get_md5, get_sha, get_sha3, get_5dm  # 5dm是我自己用的不对外展示
-from lite_tools.tools.time.lite_time import get_time, time_count, time_range
-from lite_tools.tools.core.lite_try import try_catch
-from lite_tools.tools.core.lite_ua import get_ua
+from tools.core.ip_info import get_lan, get_wan, check_proxy
+from tools.core.lib_base64 import get_b64d, get_b64e
+from tools.core.lite_parser import try_get, try_key, FlattenJson, JsJson, WrapJson
+from tools.core.lib_hashlib import get_md5, get_sha, get_sha3, get_5dm  # 5dm是我自己用的不对外展示
+from tools.time.lite_time import get_time, time_count, time_range
+from tools.core.lite_try import try_catch
+from tools.core.lite_ua import get_ua
 try:
-    from lite_tools.tools.sql.lite_mysql import MySql, AioMySql
+    from tools.sql.lite_mysql import MySql, AioMySql
 except ImportError:  # 这里是忽略这里面的包异常的
     pass
 try:
-    from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy, BloomFilter
+    from tools.sql.lite_redis import LiteRedis, LiteProxy, BloomFilter
 except ImportError:
     pass
-from lite_tools.tools.sql.config import MySqlConfig
-from lite_tools.tools.sql.lib_mysql_string import SqlString
-from lite_tools.tools.core.lite_match import match_case
-from lite_tools.tools.core.lite_string import (
+from tools.sql.config import MySqlConfig
+from tools.sql.lib_mysql_string import SqlString
+from tools.core.lite_match import match_case
+from tools.core.lite_string import (
     clean_html, CleanString, color_string, math_string, PrettySrt,
     cookie_s2d, cookie_d2s, pretty_indent
 )
-# from lite_tools.tools.time.httpx_timeout import x_timeout
-from lite_tools.tools.core.lite_cache import Singleton, Buffer
-from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
+# from tools.time.httpx_timeout import x_timeout
+from tools.core.lite_cache import Singleton, Buffer
+from tools.core.lite_file import count_lines, LiteLogFile
 
-from lite_tools.tools.js import (
+from tools.js import (
     atob, btoa,
     to_string_2, to_string_16, to_string_36,
     xor, unsigned_right_shift, left_shift, dec_to_bin
 )
-from lite_tools.utils.pip_ import install
-from lite_tools.version import VERSION
+from utils.pip_ import install
+from version import VERSION
 
 
 version = VERSION

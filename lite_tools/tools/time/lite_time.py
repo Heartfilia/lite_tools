@@ -12,9 +12,9 @@ try:
 except ImportError:
     from typing_extensions import Literal
 
-from lite_tools.logs import logger
-from lite_tools.utils.u_re_time import NORMAL_PATTERN
-from lite_tools.exceptions.TimeExceptions import TimeFormatException, ErrorTimeRange
+from logs import logger
+from utils.u_re_time import NORMAL_PATTERN
+from exceptions.TimeExceptions import TimeFormatException, ErrorTimeRange
 
 """
 这里可以用 但是比较臃肿 暂时不支持 年月日通过游标操作获得年月日 可以实现 但是不知道参数取名和其他的冲突问题

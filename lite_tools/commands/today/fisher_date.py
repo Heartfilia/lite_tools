@@ -23,7 +23,7 @@ import time
 import random
 import calendar
 
-from lite_tools.tools.core.lite_string import color_string
+from tools.core.lite_string import color_string
 
 
 _format_string = """********************************************

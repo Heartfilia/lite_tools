@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lite-tools"
+version = "0.4.11.5-beta1"  # 您可以根据实际的 VERSION 内容替换
+description = "一些让你效率提升的小工具集合包[还在持续增加及优化]"
+readme = "README.md"
+requires-python = ">=3.6"
+license = { text = "MIT" }
+authors = [
+    { name = "Lodge", email = "lodgeheartfilia@163.com" }
+]
+homepage = "https://github.com/Heartfilia/lite_tools"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Natural Language :: Chinese (Simplified)",
+    "Programming Language :: Python :: 3"
+]
+
+[project.dependencies]
+loguru = "*"
+prettytable = "*"
+datetime = "*"
+
+[project.optional-dependencies]
+net = [
+    "pymysql",
+    "pyyaml",
+    "redis",
+    "requests",
+    "urllib3",
+    "usepy",
+    "lxml",
+    "dbutils",
+    "aiomysql"
+]
+all = [
+    "colorama",
+    "pydantic",
+    "reportlab",
+    "Pillow",
+    "pymysql",
+    "pyyaml",
+    "redis",
+    "requests",
+    "urllib3",
+    "usepy",
+    "lxml",
+    "dbutils",
+    "aiomysql"
+]
+
+[project.scripts]
+lite-tools = "lite_tools.commands.cmdline:execute"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "lite_tools",
+    "lite_tools.commands",
+    "lite_tools.commands.dictionary",
+    "lite_tools.commands.flush",
+    "lite_tools.commands.fresh",
+    "lite_tools.commands.news",
+    "lite_tools.commands.today",
+    "lite_tools.commands.trans",
+    "lite_tools.commands.weather",
+    "lite_tools.commands.whsecret",
+    "lite_tools.exceptions",
+    "lite_tools.logs",
+    "lite_tools.tools",
+    "lite_tools.tools.js",
+    "lite_tools.tools.sql",
+    "lite_tools.tools.core",
+    "lite_tools.tools.time",
+    "lite_tools.utils"
+]

@@ -32,11 +32,11 @@ import aiomysql
 from pymysql import cursors
 from dbutils.pooled_db import PooledDB
 
-from lite_tools.logs.sql import x as sql_log
-from lite_tools.tools.core.lite_string import pretty_indent
-from lite_tools.tools.sql.lib_mysql_string import SqlString
-from lite_tools.tools.sql.config import MySqlConfig, CountConfig
-from lite_tools.exceptions.SqlExceptions import IterNotNeedRun, NeedPoolOrConfig
+from logs.sql import x as sql_log
+from tools.core.lite_string import pretty_indent
+from tools.sql.lib_mysql_string import SqlString
+from tools.sql.config import MySqlConfig, CountConfig
+from exceptions.SqlExceptions import IterNotNeedRun, NeedPoolOrConfig
 
 
 class MySql:

@@ -18,7 +18,7 @@ try:
 except ImportError:
 	raise ImportError
 
-from lite_tools.logs import logger
+from logs import logger
 
 
 def _generate_pdf(filename: str, page_sizes: tuple = None) -> canvas.Canvas:

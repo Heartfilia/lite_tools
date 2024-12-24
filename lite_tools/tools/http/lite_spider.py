@@ -19,7 +19,7 @@
           ┗━┻━┛   ┗━┻━┛
 """
 from threading import Thread
-from lite_tools.tools.http.models import LiteRequest
+from tools.http.models import LiteRequest
 
 
 """

@@ -22,8 +22,8 @@ import os
 import sys
 from typing import Any
 
-from lite_tools.tools.core.lite_try import try_catch
-from lite_tools.utils.lite_table import clear_screen
+from tools.core.lite_try import try_catch
+from utils.lite_table import clear_screen
 
 
 def input_option(option="无效选项返回上一级菜单", mode="news") -> str:

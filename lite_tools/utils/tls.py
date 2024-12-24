@@ -1,4 +1,4 @@
-from lite_tools.logs import logger
+from logs import logger
 
 try:
     import tls_client

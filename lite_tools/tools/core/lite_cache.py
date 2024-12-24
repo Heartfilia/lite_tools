@@ -28,8 +28,8 @@ from functools import wraps, partial
 from queue import Queue, Empty
 from threading import RLock, Lock, current_thread
 
-from lite_tools.logs import logger
-from lite_tools.exceptions.CacheExceptions import QueueEmptyNotion
+from logs import logger
+from exceptions.CacheExceptions import QueueEmptyNotion
 
 
 class Singleton(type):

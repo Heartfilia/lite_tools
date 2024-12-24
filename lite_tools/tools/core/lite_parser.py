@@ -11,13 +11,13 @@ except ImportError:
     try:
         from typing_extensions import Literal
     except ImportError:
-        from lite_tools.utils.pip_ import install
+        from utils.pip_ import install
 
         install('typing_extensions')
         from typing_extensions import Literal
 
-from lite_tools.logs import my_logger, get_using_line_info, logger
-from lite_tools.exceptions.DictExceptions import (
+from logs import my_logger, get_using_line_info, logger
+from exceptions.DictExceptions import (
     TemplateFormatError, NotJsonException, NotGoalItemException
 )
 

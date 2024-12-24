@@ -22,8 +22,8 @@
 import ctypes
 from typing import Union
 
-from lite_tools.tools.core.lib_base64 import get_b64e as btoa
-from lite_tools.tools.core.lib_base64 import get_b64d as atob
+from tools.core.lib_base64 import get_b64e as btoa
+from tools.core.lib_base64 import get_b64d as atob
 
 
 def to_string_36(number: Union[float, int]) -> str:
