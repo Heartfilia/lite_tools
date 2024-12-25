@@ -57,10 +57,6 @@ all = [
 [project.scripts]
 lite-tools = "lite_tools.commands.cmdline:execute"
 
-[tool.setuptools]
-metadata-version = "2.4"
-
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
