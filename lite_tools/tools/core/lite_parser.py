@@ -56,7 +56,7 @@ def try_get(
     renderer = _judge_json(renderer, json, options)
     if not renderer and isinstance(options, dict) and options.get('mode') == "file":
         # 这里是把json文件输出到本地文件的时候的情况
-        return None
+        return default
     if not renderer:
         if log is True:
             line, fl = get_using_line_info()
