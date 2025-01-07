@@ -308,27 +308,36 @@ class LiteCacher:
     def __init__(
             self,
             sync_redis: redis.Redis = None, async_redis: aioredis.Redis = None,
-            save_ip: bool = False,
+            save_ip: bool = False, use_func_name: bool = True, **kwargs
     ):
         """
         sync_redis 和 async_redis 二选一
         如果传入了redis 就用redis 否则用内存
+        :param sync_redis    同步的redis对象
+        :param async_redis   异步的redis对象
+        :param save_ip       是否需要记录当前内网ip
+        :param use_func_name 是否使用被装饰函数作为cache key的计算规则
         """
         self._ip = get_lan() if save_ip else ""   # 存一下内网地址
         if sync_redis:
             self._mid = sync_redis    # 同步redis
             self._mode = 1
+            self._mid_hash = None
         elif async_redis:
             self._mid = async_redis   # 异步redis
             self._mode = 2
+            self._mid_hash = None
         else:
-            self._mid = dict()            # 内存
+            self._mid_hash = dict()            # 内存
             self._mode = 0
+            self._mid = sync_redis
 
         if self._mode == 2:
             self._lock = asyncio.Lock()
         else:
             self._lock = threading.Lock()
+
+        self._log = kwargs.get("log", False)  # 我开发的时候用的 后面需要移除这里 并把代码里对应的都移除
 
     """
     task_item = {
@@ -345,16 +354,24 @@ class LiteCacher:
         """
         cache_key = task_item['key']
         if task_item['type'] == 1:   # 1-存
+            if task_item['value'] is None:
+                return
             with self._lock:
-                self._mid[cache_key] = (task_item["value"], time.perf_counter())
+                self._mid_hash[cache_key] = (task_item["value"], time.perf_counter())
+                if self._log:
+                    logger.debug(f"存-「{task_item}」")
         else:   # 0-取
-            if cache_key in self._mid:
-                result, perf_counter = self._mid[cache_key]
+            if cache_key in self._mid_hash:
+                result, perf_counter = self._mid_hash[cache_key]
                 if time.perf_counter() - perf_counter < task_item['ttl']:
+                    if self._log:
+                        logger.debug(f"取-「{task_item}」")
                     return result
                 else:
                     with self._lock:
-                        del self._mid[cache_key]   # 移除过期的key
+                        if self._log:
+                            logger.debug(f"移-「{task_item}」")
+                        del self._mid_hash[cache_key]   # 移除过期的key
 
     def _mode_1(self, task_item: dict) -> Any:
         """
@@ -362,14 +379,21 @@ class LiteCacher:
         """
         cache_key = task_item['key']
         if task_item['type'] == 1:  # 1-存
+            if task_item['value'] is None:
+                return
             with self._lock:
                 try:
+                    save_item = {
+                        "time": time.time(),
+                        "ip": self._ip,
+                        "value": task_item['value']
+                    }
                     self._mid.set(
                         cache_key,
-                        json.dumps(task_item, ensure_ascii=False, separators=(",", ":")),
+                        json.dumps(save_item, ensure_ascii=False, separators=(",", ":")),
                         ex=task_item["ttl"]
                     )
-                except:
+                except Exception:
                     pass
         else:
             cache_item = self._mid.get(cache_key)
@@ -383,14 +407,21 @@ class LiteCacher:
         """
         cache_key = task_item['key']
         if task_item['type'] == 1:  # 1-存
+            if task_item['value'] is None:
+                return
             with self._lock:
                 try:
+                    save_item = {
+                        "time": time.time(),
+                        "ip": self._ip,
+                        "value": task_item['value']
+                    }
                     await self._mid.set(
                         cache_key,
-                        json.dumps(task_item, ensure_ascii=False, separators=(",", ":")),
+                        json.dumps(save_item, ensure_ascii=False, separators=(",", ":")),
                         ex=task_item["ttl"]
                     )
-                except:
+                except Exception:
                     pass
         else:
             cache_item = await self._mid.get(cache_key)
@@ -398,13 +429,16 @@ class LiteCacher:
                 task_item_row = json.loads(cache_item)
                 return task_item_row['value']
 
-    def cached(self, redis_key: str, ttl: int = 60, func_name: bool = True, value_field: list = None):
+    def cached(self, redis_key: str, ttl: int = 60):
         def decorator(func: Callable):
             @wraps(func)
             async def async_wrapper(*args, **kwargs) -> Any:
+
                 pass
 
+            @wraps(func)
             def wrapper(*args, **kwargs) -> Any:
                 pass
 
             return async_wrapper if iscoroutinefunction(func) else wrapper
+        return decorator
