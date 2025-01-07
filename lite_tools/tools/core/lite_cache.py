@@ -23,6 +23,9 @@
 """
 import copy
 import time
+import json
+import asyncio
+import threading
 from queue import Queue, Empty
 from functools import wraps, partial
 from asyncio import iscoroutinefunction
@@ -319,8 +322,13 @@ class LiteCacher:
             self._mid = async_redis   # 异步redis
             self._mode = 2
         else:
-            self._mid = {}            # 内存
+            self._mid = dict()            # 内存
             self._mode = 0
+
+        if self._mode == 2:
+            self._lock = asyncio.Lock()
+        else:
+            self._lock = threading.Lock()
 
     """
     task_item = {
@@ -337,14 +345,58 @@ class LiteCacher:
         """
         cache_key = task_item['key']
         if task_item['type'] == 1:   # 1-存
-            self._mid[cache_key] = (task_item["value"], time.perf_counter())
+            with self._lock:
+                self._mid[cache_key] = (task_item["value"], time.perf_counter())
         else:   # 0-取
             if cache_key in self._mid:
                 result, perf_counter = self._mid[cache_key]
                 if time.perf_counter() - perf_counter < task_item['ttl']:
                     return result
                 else:
-                    del self._mid[cache_key]   # 移除过期的key
+                    with self._lock:
+                        del self._mid[cache_key]   # 移除过期的key
+
+    def _mode_1(self, task_item: dict) -> Any:
+        """
+        type self.mid = redis.Redis
+        """
+        cache_key = task_item['key']
+        if task_item['type'] == 1:  # 1-存
+            with self._lock:
+                try:
+                    self._mid.set(
+                        cache_key,
+                        json.dumps(task_item, ensure_ascii=False, separators=(",", ":")),
+                        ex=task_item["ttl"]
+                    )
+                except:
+                    pass
+        else:
+            cache_item = self._mid.get(cache_key)
+            if cache_item:
+                task_item_row = json.loads(cache_item)
+                return task_item_row['value']
+
+    async def _mode_2(self, task_item: dict) -> Any:
+        """
+        type self.mid = aioredis.Redis
+        """
+        cache_key = task_item['key']
+        if task_item['type'] == 1:  # 1-存
+            with self._lock:
+                try:
+                    await self._mid.set(
+                        cache_key,
+                        json.dumps(task_item, ensure_ascii=False, separators=(",", ":")),
+                        ex=task_item["ttl"]
+                    )
+                except:
+                    pass
+        else:
+            cache_item = await self._mid.get(cache_key)
+            if cache_item:
+                task_item_row = json.loads(cache_item)
+                return task_item_row['value']
 
     def cached(self, redis_key: str, ttl: int = 60, func_name: bool = True, value_field: list = None):
         def decorator(func: Callable):
