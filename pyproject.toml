@@ -35,7 +35,8 @@ net = [
     "usepy",
     "lxml",
     "dbutils",
-    "aiomysql"
+    "aiomysql",
+    "aioredis"
 ]
 all = [
     "colorama",
@@ -51,6 +52,7 @@ all = [
     "lxml",
     "dbutils",
     "aiomysql",
+    "aioredis",
     "python-multipart"
 ]
 

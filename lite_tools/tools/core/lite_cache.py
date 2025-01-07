@@ -21,13 +21,18 @@
 
 >> 第一版先只兼容同步的函数   **异步没有兼容** <<
 """
-import time
 import copy
-from typing import Dict, Any, NoReturn
-from functools import wraps, partial
+import time
 from queue import Queue, Empty
+from functools import wraps, partial
+from asyncio import iscoroutinefunction
+from typing import Dict, Any, NoReturn, Callable
 from threading import RLock, Lock, current_thread
 
+import redis
+import aioredis
+
+from lite_tools.tools.core.ip_info import get_lan
 from lite_tools.logs import logger
 from lite_tools.exceptions.CacheExceptions import QueueEmptyNotion
 
@@ -294,3 +299,60 @@ class Buffer(metaclass=Singleton):
             cls.count_config.set_max_out(name, 0)
             cls.count_config.set_task_done(name, False)
             cls.count_config.set_flag(name, True)
+
+
+class LiteCacher:
+    def __init__(
+            self,
+            sync_redis: redis.Redis = None, async_redis: aioredis.Redis = None,
+            save_ip: bool = False,
+    ):
+        """
+        sync_redis 和 async_redis 二选一
+        如果传入了redis 就用redis 否则用内存
+        """
+        self._ip = get_lan() if save_ip else ""   # 存一下内网地址
+        if sync_redis:
+            self._mid = sync_redis    # 同步redis
+            self._mode = 1
+        elif async_redis:
+            self._mid = async_redis   # 异步redis
+            self._mode = 2
+        else:
+            self._mid = {}            # 内存
+            self._mode = 0
+
+    """
+    task_item = {
+        "type": 0-取 1-存
+        "key": "存redis或者内存的时候的key",
+        "value": 任意类型：如果是redis存储的话 整个数据存json 这样子取出来读取就好了 存的时候 如果是None 则忽略
+        "ttl": "配置的有效期，也用作内存存取的时候的判断依据"
+    }
+    """
+
+    def _mode_0(self, task_item: dict) -> Any:
+        """
+        内存 设置
+        """
+        cache_key = task_item['key']
+        if task_item['type'] == 1:   # 1-存
+            self._mid[cache_key] = (task_item["value"], time.perf_counter())
+        else:   # 0-取
+            if cache_key in self._mid:
+                result, perf_counter = self._mid[cache_key]
+                if time.perf_counter() - perf_counter < task_item['ttl']:
+                    return result
+                else:
+                    del self._mid[cache_key]   # 移除过期的key
+
+    def cached(self, redis_key: str, ttl: int = 60, func_name: bool = True, value_field: list = None):
+        def decorator(func: Callable):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs) -> Any:
+                pass
+
+            def wrapper(*args, **kwargs) -> Any:
+                pass
+
+            return async_wrapper if iscoroutinefunction(func) else wrapper
