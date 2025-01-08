@@ -25,6 +25,7 @@ import copy
 import time
 import json
 import asyncio
+import inspect
 import threading
 from queue import Queue, Empty
 from functools import wraps, partial
@@ -35,8 +36,9 @@ from threading import RLock, Lock, current_thread
 import redis
 import aioredis
 
-from lite_tools.tools.core.ip_info import get_lan
 from lite_tools.logs import logger
+from lite_tools.tools.core.ip_info import get_lan
+from lite_tools.tools.core.lib_hashlib import get_md5
 from lite_tools.exceptions.CacheExceptions import QueueEmptyNotion
 
 
@@ -337,6 +339,7 @@ class LiteCacher:
         else:
             self._lock = threading.Lock()
 
+        self.kwargs = kwargs    # encoding
         self._log = kwargs.get("log", False)  # 我开发的时候用的 后面需要移除这里 并把代码里对应的都移除
 
     """
@@ -398,6 +401,8 @@ class LiteCacher:
         else:
             cache_item = self._mid.get(cache_key)
             if cache_item:
+                if isinstance(cache_item, bytes):  # 避免redis读取的是bytes的没有处理
+                    cache_item = cache_item.decode(encoding=self.kwargs.get("encoding", "utf-8"))
                 task_item_row = json.loads(cache_item)
                 return task_item_row['value']
 
@@ -426,15 +431,52 @@ class LiteCacher:
         else:
             cache_item = await self._mid.get(cache_key)
             if cache_item:
+                if isinstance(cache_item, bytes):  # 避免redis读取的是bytes的没有处理
+                    cache_item = cache_item.decode(encoding=self.kwargs.get("encoding", "utf-8"))
                 task_item_row = json.loads(cache_item)
                 return task_item_row['value']
 
-    def cached(self, redis_key: str, ttl: int = 60):
+    def cal_redis_key_name(self, redis_head: str, signature, *args, **kwargs):
+        """
+        获取名称
+        """
+        redis_head
+
+    def cached(self, redis_head: str, ttl: int = 60, main_key: list = None):
+        """
+        redis_head: 存到redis的名称前缀 xxx:
+        ttl       : 过期时间
+        main_key  : 如果设置了这个 那么key的拼接规则就会变成 从kw里面取值 然后组合判断 如 ["a", "b"] 那么需要提取到 这个方法 a的值和b的值来计算key
+        """
         def decorator(func: Callable):
             @wraps(func)
             async def async_wrapper(*args, **kwargs) -> Any:
+                if len(args) > 0:
+                    signature = inspect.signature(func)
+                    parameters = list(signature.parameters.keys())
+                    if parameters[0] in ['self', 'cls']:   # 需要处理类里面的这俩情况 -- 如果开发的没有按照标准规范开发 这里判断可能有问题
+                        # first_arg = args[0]
+                        # if hasattr(func, "__self__"):  # 不继续判断了 先写简单一点
+                        # 直接取除了第一位后面的所有参数
+                        cal_args = ";".join(str(arg) for arg in args[1:])
+                    else:
+                        cal_args = ";".join(str(arg) for arg in args)
+                else:
+                    cal_args = ""   # 需要计算签名的东西
 
-                pass
+                cal_kw = ";".join(f"{k}={v}" for k, v in kwargs.items())
+
+                if not main_key:
+                    hash_value = get_md5(f"{cal_args}_{cal_kw}")
+                else:
+                    base_string = ";".join(f"{self.kwargs.get(mk, '') or ''}" for mk in main_key)
+                    hash_value = get_md5(base_string)
+
+                redis_key = f"{redis_head}:{hash_value}"
+                result = await func(*args, **kwargs)
+
+
+                return
 
             @wraps(func)
             def wrapper(*args, **kwargs) -> Any:
