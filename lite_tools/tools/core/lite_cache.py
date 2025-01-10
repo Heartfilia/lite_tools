@@ -34,7 +34,6 @@ from typing import Dict, Any, NoReturn, Callable
 from threading import RLock, Lock, current_thread
 
 import redis
-import aioredis
 
 from lite_tools.logs import logger
 from lite_tools.tools.core.ip_info import get_lan
@@ -309,8 +308,8 @@ class Buffer(metaclass=Singleton):
 class LiteCacher:
     def __init__(
             self,
-            sync_redis: redis.Redis = None, async_redis: aioredis.Redis = None,
-            save_ip: bool = False, use_func_name: bool = True, **kwargs
+            sync_redis: redis.Redis = None, async_redis: redis.asyncio.Redis = None,
+            save_ip: bool = False, **kwargs
     ):
         """
         sync_redis 和 async_redis 二选一
@@ -318,14 +317,13 @@ class LiteCacher:
         :param sync_redis    同步的redis对象
         :param async_redis   异步的redis对象
         :param save_ip       是否需要记录当前内网ip
-        :param use_func_name 是否使用被装饰函数作为cache key的计算规则
         """
         self._ip = get_lan() if save_ip else ""   # 存一下内网地址
         if sync_redis:
             self._mid = sync_redis    # 同步redis
             self._mode = 1
             self._mid_hash = None
-        elif async_redis:
+        elif async_redis:   # 如果是同步方法 调用了这个 会默认走内存 不会走这里
             self._mid = async_redis   # 异步redis
             self._mode = 2
             self._mid_hash = None
@@ -340,7 +338,6 @@ class LiteCacher:
             self._lock = threading.Lock()
 
         self.kwargs = kwargs    # encoding
-        self._log = kwargs.get("log", False)  # 我开发的时候用的 后面需要移除这里 并把代码里对应的都移除
 
     """
     task_item = {
@@ -361,19 +358,13 @@ class LiteCacher:
                 return
             with self._lock:
                 self._mid_hash[cache_key] = (task_item["value"], time.perf_counter())
-                if self._log:
-                    logger.debug(f"存-「{task_item}」")
         else:   # 0-取
             if cache_key in self._mid_hash:
                 result, perf_counter = self._mid_hash[cache_key]
                 if time.perf_counter() - perf_counter < task_item['ttl']:
-                    if self._log:
-                        logger.debug(f"取-「{task_item}」")
                     return result
                 else:
                     with self._lock:
-                        if self._log:
-                            logger.debug(f"移-「{task_item}」")
                         del self._mid_hash[cache_key]   # 移除过期的key
 
     def _mode_1(self, task_item: dict) -> Any:
@@ -389,6 +380,7 @@ class LiteCacher:
                     save_item = {
                         "time": time.time(),
                         "ip": self._ip,
+                        "function": task_item['function'],
                         "value": task_item['value']
                     }
                     self._mid.set(
@@ -396,8 +388,9 @@ class LiteCacher:
                         json.dumps(save_item, ensure_ascii=False, separators=(",", ":")),
                         ex=task_item["ttl"]
                     )
-                except Exception:
-                    pass
+                except Exception as err:
+                    if self.kwargs.get("log", False):
+                        logger.error(f"【{err.__traceback__.tb_lineno}】redis- {err}")
         else:
             cache_item = self._mid.get(cache_key)
             if cache_item:
@@ -408,26 +401,30 @@ class LiteCacher:
 
     async def _mode_2(self, task_item: dict) -> Any:
         """
-        type self.mid = aioredis.Redis
+        type self.mid = redis.asyncio.Redis
         """
         cache_key = task_item['key']
         if task_item['type'] == 1:  # 1-存
-            if task_item['value'] is None:
+            # 这里有一次碰到了出来的结果是异步函数，现在没有碰到，不知道为啥
+            await_value = await task_item['value'] if iscoroutinefunction(task_item['value']) else task_item['value']
+            if await_value is None:
                 return
-            with self._lock:
+            async with self._lock:
                 try:
                     save_item = {
                         "time": time.time(),
                         "ip": self._ip,
-                        "value": task_item['value']
+                        "function": task_item['function'],
+                        "value": await_value
                     }
                     await self._mid.set(
                         cache_key,
                         json.dumps(save_item, ensure_ascii=False, separators=(",", ":")),
                         ex=task_item["ttl"]
                     )
-                except Exception:
-                    pass
+                except Exception as err:
+                    if self.kwargs.get("log", False):
+                        logger.error(f"【{err.__traceback__.tb_lineno}】async_redis- {err}")
         else:
             cache_item = await self._mid.get(cache_key)
             if cache_item:
@@ -472,24 +469,52 @@ class LiteCacher:
         def decorator(func: Callable):
             @wraps(func)
             async def async_wrapper(*args, **kwargs) -> Any:
-                if len(args) > 0:
-                    signature = inspect.signature(func)
+                redis_key = self.cal_redis_key_name(
+                    redis_head,
+                    inspect.signature(func) if args else None,
+                    main_key,
+                    *args, **kwargs)
+                task_item_0 = {"type": 0, "key": redis_key, "ttl": ttl, "function": func.__name__}
+                if self._mode == 2:
+                    cache_result = await self._mode_2(task_item_0)
                 else:
-                    signature = None
+                    cache_result = self._mode_1(task_item_0) if self._mode == 1 else self._mode_0(task_item_0)
+                if cache_result is None:
+                    result = await func(*args, **kwargs)
+                    if result is not None:
+                        task_item_1 = dict(task_item_0, **{"type": 1, "value": result})
+                        if self._mode == 2:
+                            await self._mode_2(task_item_1)
+                        else:
+                            self._mode_1(task_item_1) if self._mode == 1 else self._mode_0(task_item_1)
 
-                redis_key = self.cal_redis_key_name(redis_head, signature, main_key, *args, **kwargs)
-                result = await func(*args, **kwargs)
-
-                return
+                    return result
+                else:
+                    return cache_result
 
             @wraps(func)
             def wrapper(*args, **kwargs) -> Any:
-                if len(args) > 0:
-                    signature = inspect.signature(func)
+                redis_key = self.cal_redis_key_name(
+                    redis_head,
+                    inspect.signature(func) if args else None,
+                    main_key,
+                    *args, **kwargs)
+                task_item_0 = {"type": 0, "key": redis_key, "ttl": ttl, "function": func.__name__}
+                if self._mode == 1:
+                    cache_result = self._mode_1(task_item_0)
                 else:
-                    signature = None
-
-                redis_key = self.cal_redis_key_name(redis_head, signature, main_key, *args, **kwargs)
+                    cache_result = self._mode_0(task_item_0)
+                if cache_result is None:
+                    result = func(*args, **kwargs)
+                    if result is not None:
+                        task_item_1 = dict(task_item_0, **{"type": 1, "value": result})
+                        if self._mode == 1:
+                            self._mode_1(task_item_1)
+                        else:
+                            self._mode_0(task_item_1)
+                    return result
+                else:
+                    return cache_result
 
             return async_wrapper if iscoroutinefunction(func) else wrapper
         return decorator

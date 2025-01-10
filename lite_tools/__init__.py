@@ -83,7 +83,10 @@ from lite_tools.tools.core.lite_string import (
     cookie_s2d, cookie_d2s, pretty_indent
 )
 # from lite_tools.tools.time.httpx_timeout import x_timeout
-from lite_tools.tools.core.lite_cache import Singleton, Buffer
+try:
+    from lite_tools.tools.core.lite_cache import Singleton, Buffer, LiteCacher
+except ImportError:
+    pass
 from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
 
 from lite_tools.tools.js import (
