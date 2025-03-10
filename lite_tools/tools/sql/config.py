@@ -26,7 +26,10 @@ try:
 except ImportError:
     from typing_extensions import Literal
 
-from pymysql.converters import decoders
+try:
+    from pymysql.converters import decoders
+except ImportError:
+    decoders = None
 
 from lite_tools.tools.core.lite_parser import try_get
 from lite_tools.exceptions.SqlExceptions import EmptyConfigException, KeyFieldNeedError
