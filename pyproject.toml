@@ -3,7 +3,7 @@ name = "lite-tools"
 version = "0.4.12.2"    # 您可以根据实际的 记得utils.__init__里面也有
 description = "一些让你效率提升的小工具集合包[还在持续增加及优化]"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 license = { file = "LICENSE" }
 authors = [
     { name = "Lodge", email = "lodgeheartfilia@163.com" }
@@ -18,6 +18,7 @@ classifiers = [
 
 dependencies = [
     "loguru",
+    "telnetlib3",
     "prettytable",
     "datetime"
 ]
@@ -29,7 +30,7 @@ homepage = "https://github.com/Heartfilia/lite_tools"
 net = [
     "pymysql",
     "pyyaml",
-    "redis",
+    "redis[hiredis]≥4.5.0",
     "requests",
     "urllib3",
     "usepy",
