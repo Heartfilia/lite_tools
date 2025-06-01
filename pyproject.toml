@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Lodge", email = "lodgeheartfilia@163.com" }
+    { name = "Empty", email = "lodgeheartfilia@163.com" }
 ]
 
 classifiers = [
