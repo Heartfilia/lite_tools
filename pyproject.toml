@@ -20,7 +20,8 @@ dependencies = [
     "loguru",
     "telnetlib3",
     "prettytable",
-    "datetime"
+    "datetime",
+    "redis[hiredis]>=4.5.0"
 ]
 
 [project.urls]
@@ -30,7 +31,6 @@ homepage = "https://github.com/Heartfilia/lite_tools"
 net = [
     "pymysql",
     "pyyaml",
-    "redis[hiredis]≥4.5.0",
     "requests",
     "urllib3",
     "usepy",
@@ -45,7 +45,6 @@ all = [
     "Pillow",
     "pymysql",
     "pyyaml",
-    "redis[hiredis]≥4.5.0",
     "requests",
     "urllib3",
     "usepy",
