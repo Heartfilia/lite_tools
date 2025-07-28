@@ -2,6 +2,7 @@
 import re
 import os
 import math
+from urllib.parse import quote_plus
 from typing import Optional, Union
 
 from lite_tools.utils.u_code_range import u_range_list, U_range_list
@@ -275,15 +276,18 @@ class CleanString(object):
     def __judge_x(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and (0 <= ord(kill) < 7 or 14 <= ord(kill) < 32 or 127 <= ord(kill) < 161):
             return True
+        return None
 
     def __judge_s(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and 7 <= ord(kill) < 14:
             return True
+        return None
 
     def __judge_p(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and (
                 32 <= ord(kill) < 48 or 58 <= ord(kill) < 65 or 91 <= ord(kill) < 97 or 123 <= ord(kill) < 127):
             return True
+        return None
 
     def __judge_big_p(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and (
@@ -291,22 +295,27 @@ class CleanString(object):
             65072 <= ord(kill) < 65107 or 65108 <= ord(kill) < 65127 or 65128 <= ord(kill) < 65132 or
                 65281 <= ord(kill) < 65313):
             return True
+        return None
 
     def __judge_f(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and 65314 <= ord(kill) < 65377:
             return True
+        return None
 
     def __judge_u(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and ord(kill) in u_range_list:
             return True
+        return None
 
     def __judge_big_u(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and ord(kill) in U_range_list:
             return True
-    
+        return None
+
     def __judge_e(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and ord(kill) > 65535:
             return True
+        return None
 
     def __judge_r(self, kill: str) -> Optional[bool]:
         """
@@ -318,6 +327,7 @@ class CleanString(object):
             ord(kill) not in U_range_list and \
                 not self.__judge_big_p(kill) and not self.__judge_f(kill):
             return True
+        return None
 
 
 def clean_html(html: str, white_tags: list = None) -> str:
@@ -560,14 +570,19 @@ def cookie_s2d(cookie: str) -> dict:
     ))
 
 
-def cookie_d2s(cookie: dict) -> str:
+def cookie_d2s(cookie: Union[dict, list]) -> str:
     """
     把字典格式的cookie转换成字符串格式 {"a": "1", "b": "2"} -> a=1;b=2
+    或者 把[{"name":"a","value":1}] ->a=1
     """
     if not cookie:
         return ""
-    return f';'.join(map(lambda x: f"{x[0]}={x[1]}", cookie.items()))
-
+    if isinstance(cookie, dict):
+        ck_s = f';'.join(map(lambda x: f"{x[0]}={quote_plus(x[1])}", cookie.items()))
+    else:
+        ck_s = ";".join(map(lambda x: f"{x['name']}={quote_plus(x['value'])}", cookie))
+    ck_s = ck_s.replace(" ", '%20')
+    return ck_s
 
 def pretty_indent(s: str, indent: int = 2, remove_empty_line: bool = True, strict_indent: bool = False):
     """

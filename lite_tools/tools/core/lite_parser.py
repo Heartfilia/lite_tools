@@ -3,8 +3,9 @@
 # @Author : Lodge
 import re
 import copy
-import json as _json
-from typing import Any, Optional, Iterator, Union
+import json as os_json
+from typing import Any, Optional, Iterator, Union, Generator
+
 try:
     from typing import Literal
 except ImportError:
@@ -30,7 +31,7 @@ get_using_line_info  这个也得调整
 
 
 def try_get(
-        renderer: Union[dict, str],
+        renderer: Any,
         getters: Optional[str] = None, default: Any = None, expected_type: Any = None,
         log: bool = False, json: bool = False, options: dict = None
 ) -> Any:
@@ -58,7 +59,7 @@ def try_get(
         # 这里是把json文件输出到本地文件的时候的情况
         return default
     if not renderer:
-        if log is True:
+        if log:
             line, fl = get_using_line_info()
             my_logger(fl, "try_get", line, f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
         return expected_type
@@ -75,7 +76,7 @@ def try_get(
                 now_result = __main_try_get(renderer, lambda _: eval(decode_getter), default, expected_type, log)
             except Exception as err:
                 # 因为有些时候lambda 那里可能会出现问题
-                if log is True:
+                if log:
                     line, fl = get_using_line_info()
                     my_logger(fl, "try_get", line, err)
                 continue
@@ -116,13 +117,13 @@ def trans_to_dict_rule(origin_string: str):
     return result
 
 
-def __main_try_get(renderer, getter: Any, default=None, expected_type=None, log=False):
+def __main_try_get(renderer: Any, getter: Any, default=None, expected_type=None, log: bool = False):
     try:
         result = getter(renderer)  # lambda function
         if expected_type is None or isinstance(result, expected_type):
             return result
     except (AttributeError, KeyError, TypeError, IndexError) as e:
-        if log is True:
+        if log:
             line, fl = get_using_line_info()
             my_logger(fl, "try_get", line, e)
     return default
@@ -156,7 +157,7 @@ def try_key(renderer, getter, mode: Literal['key', 'value'] = "key", expected_ty
         # 这里是把json文件输出到本地文件的时候的情况
         return []
     if not renderer:
-        if log is True:
+        if log:
             line, fl = get_using_line_info()
             my_logger(fl, "try_key", line, f"请传入标准的json串或者python字典数据")
         return []
@@ -261,9 +262,9 @@ def _judge_json(renderer, json=False, options=None):
         # 如果要直接操作文件的js 那么走这里
         return _js_file_local(renderer, options)
     if isinstance(renderer, (dict, list)):
-        if json is True:
+        if json:
             try:
-                return _json.dumps(
+                return os_json.dumps(
                     renderer,
                     skipkeys=options.get('skipkeys', False),
                     ensure_ascii=options.get('ensure_ascii', False),   # 这里我是按照了自己常用修改成这个了
@@ -280,7 +281,7 @@ def _judge_json(renderer, json=False, options=None):
         return renderer
     elif isinstance(renderer, str):
         try:
-            if json is True:
+            if json:
                 return renderer
             if (renderer.startswith('{') and renderer.endswith("}")) or (
                     renderer.startswith('[') and renderer.endswith("]")):
@@ -288,11 +289,12 @@ def _judge_json(renderer, json=False, options=None):
                 pass
             elif regex.search(renderer):  # 如果是jsonP的格式
                 renderer = regex.search(renderer).group(1)
-            data = _json.loads(renderer)
-        except _json.decoder.JSONDecodeError:
+            data = os_json.loads(renderer)
+        except os_json.decoder.JSONDecodeError:
             return None
         else:
             return data
+    return None
 
 
 def _js_file_local(renderer, options):
@@ -300,7 +302,7 @@ def _js_file_local(renderer, options):
         # 如果传入的是字符串,那么就是想要从本地js里面获取json
         try:
             with open(renderer, 'r', encoding=options.get('encoding', 'utf-8')) as fr:  # file read
-                return _json.load(fr)
+                return os_json.load(fr)
         except FileNotFoundError:
             logger.error(f"{renderer} -- 路径错误没有找到js文件")
         except (UnicodeEncodeError, UnicodeDecodeError):
@@ -315,7 +317,7 @@ def _js_file_local(renderer, options):
             return None
         try:
             with open(options.get("output"), 'w', encoding=options.get('encoding', 'utf-8')) as fw:  # file write
-                return _json.dump(renderer, fw,
+                return os_json.dump(renderer, fw,
                                   skipkeys=options.get("skipkeys", False),
                                   ensure_ascii=options.get("ensure_ascii", False),    # 这里默认是True 我不想他转我换了
                                   check_circular=options.get("check_circular", True),
@@ -339,7 +341,7 @@ class FlattenJson(object):
         self._start()
 
     def __str__(self):
-        return _json.dumps(self.result_data)
+        return os_json.dumps(self.result_data)
 
     def _start(self):
         _ = [_ for _ in self._flat_now(self.dict_data)]
@@ -348,7 +350,7 @@ class FlattenJson(object):
     def __dict__(self):
         return self.result_data
 
-    def _flat_now(self, dict_data, base_node="") -> dict:
+    def _flat_now(self, dict_data, base_node="") -> Generator[Any, None, None]:
         if isinstance(dict_data, dict):
             key_value_iter = (iter_obj for iter_obj in dict_data.items())
             flag = "dict"
@@ -444,7 +446,7 @@ class JsJson(object):
         判断这个js文件是不是有效的成对出现的符号 -- 貌似也用不到这里 先留着叭
         """
         temp_stack = []
-        for char in re.findall(r"[(\[{)\]\}]", need_check_js):
+        for char in re.findall(r"[(\[{)\]}]", need_check_js):
             if char in ["(", "[", "{"]:     # 40  91  123
                 temp_stack.append(char)
             elif char in [")", "]", "}"]:   # 41  93  125
