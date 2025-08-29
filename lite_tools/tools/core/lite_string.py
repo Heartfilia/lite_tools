@@ -564,25 +564,40 @@ def cookie_s2d(cookie: str) -> dict:
     """
     if not cookie:
         return {}
-    return dict(map(
-        lambda x: (x.strip().split('=', 1)[0], x.strip().split('=', 1)[1]),
-        cookie.strip().rstrip(';').split(';')
-    ))
+    # return dict(map(
+    #     lambda x: (x.strip().split('=', 1)[0], x.strip().split('=', 1)[1]),
+    #     cookie.strip().rstrip(';').split(';')
+    # ))
+
+    # 发现有的cookie是 xxxx 没有=的 这种cookie直接放进去就好了
+    cookies = {}
+    for each in cookie.strip().rstrip(';').split(';'):
+        if "=" not in each:
+            cookies[""] = each
+        else:
+            k, v = each.split("=", 1)
+            cookies[k] = v
+    return cookies
 
 
-def cookie_d2s(cookie: Union[dict, list]) -> str:
+def cookie_d2s(cookie: Union[dict, list], space: bool = False) -> str:
     """
     把字典格式的cookie转换成字符串格式 {"a": "1", "b": "2"} -> a=1;b=2
     或者 把[{"name":"a","value":1}] ->a=1
+    space: 如果需要cookie后面添加空格的配置这个
     """
     if not cookie:
         return ""
+    space_key = "+++++" if space else ""
     if isinstance(cookie, dict):
-        ck_s = f';'.join(map(lambda x: f"{x[0]}={quote_plus(x[1])}", cookie.items()))
+        ck_s = f';{space_key}'.join(map(lambda x: f"{x[0]}={quote_plus(x[1])}".lstrip("="), cookie.items()))
     else:
-        ck_s = ";".join(map(lambda x: f"{x['name']}={quote_plus(x['value'])}", cookie))
+        ck_s = f';{space_key}'.join(map(lambda x: f"{x['name']}={quote_plus(x['value'])}", cookie))
     ck_s = ck_s.replace(" ", '%20')
+    if space:
+        ck_s = ck_s.replace(f";{space_key}", '; ')
     return ck_s
+
 
 def pretty_indent(s: str, indent: int = 2, remove_empty_line: bool = True, strict_indent: bool = False):
     """
