@@ -576,7 +576,7 @@ def cookie_s2d(cookie: str) -> dict:
             cookies[""] = each
         else:
             k, v = each.split("=", 1)
-            cookies[k] = v
+            cookies[k.strip()] = v
     return cookies
 
 
