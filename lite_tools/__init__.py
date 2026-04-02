@@ -65,7 +65,7 @@ from lite_tools.tools.core.lite_parser import try_get, try_key, FlattenJson, JsJ
 from lite_tools.tools.core.lib_hashlib import get_md5, get_sha, get_sha3, get_5dm  # 5dm是我自己用的不对外展示
 from lite_tools.tools.time.lite_time import get_time, time_count, time_range
 from lite_tools.tools.core.lite_try import try_catch
-from lite_tools.tools.core.lite_ua import get_ua
+from lite_tools.tools.core.lite_ua import get_ua, generate_ua, lite_ua
 try:
     from lite_tools.tools.sql.config import MySqlConfig
     from lite_tools.tools.sql.lite_mysql import MySql, AioMySql

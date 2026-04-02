@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import re
-import os
+import html
 import math
+import os
+import re
 from urllib.parse import quote_plus
 from typing import Optional, Union
 
@@ -10,26 +11,40 @@ from lite_tools.utils.u_sub_sup_string import SUB_SUP_WORDS_HASH
 """
 这里是把常用的先弄了出来 后续还可以拓展举铁参考见code_range   ***这里清理字符串还是有bug  还需要调试***
 """
-__ALL__ = ["clean_html", "CleanString", "color_string", "math_string", "PrettySrt"]
+__all__ = [
+    "clean_html", "CleanString", "color_string", "math_string", "PrettySrt",
+    "cookie_s2d", "cookie_d2s", "pretty_indent", "normalize_whitespace"
+]
+__ALL__ = __all__
+
+
+def normalize_whitespace(string: str, strip: bool = True) -> str:
+    """
+    规范空白字符，连续空白会压缩为一个空格。
+    """
+    if not isinstance(string, str):
+        return ""
+    new_string = re.sub(r"\s+", " ", string)
+    return new_string.strip() if strip else new_string
 
 
 class PrettySrt:
-    _RE_RAW = re.compile(r"(\d+.*?)\n(\d{2}:\d{2}:\d{2},\d{1,3} --> \d{2}:\d{2}:\d{2},\d{1,3})\n(.*)\n?")
+    _RE_TIME = re.compile(r"^\d{2}:\d{2}:\d{2},\d{1,3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{1,3}$")
 
     def __init__(self, srt_file: str) -> None:
         self._srt = self._check_and_get(srt_file)
         self._source_root = srt_file  # 记录源文件路径 或许能用到
         self._start = 1   # 会被重写
         self._rows = []
-        self._init_rows()
         self._last_ind = 0  # 记录最后一个序号/会被更新 有的程序会
         self._result = ""  # 缓存处理好的结果
+        self._init_rows()
 
     def _update_last_ind(self):
         if self._rows:
             for row in self._rows[::-1]:  # 倒着查
-                if row and len(row) == 3:
-                    last_item = row[-1][0]
+                if row:
+                    last_item = str(row[0])
                     sort_id_obj = re.search(r"^(\d+)", last_item)
                     if sort_id_obj:
                         self._last_ind = int(sort_id_obj.group(1))
@@ -68,13 +83,11 @@ class PrettySrt:
         :param t:
         :return:
         """
-        base_time_fmt = "{H:>02}:{M:>02}:{S:>02},{F:<03}"
-        new_h = t // 3600
-        new_m = (t % 3600) // 60
-        new_s = (t % 3600) % 60
-        fs = str(t).split(".")
-        fs = str(fs[-1])[:3] if len(fs) > 1 else "000"
-        return base_time_fmt.format(H=int(new_h), M=int(new_m), S=int(new_s), F=fs)
+        total_ms = max(0, int(round(t * 1000)))
+        total_seconds, ms = divmod(total_ms, 1000)
+        new_h, remain = divmod(total_seconds, 3600)
+        new_m, new_s = divmod(remain, 60)
+        return f"{new_h:02}:{new_m:02}:{new_s:02},{ms:03}"
 
     def _combine_new_time_line(self, start_ts: float, end_ts: float) -> str:
         """
@@ -94,7 +107,19 @@ class PrettySrt:
         return start_ts, end_ts
 
     def _init_rows(self):
-        self._rows = self._RE_RAW.findall(self._srt)
+        rows = []
+        blocks = re.split(r"\n\s*\n", self._srt.strip())
+        for block in blocks:
+            lines = [line.rstrip("\r") for line in block.splitlines() if line.strip() != ""]
+            if not lines:
+                continue
+            if len(lines) >= 3 and self._RE_TIME.match(lines[1].strip()):
+                rows.append((lines[0].strip(), lines[1].strip(), "\n".join(lines[2:])))
+            elif len(lines) >= 2 and self._RE_TIME.match(lines[0].strip()):
+                next_index = str(len(rows) + 1)
+                rows.append((next_index, lines[0].strip(), "\n".join(lines[1:])))
+        self._rows = rows
+        self._update_last_ind()
 
     def pretty_number(self, start: int = 1, clear_other: bool = True):
         """
@@ -104,7 +129,8 @@ class PrettySrt:
         """
         self._start = start    # 如果配置了这里 那么后面重新排的时候会从这里开始
         if self._rows and self._rows[0] and len(self._rows[0]) == 3:
-            if not self._rows[0][0].startswith(str(start)):
+            first_row_no = re.search(r"^\d+", self._rows[0][0])
+            if not first_row_no or int(first_row_no.group(0)) != start:
                 # 如果第一行不是以需要的行号开始 那么需要更新每一行
 
                 for ind, row in enumerate(self._rows):
@@ -136,7 +162,7 @@ class PrettySrt:
         change = False
         new_row = []  # 缓存
         if self._rows:
-            for ind, row in self._rows:
+            for row in self._rows:
                 if len(row) == 3:
                     # ind 行这里不做记录 因为后面要重新排序
                     now_row_number = row[0]
@@ -158,12 +184,15 @@ class PrettySrt:
                         split_number = math.ceil(len(words_line) / max_line)
                         start_ts, end_ts = self._trans_time(time_line)
                         ts_duration = end_ts - start_ts
-                        each_word_ts = round(ts_duration / len(words_line))   # 每一个字多少时间
+                        each_word_ts = ts_duration / len(words_line)   # 每一个字多少时间
 
                         for ind_line in range(split_number):
                             new_words = words_line[max_line * ind_line:max_line * (ind_line + 1)]
-                            spend_ts = each_word_ts * len(new_words)
-                            new_end_ts = start_ts + spend_ts
+                            if ind_line == split_number - 1:
+                                new_end_ts = end_ts
+                            else:
+                                spend_ts = each_word_ts * len(new_words)
+                                new_end_ts = min(start_ts + spend_ts, end_ts)
                             new_time_row = self._combine_new_time_line(start_ts, new_end_ts)
                             new_row.append((now_start_number, new_time_row, new_words))
                             start_ts = min(new_end_ts, end_ts)
@@ -185,6 +214,9 @@ class PrettySrt:
             self._rows = results
             # 排完行号后重新记录新的尾行号
             self._update_last_ind()
+        elif new_row:
+            self._rows = new_row
+            self._update_last_ind()
 
         return self
 
@@ -195,10 +227,11 @@ class PrettySrt:
         if self._rows and len(self._rows[-1]) != 1:
             self._last_ind += 1
             self._rows.append((str(self._last_ind),))  # 最后一行独立判断
+        return self
 
     def _handle_string(self):
         result = ""
-        if not self._rows:
+        if self._rows:
             template = "{ind_line}\n{time_range}\n{words}\n\n"
             for row in self._rows:
                 if len(row) == 3:
@@ -221,8 +254,10 @@ class PrettySrt:
         :param encoding  : 默认存的格式
         """
         self._handle_string()
+        save_path = save_path or self._source_root
         with open(save_path, "w", encoding=encoding) as fw:
-            fw.write(save_path)
+            fw.write(self._result)
+        return save_path
 
 
 class CleanString(object):
@@ -257,21 +292,24 @@ class CleanString(object):
         if not isinstance(string, str):
             return ""
 
+        active_mode = self.mode
+        if "a" in str(self.mode).lower():
+            active_mode = "xupPefsUr"
+
         kill_jar = self._scanner(string)
 
         for kill in kill_jar:
-            if ("x" in self.mode and self.__judge_x(kill)) or ("s" in self.mode and self.__judge_s(kill)) or (
-                "p" in self.mode and self.__judge_p(kill)) or ("P" in self.mode and self.__judge_big_p(kill)) or (
-                "f" in self.mode and self.__judge_f(kill)) or ("e" in self.mode and self.__judge_e(kill)) or (
-                "u" in self.mode and self.__judge_u(kill)) or ("U" in self.mode and self.__judge_big_u(kill)) or (
-                    "r" in self.mode and self.__judge_r(kill)):
+            if ("x" in active_mode and self.__judge_x(kill)) or ("s" in active_mode and self.__judge_s(kill)) or (
+                "p" in active_mode and self.__judge_p(kill)) or ("P" in active_mode and self.__judge_big_p(kill)) or (
+                "f" in active_mode and self.__judge_f(kill)) or ("e" in active_mode and self.__judge_e(kill)) or (
+                "u" in active_mode and self.__judge_u(kill)) or ("U" in active_mode and self.__judge_big_u(kill)) or (
+                    "r" in active_mode and self.__judge_r(kill)):
                 string = string.replace(kill, "")
         return string
 
     @staticmethod
     def _scanner(string: str):
-        jar = set(filter(lambda x: not x.isalpha() or not x.isdigit(), string))
-        return jar
+        return set(string)
 
     def __judge_x(self, kill: str) -> Optional[bool]:
         if kill not in self.ignore and (0 <= ord(kill) < 7 or 14 <= ord(kill) < 32 or 127 <= ord(kill) < 161):
@@ -334,15 +372,30 @@ def clean_html(html: str, white_tags: list = None) -> str:
     """
     采用了米乐大佬的包 usepy
     """
+    if not isinstance(html, str) or not html:
+        return ""
     try:
         from usepy import useCleanHtml
+        return useCleanHtml(html, white_tags)
     except ImportError:
-        from lite_tools.utils.pip_ import install
+        content = re.sub(r"(?is)<(script|style).*?>.*?</\1>", "", html)
+        if white_tags:
+            white_tags = {tag.lower() for tag in white_tags}
 
-        install('usepy')
-        from usepy import useCleanHtml
-    content = useCleanHtml(html, white_tags)
-    return content
+            def _keep_white_tag(match):
+                tag = match.group(1).lower()
+                return match.group(0) if tag in white_tags else ""
+
+            content = re.sub(r"(?is)</?([a-zA-Z0-9]+)(?:\s[^<>]*)?>", _keep_white_tag, content)
+        else:
+            content = re.sub(r"(?is)<[^>]+>", "", content)
+        return html_unescape(content)
+
+
+def html_unescape(string: str) -> str:
+    if not isinstance(string, str):
+        return ""
+    return html.unescape(string)
 
 
 def __get_color_front(string: str) -> Optional[int]:
@@ -425,7 +478,7 @@ def __get_view_mode(mode: str, viewer=True) -> Optional[int]:
         return 8          # 不可见
     elif lower_string in ["strikethrough", "删除线", "s", "9"]:
         return 9          # 删除线
-    return 0
+    return None
 
 
 def _trans_color(string: str, color: str = "") -> str:
@@ -443,7 +496,7 @@ def _trans_color(string: str, color: str = "") -> str:
     if color.lower() not in color_map:
         return string
     fresh_string = "".join(re.findall(">(.*?)<", string))
-    return f"\033[{color_map[color]}m{fresh_string}\033[0m"
+    return f"\033[{color_map[color.lower()]}m{fresh_string}\033[0m"
 
 
 def _decorate_string(string: str) -> str:
@@ -523,19 +576,21 @@ def color_string(string: str = "", *args, **kwargs) -> str:
         if not kwargs.get('length') and not kwargs.get('l', 0):
             length = 0
         else:
-            length -= len(string)
+            length = max(0, length - len(string))
         return f"{base_string.strip(';')}m{string}{' ' * length}\033[0m"
 
     elif string and args:
-        result_ftclr = list(filter(__get_color_front, map(__get_color_front, args)))
-        result_bkclr = list(filter(__get_color_background, args))
-        result_vt = list(filter(__get_view_mode, args))
+        result_ftclr = [value for value in map(__get_color_front, args) if value is not None]
+        result_bkclr = [value for value in map(__get_color_background, args) if value is not None]
+        result_vt = [value for value in map(__get_view_mode, args) if value is not None]
         if result_ftclr:
             base_string += f'{result_ftclr[0]};'
         if result_bkclr:
             base_string += f'{result_bkclr[0]};'
         if result_vt:
-            base_string += f'0{result_vt[0]};'
+            base_string += f'{result_vt[0]};'
+        if base_string == '\033[':
+            return string
         return f"{base_string.strip(';')}m{string}\033[0m"
 
     return string
@@ -572,11 +627,14 @@ def cookie_s2d(cookie: str) -> dict:
     # 发现有的cookie是 xxxx 没有=的 这种cookie直接放进去就好了
     cookies = {}
     for each in cookie.strip().rstrip(';').split(';'):
+        each = each.strip()
+        if not each:
+            continue
         if "=" not in each:
-            cookies[""] = each
+            cookies[each] = ""
         else:
             k, v = each.split("=", 1)
-            cookies[k.strip()] = v
+            cookies[k.strip()] = v.strip()
     return cookies
 
 
@@ -590,9 +648,13 @@ def cookie_d2s(cookie: Union[dict, list], space: bool = False) -> str:
         return ""
     space_key = "+++++" if space else ""
     if isinstance(cookie, dict):
-        ck_s = f';{space_key}'.join(map(lambda x: f"{x[0]}={quote_plus(x[1])}".lstrip("="), cookie.items()))
+        ck_s = f';{space_key}'.join(
+            map(lambda x: f"{x[0]}={quote_plus(str(x[1]))}".lstrip("="), cookie.items())
+        )
     else:
-        ck_s = f';{space_key}'.join(map(lambda x: f"{x['name']}={quote_plus(x['value'])}", cookie))
+        ck_s = f';{space_key}'.join(
+            map(lambda x: f"{x['name']}={quote_plus(str(x['value']))}", cookie)
+        )
     ck_s = ck_s.replace(" ", '%20')
     if space:
         ck_s = ck_s.replace(f";{space_key}", '; ')
@@ -612,7 +674,7 @@ def pretty_indent(s: str, indent: int = 2, remove_empty_line: bool = True, stric
 
     temp_slice = []   # 因为替换了\t的后续替换需要用到
     for row in each_row:
-        start_tab = re.search("^(\t\t)", row)
+        start_tab = re.search(r"^(\t+)", row)
         if start_tab:
             start_tab_string = start_tab.group(1).count("\t")
             row = re.sub(r"^\t+", " " * start_tab_string * indent, row)
@@ -631,7 +693,7 @@ def pretty_indent(s: str, indent: int = 2, remove_empty_line: bool = True, stric
             temp_slice.append(row)   #
 
     if min_space == 0:  # 如果无须改动 直接返回
-        return s
+        return "\n".join(temp_slice) if remove_empty_line else "\n".join(temp_slice)
 
     new_slice = map(lambda xl: xl.removeprefix(" " * min_space), temp_slice)
 

@@ -1,140 +1,175 @@
 # -*- coding: utf-8 -*-
 # @Author  : Lodge
 """
-      ┏┛ ┻━━━━━┛ ┻┓
-      ┃　　　　　　 ┃
-      ┃　　　━　　　┃
-      ┃　┳┛　  ┗┳　┃
-      ┃　　　　　　 ┃
-      ┃　　　┻　　　┃
-      ┃　　　　　　 ┃
-      ┗━┓　　　┏━━━┛
-        ┃　　　┃   神兽保佑
-        ┃　　　┃   代码无BUG！
-        ┃　　　┗━━━━━━━━━┓
-        ┃　　　　　　　    ┣┓
-        ┃　　　　         ┏┛
-        ┗━┓ ┓ ┏━━━┳ ┓ ┏━┛
-          ┃ ┫ ┫   ┃ ┫ ┫
-          ┗━┻━┛   ┗━┻━┛
-这个文件主要放一些 js转python的操作 比如 >>>   还有36进制等等 不过这里我还没有写 晚点弄
+JS 常见数值与位运算兼容工具。
 """
 import ctypes
+import math
 from typing import Union
 
-from lite_tools.tools.core.lib_base64 import get_b64e as btoa
 from lite_tools.tools.core.lib_base64 import get_b64d as atob
+from lite_tools.tools.core.lib_base64 import get_b64e as btoa
+
+Number = Union[float, int]
+_DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz'
+_MAX_FRACTION_DIGITS = 16
 
 
-def to_string_36(number: Union[float, int]) -> str:
+def _ensure_base(base: int) -> int:
+    if not 2 <= base <= 36:
+        raise ValueError('base must be between 2 and 36')
+    return base
+
+
+def _is_integer(number: Number) -> bool:
+    return isinstance(number, int) or (isinstance(number, float) and number.is_integer())
+
+
+def to_int32(number: Number) -> int:
     """
-    将数字转为36进制字符串  TODO(浮点数处理还没有实现)
+    对齐 JS ToInt32 的 32 位有符号整数结果。
     """
-    if number == 0 or not isinstance(number, int):
+    return ctypes.c_int32(int(number)).value
+
+
+def to_uint32(number: Number) -> int:
+    """
+    对齐 JS ToUint32 的 32 位无符号整数结果。
+    """
+    return ctypes.c_uint32(int(number)).value
+
+
+def _integer_to_base(number: int, base: int) -> str:
+    _ensure_base(base)
+    if number == 0:
         return '0'
-    base36 = []
-    while number != 0:
-        number, i = divmod(number, 36)
-        base36.append('0123456789abcdefghijklmnopqrstuvwxyz'[i])
-    return ''.join(reversed(base36))
+
+    sign = '-' if number < 0 else ''
+    number = abs(number)
+    chars = []
+    while number:
+        number, remainder = divmod(number, base)
+        chars.append(_DIGITS[remainder])
+    return sign + ''.join(reversed(chars))
 
 
-def to_string_16(number: Union[float, int]) -> str:
-    if number < 0:
-        flag = "-"
-        number = abs(number)
-    else:
-        flag = ""
-    s = [flag + str(int(number)) + '.']
-    number -= int(number)
+def _fraction_to_base(fraction: float, base: int, precision: int) -> str:
+    if fraction <= 0 or precision <= 0:
+        return ''
 
-    for _ in range(16):
-        y = int(number * 16)
-        s.append(f"{y:x}")
-        number = number * 16 - y
-
-    temp_ok = ''.join(s).rstrip('0')
-    if "." in temp_ok:
-        base, other = temp_ok.split('.')
-        temp_ok = f"{int(base):x}.{other}"
-    return temp_ok.strip(".")
+    chars = []
+    for _ in range(precision):
+        fraction *= base
+        digit = int(fraction)
+        chars.append(_DIGITS[digit])
+        fraction -= digit
+        if math.isclose(fraction, 0.0, abs_tol=1e-15):
+            break
+    return ''.join(chars).rstrip('0')
 
 
-"""
-以下板块由 小小白 提供
-"""
-
-
-def xor(num_1: int, num_2: int):
+def to_string(number: Number, base: int = 10, precision: int = _MAX_FRACTION_DIGITS) -> str:
     """
-    异或 同 python ^ 主要是精度问题 所以这里放这里搞了一个
+    将数字转成指定进制字符串，覆盖常见 JS toString(radix) 场景。
     """
-    x, y = ctypes.c_int32(num_1).value, ctypes.c_int32(num_2).value
-    return ctypes.c_int(x ^ y).value
+    _ensure_base(base)
+
+    if not isinstance(number, (int, float)):
+        raise TypeError('number must be int or float')
+
+    if isinstance(number, float):
+        if math.isnan(number):
+            return 'NaN'
+        if math.isinf(number):
+            return 'Infinity' if number > 0 else '-Infinity'
+
+    if base == 10:
+        if _is_integer(number):
+            return str(int(number))
+        return format(float(number), '.15g')
+
+    if _is_integer(number):
+        return _integer_to_base(int(number), base)
+
+    sign = '-' if number < 0 else ''
+    number = abs(float(number))
+    integer_part = int(number)
+    fraction_part = number - integer_part
+
+    integer_text = _integer_to_base(integer_part, base)
+    fraction_text = _fraction_to_base(fraction_part, base, precision)
+    if not fraction_text:
+        return sign + integer_text
+    return f'{sign}{integer_text}.{fraction_text}'
 
 
-def unsigned_right_shift(num: int,  step: int):
+def to_string_36(number: Number) -> str:
     """
-    'num >>>  step' 无符号右移
-    :param num: 需要移动的数
-    :param  step: 移动的步数
+    将数字转为 36 进制字符串。
     """
-    x, y = ctypes.c_uint32(num).value,  step % 32
-    return ctypes.c_uint32(x >> y).value
+    return to_string(number, 36)
 
 
-def left_shift(num: int,  step: int):
+def to_string_16(number: Number) -> str:
     """
-    <<      num <<  step
-    :param num: 需要移动的数据
-    :param  step: 移动的步数
+    将数字转为 16 进制字符串。
     """
-    x, y = ctypes.c_int32(num).value,  step % 32
-    return ctypes.c_int32(x << y).value
+    return to_string(number, 16)
 
 
-def dec_to_bin(num: Union[float, int]) -> str:
+def xor(num_1: int, num_2: int) -> int:
     """
-    十进制浮点数转二进制 toString(2)
+    异或，结果保持 32 位有符号整数语义。
     """
-    # 判断是否为浮点数
-    if num == int(num):
-        # 若为整数
-        integer = '{:b}'.format(int(num))
-        return integer
-    else:
-        # 若为浮点数
-        if float(num) < 0:
-            num = abs(num)
-            flag = "-"
-        else:
-            flag = ""
-        # 取整数部分
-        integer_part = int(num)
-        # 取小数部分
-        decimal_part = num - integer_part
-        # 整数部分进制转换
-        integer_com = '{:b}'.format(integer_part)  # {:b}.format中b是二进制
-        # 小数部分进制转换
-        tem = decimal_part
-        tmp_float = []
-        while True:
-            tem *= 2
-            tmp_float += str(int(tem))  # 若整数部分为0则二进制部分为0，若整数部分为1则二进制部分为1 #将1或0放入列表
-            if tem > 1:   # 若乘以2后为大于1的小数，则要减去整数部分
-                tem -= int(tem)
-            elif tem < 1:  # 乘以2后若仍为小于1的小数，则继续使用这个数乘2变换进制
-                pass
-            else:    # 当乘以2后正好为1，则进制变换停止
-                break
-        float_com = tmp_float
-        return flag + integer_com + '.' + ''.join(float_com)
+    return to_int32(to_int32(num_1) ^ to_int32(num_2))
+
+
+def and_(num_1: int, num_2: int) -> int:
+    """
+    按位与，结果保持 32 位有符号整数语义。
+    """
+    return to_int32(to_int32(num_1) & to_int32(num_2))
+
+
+def or_(num_1: int, num_2: int) -> int:
+    """
+    按位或，结果保持 32 位有符号整数语义。
+    """
+    return to_int32(to_int32(num_1) | to_int32(num_2))
+
+
+def bit_not(num: int) -> int:
+    """
+    按位取反，结果保持 32 位有符号整数语义。
+    """
+    return to_int32(~to_int32(num))
+
+
+def unsigned_right_shift(num: int, step: int) -> int:
+    """
+    JS 的 `num >>> step` 无符号右移。
+    """
+    return to_uint32(to_uint32(num) >> (step % 32))
+
+
+def left_shift(num: int, step: int) -> int:
+    """
+    JS 的 `num << step` 左移。
+    """
+    return to_int32(to_int32(num) << (step % 32))
+
+
+def dec_to_bin(num: Number) -> str:
+    """
+    十进制转二进制字符串，对齐常见 `toString(2)` 场景。
+    """
+    return to_string(num, 2)
 
 
 to_string_2 = dec_to_bin
 
 
 if __name__ == '__main__':
-    xx = 35.51
-    result = to_string_36(xx)
-    print(f'{xx} -->：{result}')
+    samples = [35.51, 35, -12, 0.625]
+    for value in samples:
+        print(f'{value} -> bin: {to_string_2(value)}, hex: {to_string_16(value)}, base36: {to_string_36(value)}')
