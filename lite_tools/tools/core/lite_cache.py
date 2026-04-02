@@ -74,6 +74,7 @@ BASE_TEMPLATE = {
     "max_out": 0,         # type: int     # 每个程序的最大重试次数
     "task_done": False,   # type: bool    # 任务是否终止
     "flag": False,        # type: bool    # 队列什么时候结束
+    "producer_count": 0,  # type: int     # 当前生产者数量
 }
 
 
@@ -84,8 +85,9 @@ class CountConfig:
 
     def init(self, name):
         """初始化模板数据字段"""
-        if name not in self.log_jar:
-            self.log_jar[name] = copy.deepcopy(BASE_TEMPLATE)
+        with self.lock:
+            if name not in self.log_jar:
+                self.log_jar[name] = copy.deepcopy(BASE_TEMPLATE)
 
     def set_max_out(self, name: str, num: int = 0):
         self.init(name)
@@ -159,9 +161,27 @@ class CountConfig:
         self.init(name)
         with self.lock:
             self.log_jar[name]["flag"] = flag
+            self.log_jar[name]["producer_count"] = 1 if flag else 0
 
     def get_flag(self, name: str) -> bool:
-        return self.log_jar[name]["flag"]
+        return self.log_jar[name].get("producer_count", 0) > 0
+
+    def start_producer(self, name: str):
+        self.init(name)
+        with self.lock:
+            self.log_jar[name]["producer_count"] += 1
+            self.log_jar[name]["flag"] = True
+
+    def finish_producer(self, name: str):
+        self.init(name)
+        with self.lock:
+            left = max(0, self.log_jar[name].get("producer_count", 0) - 1)
+            self.log_jar[name]["producer_count"] = left
+            self.log_jar[name]["flag"] = left > 0
+
+    def get_producer_count(self, name: str) -> int:
+        self.init(name)
+        return self.log_jar[name].get("producer_count", 0)
 
 
 class Buffer(metaclass=Singleton):
@@ -182,6 +202,7 @@ class Buffer(metaclass=Singleton):
         """
         队列里面剩余的量
         """
+        cls.__init__queue__(name)
         return cls.__queues[name].qsize()
 
     @classmethod
@@ -196,6 +217,7 @@ class Buffer(metaclass=Singleton):
         """
         这里是种种子 相当于 queue.put(xxx) 避免阻塞 采取丢失失败任务的方案
         """
+        cls.__init__queue__(name)
         if not cls.__queues[name].full():
             cls.__queues[name].put(job)
         else:
@@ -206,15 +228,13 @@ class Buffer(metaclass=Singleton):
         """
         这里是拿种子 相当于 queue.get()
         """
-        if not cls.__queues[name].empty():
-            try:
-                return cls.__queues[name].get(timeout=3)
-            except Empty:
-                raise QueueEmptyNotion
-            finally:
-                cls.count_config.set_count(name, 1)
-        else:
+        cls.__init__queue__(name)
+        try:
+            result = cls.__queues[name].get(timeout=3)
+        except Empty:
             raise QueueEmptyNotion
+        cls.count_config.set_count(name, 1)
+        return result
 
     @classmethod
     def task(cls, func=None, *, name: str = "default"):
@@ -225,13 +245,13 @@ class Buffer(metaclass=Singleton):
         @wraps(func)
         def wrapper(*args, **kwargs):
             # 这里是一个独立的线程运行
-            cls.count_config.set_flag(name, True)
-            cls.count_config.set_task_time(name)
-            
-            for job in func(*args, **kwargs):
-                cls.__queues[name].put(job)
-
-            cls.count_config.set_flag(name, False)  # 标记这个任务线程已经退出
+            cls.__prepare_task_run(name)
+            cls.count_config.start_producer(name)
+            try:
+                for job in func(*args, **kwargs):
+                    cls.sow(job, name=name)
+            finally:
+                cls.count_config.finish_producer(name)  # 标记这个任务线程已经退出
 
         return wrapper
 
@@ -257,6 +277,7 @@ class Buffer(metaclass=Singleton):
         @wraps(func)
         def wrapper(*args, **kwargs):
             cls.count_config.set_task_name(name, current_thread().name)
+            empty_rounds = 0
             while True:
                 if not cls.count_config.get_flag(name) and cls.__queues[name].empty():
                     if cls.count_config.exists_task(name, current_thread().name):
@@ -264,23 +285,18 @@ class Buffer(metaclass=Singleton):
                         continue
                     break
                 if cls.__queues[name].empty():
-                    time.sleep(.5)
-                    if not cls.count_config.get_flag(name):
-                        cls.count_config.set_max_out(name, 1)
-                    if cls.count_config.get_max_out(name) >= 300:
-                        break
+                    time.sleep(.1)
                     continue
 
                 try:
                     func(*args, **kwargs)
-                    if cls.count_config.get_max_out(name) > 0:
-                        cls.count_config.set_max_out(name, 0)
+                    empty_rounds = 0
                 except QueueEmptyNotion:   # 如果队列持续为空 # 避免卡死
                     if not cls.count_config.get_flag(name):
-                        cls.count_config.set_max_out(name, 1)
-                        time.sleep(1)
-                    if cls.count_config.get_max_out(name) >= 300:
-                        break
+                        empty_rounds += 1
+                        time.sleep(.1)
+                        if empty_rounds >= 5:
+                            break
             cls._log_detail(name)
 
         return wrapper
@@ -296,13 +312,29 @@ class Buffer(metaclass=Singleton):
                 if name not in cls.__queues:
                     cls.__queues[name] = Queue(cls.max_cache)
 
+        if rs is True:
+            with cls._lock:
+                cls.__queues[name] = Queue(cls.max_cache)
         if name not in cls.count_config.log_jar or rs is True:
             cls.count_config.set_count(name, 0)
             cls.count_config.set_task_time(name)
             cls.count_config.set_task_name(name)
             cls.count_config.set_max_out(name, 0)
             cls.count_config.set_task_done(name, False)
-            cls.count_config.set_flag(name, True)
+            cls.count_config.set_flag(name, False)
+
+    @classmethod
+    def __prepare_task_run(cls, name: str):
+        """
+        新一轮生产开始前，只有在当前队列已经空闲时才重置统计信息。
+        这样不会打断多个生产者共同写入同一队列的场景。
+        """
+        cls.__init__queue__(name)
+        if cls.count_config.get_producer_count(name) == 0 and cls.__queues[name].empty():
+            cls.count_config.set_count(name, 0)
+            cls.count_config.set_task_time(name)
+            cls.count_config.set_task_done(name, False)
+            cls.count_config.set_max_out(name, 0)
 
 
 class LiteCacher:

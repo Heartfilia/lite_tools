@@ -4,7 +4,7 @@ try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
-from typing import Union, Optional, Mapping, List, Dict, Tuple
+from typing import Union, Optional, Mapping, List, Dict, Tuple, Any
 
 from lite_tools.utils.u_sql_base_string import MysqlKeywordsList
 from lite_tools.exceptions.SqlExceptions import NotSupportType, LengthError
@@ -29,32 +29,45 @@ class SqlString(object):
             raise ValueError("缺少表名")
 
     @staticmethod
+    def _normalize_param_value(value: Any):
+        if isinstance(value, bool):
+            return 1 if value else 0
+        return value
+
+    @classmethod
+    def _quote_identifier(cls, identifier: str) -> str:
+        if not isinstance(identifier, str):
+            identifier = str(identifier)
+        parts = [part.strip("`") for part in identifier.split(".")]
+        return ".".join("*" if part == "*" else f"`{part}`" for part in parts)
+
+    @classmethod
+    def _build_where_clause(cls, keys: List[str]) -> str:
+        return " AND ".join(f"{cls._quote_identifier(key)} <=> %s" for key in keys)
+
+    @classmethod
+    def _format_direct_value(cls, value: Any) -> str:
+        if value is None:
+            return "NULL"
+        if isinstance(value, bool):
+            return "1" if value else "0"
+        if isinstance(value, (int, float)):
+            return str(value)
+        return cls._handle_value(value)
+
+    @staticmethod
     def _parse_dict(item: Union[dict, str], origin_keys: list = None, mode: str = "key"):
         keys = []
         now_value = []
         if isinstance(item, dict):
             if origin_keys:   # 如果有明确的key的顺序提取值传入
                 for key in origin_keys:
-                    value = item[key]
-                    if isinstance(value, bool):
-                        value = 1 if value else 0
-                    elif value is None and mode == "key":
-                        value = ""
-                    elif value is None and mode == "where":
-                        value = " IS NULL "
-                    now_value.append(value)
+                    now_value.append(SqlString._normalize_param_value(item[key]))
                 return origin_keys, now_value
             else:
                 for key, value in item.items():
                     keys.append(key)
-                    if isinstance(value, bool):
-                        value = 1 if value else 0
-                    elif value is None and mode == "key":
-                        value = ""
-                    elif value is None and mode == "where":
-                        value = " IS NULL "
-
-                    now_value.append(value)
+                    now_value.append(SqlString._normalize_param_value(value))
         else:
             keys.append(item)
 
@@ -96,24 +109,29 @@ class SqlString(object):
         :param duplicate_except: 这里是排除法一般这里建议把你不需要替换的字段名称写上去 None的话就不 insert... on duplicate
         :param ignore          : 一般这里是忽略表里已经存在的时候 这里优先级高于上面 这个和上面都写了的话 是直接忽略重复异常
         """
-        assert table_name or self.table_name, "请至少在一个入口位置传入table_name"
+        if not (table_name or self.table_name):
+            raise ValueError("请至少在一个入口位置传入table_name")
         keys, values = self._handle_items(item)
 
-        key_string = ", ".join(map(lambda x: f"`{x}`", keys))
+        key_string = ", ".join(self._quote_identifier(key) for key in keys)
         value_string = ", ".join("%s" for _ in keys)
         if ignore:
             ignore = " IGNORE"
             dup = ""
         else:
             if duplicate_except and isinstance(duplicate_except, list):
-                up = ", ".join(f"`{key}`=VALUES(`{key}`)" for key in keys if key not in duplicate_except)
+                up = ", ".join(
+                    f"{self._quote_identifier(key)}=VALUES({self._quote_identifier(key)})"
+                    for key in keys if key not in duplicate_except
+                )
                 dup = f" ON DUPLICATE KEY UPDATE {up}"
             else:
                 dup = ""
             ignore = ""
 
         return (
-            f"INSERT{ignore} INTO `{table_name or self.table_name}` ({key_string}) VALUES ({value_string}){dup};",
+            f"INSERT{ignore} INTO {self._quote_identifier(table_name or self.table_name)} "
+            f"({key_string}) VALUES ({value_string}){dup};",
             values
         )
 
@@ -128,18 +146,19 @@ class SqlString(object):
         :param where     : 条件，如果不是dict，那么这里就是直接用了拼接上 不需要构造模板 | 如果是批量更新 只能用等的情况 要不然批量没意义
         :param table_name: 表名,这里优先级高于全局
         """
-        assert table_name or self.table_name, "请至少在一个入口位置传入table_name"
+        if not (table_name or self.table_name):
+            raise ValueError("请至少在一个入口位置传入table_name")
         if isinstance(item, list) and isinstance(where, (dict, str)):
             raise Exception("批量更新,where位置需要传入列表,里面的每一个元素对应更新值的位置")
 
         keys, values = self._handle_items(item)
         where_values = []
+        where_string = ""
 
         if isinstance(where, dict):
             where_keys, where_values = self._handle_items(where, mode="where")
-            where_string = " AND ".join(map(lambda x: f"`{x}` = %s", where_keys))
-        elif isinstance(item, dict) and isinstance(where, dict):   # 如果前面是单个条件的情况
-            where_string = " AND ".join(where)
+            where_string = self._build_where_clause(where_keys)
+            where_values = where_values[0]
         elif isinstance(item, list) and isinstance(where, list) and where and isinstance(where[0], dict):   # 前后都是列表
             # 批量更新 不能用其它情况 只能用 xxx=xxx  多个条件也得，但是一定是等值
             assert len(set(map(lambda x: len(x), where))) == 1, "批量更新,where位置的元素长度不一致"
@@ -149,23 +168,32 @@ class SqlString(object):
                 if not other_keys:
                     other_keys = round_key
                 where_values.append(round_value)
-            where_string = " AND ".join(map(lambda x: f"`{x}` = %s", other_keys))
+            where_string = self._build_where_clause(other_keys)
+        elif isinstance(where, list) and where and isinstance(where[0], str):
+            where_string = " AND ".join(where)
         elif isinstance(where, str):
             where_string = where
         else:
             raise Exception(f"错误的参数值类型: item{type(item)} where{type(where)}")
 
-        file_string = ", ".join(map(lambda x: f"`{x}` = %s", keys))
+        file_string = ", ".join(f"{self._quote_identifier(key)} = %s" for key in keys)
         base_update = "UPDATE"
 
         new_values = []
         if where_values:
-            for ind, value in enumerate(values):
-                new_values.append(value + where_values[ind])
+            if isinstance(item, dict):
+                new_values = [values[0] + where_values]
+            else:
+                for ind, value in enumerate(values):
+                    new_values.append(value + where_values[ind])
         else:
             new_values = values
         result_where = "" if not where_string else f" WHERE {where_string}"
-        return f"{base_update} {table_name or self.table_name} SET {file_string}{result_where};", new_values
+        return (
+            f"{base_update} {self._quote_identifier(table_name or self.table_name)} "
+            f"SET {file_string}{result_where};",
+            new_values,
+        )
 
     @staticmethod
     def __clear_string(string: str) -> str:
@@ -203,7 +231,7 @@ class SqlString(object):
         self.check_table_name(table_name)
         if not keys:
             return None
-        base_create = f"CREATE TABLE `{table_name or self.table_name}`"
+        base_create = f"CREATE TABLE {self._quote_identifier(table_name or self.table_name)}"
         # key_string, value_string = self.__handle_create_data(keys, values)
         key_string = self.__handle_create_data(keys)
         if key_string == "":
@@ -211,14 +239,16 @@ class SqlString(object):
         insert_string = f"{base_create} ({self._handle_key(key_string)}) ENGINE={engine} DEFAULT CHARSET={charset};"
         return self.__clear_string(insert_string)
 
-    def replace(self, keys: Union[dict, list, tuple], values: list = None, table_name: str = None) -> Optional[str]:
+    def replace(
+            self, keys: Union[Mapping[str, any], List[Mapping[str, any]]], values: list = None, table_name: str = None
+    ) -> Tuple[str, List[any]]:
         """
         不确定是否可以用 <<<
         """
         self.check_table_name(table_name)
-        string = self.insert(keys, values, table_name=table_name)
-        string = string.replace('INSERT', 'REPLACE')
-        return string
+        _ = values
+        string, insert_values = self.insert(keys, table_name=table_name)
+        return string.replace('INSERT', 'REPLACE', 1), insert_values
 
     def delete(self, where: Union[dict, str] = None, table_name: str = None) -> Optional[str]:
         """
@@ -227,16 +257,19 @@ class SqlString(object):
         :param table_name: 表名 优先级高于全局那个
         """
         self.check_table_name(table_name)
-        base_delete = f"DELETE FROM {table_name or self.table_name}"
+        base_delete = f"DELETE FROM {self._quote_identifier(table_name or self.table_name)}"
         if not where:
             return base_delete + ";"
         base_delete += " WHERE "
         if isinstance(where, dict):
+            clauses = []
             for key, value in where.items():
-                base_delete += (f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = '
-                                f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)} '
-                                f'AND ')
-            base_delete = base_delete.rstrip(' AND ') + ";"
+                quoted_key = self._quote_identifier(key)
+                if value is None:
+                    clauses.append(f"{quoted_key} IS NULL")
+                else:
+                    clauses.append(f"{quoted_key} = {self._format_direct_value(value)}")
+            base_delete += " AND ".join(clauses) + ";"
         elif isinstance(where, str):
             base_delete += where + ";"
         else:
@@ -248,7 +281,7 @@ class SqlString(object):
         这个是查询键值在不在mysql中,一般推荐用**主键** 如果用其它键就需要加索引了
         """
         self.check_table_name(table_name)
-        base_sql = f"SELECT 1 FROM {table_name or self.table_name} WHERE "
+        base_sql = f"SELECT 1 FROM {self._quote_identifier(table_name or self.table_name)} WHERE "
         if isinstance(where, dict):
             base_sql = base_sql + self._handle_where_dict(where)
         elif isinstance(where, str):
@@ -266,7 +299,7 @@ class SqlString(object):
         只适用于全局统计 可以加条件 但是不适合 查询条件group 之类的统计
         """
         self.check_table_name(table_name)
-        base_sql = f"SELECT COUNT(*) FROM {table_name or self.table_name}"
+        base_sql = f"SELECT COUNT(*) FROM {self._quote_identifier(table_name or self.table_name)}"
         if where is None:
             return f"{base_sql};"
 
@@ -306,30 +339,21 @@ class SqlString(object):
     def _handle_value(item: Union[str, list, tuple, dict, set], *, decorate: bool = True):
         if not isinstance(item, str):
             item = str(item)
-
-        base_string = ""
-        last_word = ""
-        for word in item:
-            if word == "'" and last_word == "\\":
-                word = "\\\\'"
-            elif word == "'":
-                word = "\\'"
-            base_string += word
-            last_word = word
+        base_string = item.replace("\\", "\\\\").replace("'", "\\'")
 
         if not decorate:
             return base_string
-        else:
-            return repr(base_string)  # 这里好像是sqlite需要的格式
+        return f"'{base_string}'"
 
     def _handle_where_dict(self, where: dict) -> str:
-        base_string = ""
+        clauses = []
         for key, value in where.items():
-            base_string += f'{key if key.upper() not in MysqlKeywordsList else f"`{key}`"} = ' \
-                           f'{value if isinstance(value, (int, float, bool)) or value is None else self._handle_value(value)} ' \
-                           f'AND '
-        base_string = base_string.rstrip(' AND ') + ";"
-        return base_string
+            quoted_key = self._quote_identifier(key)
+            if value is None:
+                clauses.append(f"{quoted_key} IS NULL")
+            else:
+                clauses.append(f"{quoted_key} = {self._format_direct_value(value)}")
+        return " AND ".join(clauses) + ";"
 
 
 if __name__ == "__main__":
@@ -340,4 +364,3 @@ if __name__ == "__main__":
     # print(base.update({"a": 1, "b": 2}, "c IS NULL AND d > 50"))
     # print(base.update({"a": 1, "b": 2}, ["c IS NULL", "d > 50"]))
     # print(base.update([{"a": 1}, {"a": 2}, {"a": 3}], [{"d": 5}, {"d": 1}, {"d": 10}]))
-

@@ -37,8 +37,10 @@ class LiteSpider(LiteRequest, Thread):
     spider_name: str = "Spider"
 
     def __init__(self, thread_num: int = 1):
-        super(LiteSpider, self).__init__()
-        assert isinstance(thread_num, int), TypeError
+        if not isinstance(thread_num, int):
+            raise TypeError("thread_num 需要是 int 类型")
+        LiteRequest.__init__(self)
+        Thread.__init__(self)
         self.thread_num = thread_num
 
     def _buffer_task(self):
@@ -53,5 +55,3 @@ class LiteSpider(LiteRequest, Thread):
         spider.run()
         """
         pass
-
-

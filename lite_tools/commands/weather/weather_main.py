@@ -66,7 +66,8 @@ def get_weather(city: str = None, geo_id: str = None):
 
 
 def get_city():
-    base_root = get_goal_dir("weather", "cities.json", "http://static.litetools.top/source/json/cities.json")
+    base_root = get_goal_dir("weather", "cities.json",
+                             "https://static.litetools.top/source/json/cities.json")
     if not os.path.exists(base_root):
         logger.warning("字典源数据获取异常...")
         return

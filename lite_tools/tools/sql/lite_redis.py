@@ -184,8 +184,7 @@ class LiteRedis:
                 # _redis.from_url(path, decode_responses=True) # 我这里不这么运行 因为我要自己封装
                 self.read_url(path)
             else:
-                logger.warning("path只支持 json/yaml 格式文件")
-                exit(0)
+                raise ValueError("path只支持 json/yaml 文件或 redis:// URL")
         self._redis = self._connect_redis(self.host, self.db, self.password, self.port)
         self.keep_waiting = keep_waiting
         self.timeout = timeout

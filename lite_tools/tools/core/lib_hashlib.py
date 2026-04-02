@@ -19,6 +19,22 @@ from lite_tools.exceptions.StringExceptions import BadModeException
 __ALL__ = ["get_md5", "get_sha", "get_sha3"]
 
 
+_SHA_FACTORIES = {
+    1: sha1,
+    224: sha224,
+    256: sha256,
+    384: sha384,
+    512: sha512,
+}
+
+_SHA3_FACTORIES = {
+    224: sha3_224,
+    256: sha3_256,
+    384: sha3_384,
+    512: sha3_512,
+}
+
+
 def get_md5(s: Union[str, bytes, int, float, List[int]], mode: Literal[16, 32] = 32, up: bool = False, encoding='utf-8',
             **kwargs) -> str:
     """
@@ -64,7 +80,7 @@ def get_sha(s: Union[str, bytes, int, float], mode: Literal[1, 224, 256, 384, 51
     if mode not in [1, 224, 256, 384, 512]:
         raise BadModeException
 
-    sha_obj = eval(f"sha{mode}()")
+    sha_obj = _SHA_FACTORIES[mode]()
     try:
         if isinstance(s, (str, int, float)):
             sha_obj.update(str(s).encode(encoding))
@@ -86,7 +102,7 @@ def get_sha3(s: Union[str, bytes, int, float], mode: Literal[224, 256, 384, 512]
     if mode not in [224, 256, 384, 512]:
         raise BadModeException
 
-    sha3_obj = eval(f"sha3_{mode}()")
+    sha3_obj = _SHA3_FACTORIES[mode]()
     try:
         if isinstance(s, (str, int, float)):
             sha3_obj.update(str(s).encode(encoding))

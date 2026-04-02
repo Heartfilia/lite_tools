@@ -28,7 +28,6 @@ return int(out.split()[0])
 -------------------------------------------------------------------------
 """
 import os
-import subprocess
 from itertools import takewhile, repeat
 
 from lite_tools.utils.lite_dir import lite_tools_dir
@@ -68,36 +67,27 @@ class LiteLogFile(object):
         """
         传入要记录的信息就好了 不用记录时间点 我这里有记录
         """
-        tag = self._get_echo_tag()
-        if os.name == "nt":
-            trans_message = message.replace('^', '^^').replace(
-                '>', '^>').replace(' ', '^ ').replace('|', '^|').replace('&', '^&').replace(
-                '"', '^"').replace("'", "^'")
-        else:
-            trans_message = message.replace("'", "`")   # 单引号有问题我给换成这个符号了其它的暂时没啥大问题
-        win_flag = '^' if os.name == 'nt' else ''
-        string = f'[{get_time(fmt=True)}]{win_flag} {trans_message}'
-        subprocess.call(
-            f"echo {string if os.name == 'nt' else repr(string)} {tag} {self.log_path}",
-            shell=True,
-        )
+        content = f"[{get_time(fmt=True)}] {message}\n"
+        with open(self.log_path, self._get_write_mode(), encoding=self._get_encoding()) as fp:
+            fp.write(content)
 
     def _create_new_file(self, folder_name: str, file_name: str):
         """创建文件位置"""
         file_path = self._get_file_path(folder_name, file_name)
         if not os.path.exists(file_path):
-            if not self.encoding:
-                encoding = 'gb2312' if os.name == "nt" else 'utf-8'
-            else:
-                encoding = self.encoding
-            with open(file_path, 'w', encoding=encoding) as f:  # 不调用其它的创建方案 为了兼容...
+            with open(file_path, 'w', encoding=self._get_encoding()) as f:  # 不调用其它的创建方案 为了兼容...
                 f.write("")
         return file_path
 
-    def _get_echo_tag(self):
-        """echo命令用 文件超长要调整输出模式"""
+    def _get_write_mode(self):
+        """文件超长时重置，保持原来的循环覆盖语义。"""
         line_num = count_lines(self.log_path, encoding=self.encoding)
-        return ">" if line_num > 9999 else ">>"   # 第10000行调整模式
+        return "w" if line_num > 9999 else "a"   # 第10000行调整模式
+
+    def _get_encoding(self) -> str:
+        if not self.encoding:
+            return 'gb2312' if os.name == "nt" else 'utf-8'
+        return self.encoding
 
     @staticmethod
     def _get_file_path(folder_name: str, file_name: str):

@@ -61,7 +61,7 @@ def _print_base():
     print_info += "  fresh          更新一些lite-tools需要的资源 可以后跟具体参数\n"
     print_info += "  say            加解密:默认 <bear>兽说 <morse>摩斯\n"
     # print_info += "  acg            更多详情见 -h 默认输出今日视频记录(没搞完但是可以体验基础操作没有同步更新操作)\n"
-    # print_info += "  ball           获取彩票详情\n"   # 这里先不提供了 目前要学习其他的 不搞这个地方了
+    print_info += "  ball           获取彩票详情\n"
     print_info += "  news           获取近日热闻,新闻列表 后面可以跟 -h 获取更多操作\n"
     print_info += "  today          获取当天黄历 后接`history`可以获取今日往事 接`oil`获取今日油价\n"
     print_info += "  weather        默认获取本地天气信息 跟 -h 获取更多操作\n"
@@ -86,11 +86,15 @@ def _get_last_check_version(fun):
         version_path = os.path.join(lite_tools_dir(), ".version")
         if not os.path.exists(version_path):
             return fun()   # 不存在 需要重新获取的
-        with open(version_path, "r", encoding='utf-8') as fp:
-            version_log = fp.read()  # "时间|版本"    至少缓存10分钟 10分钟内有变动不提示
-        t, v = version_log.split("|")
-        if get_time() - int(t) >= 600:  # 如果现在的时间比缓存的时间相差超过10分钟 将重新请求缓存
-            return v
+        try:
+            with open(version_path, "r", encoding='utf-8') as fp:
+                version_log = fp.read()  # "时间|版本"    至少缓存10分钟 10分钟内有变动不提示
+            t, v = version_log.split("|", 1)
+            if get_time() - int(t) < 600:
+                return v
+        except (OSError, ValueError):
+            pass
+        return fun()
     return wrap
 
 
@@ -108,6 +112,9 @@ def _get_version():
 
 
 def check_new_version(check: bool = True):
+    if not check:
+        return
+
     def sure_version(version: str):
         return tuple(map(lambda x: int(x), version.split(".")))
     online_last_stable_version = _get_version()
@@ -228,7 +235,9 @@ def trans_files(_, *args):
         logger.warning("trans 需要一些额外的包[reportlab][Pillow] 也可以使用安装>> lite-tools[all]")
         sys.exit(0)
     else:
-        mode_args = re.search(r"-m\s+(pdf)", " ".join(args)) or re.search(r"--mode\s+(pdf)", " ".join(args))
+        mode_args = re.search(r"-m\s+(pdf|excel|pic|word)", " ".join(args)) or re.search(
+            r"--mode\s+(pdf|excel|pic|word)", " ".join(args)
+        )
         if mode_args:
             mode = mode_args.group(1)
             if mode == "pdf":
@@ -239,6 +248,8 @@ def trans_files(_, *args):
                 pic_run(args)
             elif mode == "word":
                 word_run(args)
+            else:
+                logger.warning(f"暂不支持的 trans 模式: {mode}")
         else:
             pdf_run(args)
 
@@ -282,7 +293,7 @@ def handle_video_logs(_, *args):
 
 
 def execute():
-    args = sys.argv
+    args = sys.argv[:]
     if len(args) < 2:
         _print_base()
         check_new_version()
@@ -295,5 +306,4 @@ def execute():
 
 
 if __name__ == "__main__":
-    # _print_base()
-    check_new_version()
+    execute()

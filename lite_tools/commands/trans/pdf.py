@@ -96,11 +96,10 @@ def lite_pdf(file_dir: str, out_name: str, width: int = -1, height: int = -1) ->
 			my_pdf = _generate_pdf(out_dir)
 			first_pic = False
 
-		x = 0
-		y = 0
-		if not my_pdf:
-			print("初始话pdf模板错误,可以尝试手动添加模板尺寸")
-			exit(0)
+			x = 0
+			y = 0
+			if not my_pdf:
+				raise ValueError("初始化 pdf 模板错误，可以尝试手动添加模板尺寸")
 		if set_size:  # 如果是设置了尺寸 需要做到适配尺寸
 			if img_w > width or img_h > height:  # 如果两个边有一边比预设的大
 				w_rate = round(width / img_w, 2)
@@ -159,8 +158,7 @@ def _check_legal(out_dir):
 	elif out_dir and out_dir.endswith('.pdf'):
 		pass
 	else:
-		logger.warning("检查输出的文件路径是否正确")
-		sys.exit(0)
+		raise ValueError("检查输出的文件路径是否正确")
 	# 判断字符是否合法
 	if not re.search(r"[?:*\"<>|']+", out_dir) or re.search(r"^\w:\\", out_dir) or re.search(r"^\w:/", out_dir):
 		return out_dir
@@ -199,16 +197,14 @@ def _judge_file_or_folder(location_name: str, out_name: str = None):
 	elif os.path.exists(os.path.join(cmd_cwd, location_name)):
 		full_path = os.path.join(cmd_cwd, location_name)
 	else:
-		logger.warning("需要传入准确的文件或者文件夹路径或者名称")
-		sys.exit(0)
+		raise ValueError("需要传入准确的文件或者文件夹路径或者名称")
 
 	if out_name:
 		new_out_name = _has_out_name(cmd_cwd, out_name)
 	else:
 		new_out_name = _not_have_out_name(cmd_cwd, full_path)
 	if not new_out_name:
-		logger.warning("需要传入准确的文件或者文件夹路径或者名称")
-		sys.exit(0)
+		raise ValueError("需要传入准确的文件或者文件夹路径或者名称")
 	result = new_out_name if not re.search(r"^\.\S+", new_out_name) else f"lite_pdf_{new_out_name}"
 
 	return result
@@ -254,7 +250,11 @@ def pdf_run(args):
 
 		if _output_string:
 			out_dir = _output_string.group(1)
-		output_info = _judge_file_or_folder(input_info, out_dir)
+		try:
+			output_info = _judge_file_or_folder(input_info, out_dir)
+		except ValueError as err:
+			logger.warning(str(err))
+			return
 
 		if _width_string:
 			width_info = _width_string.group(1)
@@ -267,7 +267,11 @@ def pdf_run(args):
 				default_height = int(height_info)
 
 		# 注意文件要是输出的时候本地已经有同名的文件了得加后缀
-		lite_pdf(input_info, output_info, default_width, default_height)
+		try:
+			lite_pdf(input_info, output_info, default_width, default_height)
+		except ValueError as err:
+			logger.warning(str(err))
+			return
 
 	else:
 		_print_pdf_base()

@@ -22,6 +22,7 @@ from typing import Literal, Union, TypeVar, Mapping
 
 import httpx
 import requests
+from requests.cookies import RequestsCookieJar
 
 from lite_tools.tools.time.lite_time import get_time
 
@@ -92,12 +93,16 @@ class LiteResponse:
     body: ...
     decode: str   # 这里还不确定怎么弄
     request_mode: str = 'requests'
-    cookies: Union[requests.Response.cookies, httpx.Response.cookies]
+    cookies: Union[RequestsCookieJar, httpx.Cookies]
     headers: Mapping[str, T]
     history: LiteHistory
 
-    def __new__(cls):
-        cls.response_time = get_time(instance=float)
+    def __new__(cls, *args, **kwargs):
+        _ = args, kwargs
+        return super().__new__(cls)
+
+    def __init__(self):
+        self.response_time = get_time(instance=float)
 
     def __str__(self):
         return f"<Response [{self.status_code}]>"
@@ -115,10 +120,12 @@ class LiteResponse:
 class LiteRequest(BaseModel):
     request_time: float  # ms 单位 请求开始的时间
 
-    def __new__(cls):
-        cls.request_time = get_time(instance=float)
+    def __new__(cls, *args, **kwargs):
+        _ = args, kwargs
+        return super().__new__(cls)
 
     def __init__(self):
+        self.request_time = get_time(instance=float)
         self._progress_list = []
 
     def send(self, url,

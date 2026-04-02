@@ -2,7 +2,7 @@
 # @Time   : 2021-04-06 15:50
 # @Author : Lodge
 name = "lite-tools"
-__ALL__ = [
+__all__ = [
     "get_lan",       # 获取内网ip
     "get_wan",       # 获取外网ip
     "check_proxy",   # 校验代理是否有效
@@ -100,4 +100,5 @@ from lite_tools.utils import VERSION
 
 version = VERSION
 
-__ALL__ += ["5dm"]  # 这个是给我自己用的
+__all__ += ["5dm"]  # 这个是给我自己用的
+__ALL__ = __all__

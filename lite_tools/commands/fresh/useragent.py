@@ -12,7 +12,8 @@ from lite_tools.utils.json_download import get_goal_dir
 
 
 def fresh_useragent():
-    ua_path = get_goal_dir("browser", "ua_version.json", "http://static.litetools.top/source/json/useragent.json")
+    ua_path = get_goal_dir("browser", "ua_version.json",
+                           "https://static.litetools.top/source/json/useragent.json")
     if os.path.exists(ua_path):
         with open(ua_path, "r", encoding='utf-8') as fp:
             file_hash = get_md5(fp.read())
@@ -32,10 +33,10 @@ def fresh_useragent():
 
 @try_catch(log=False, retry=1)
 def get_info():
-    # http://static.litetools.top/source/json/useragent.json
+    # https://static.litetools.top/source/json/useragent.json
     # https://cdn.jsdelivr.net/npm/litetools/tools/useragent.json
     resp = requests.get(
-        "http://static.litetools.top/source/json/useragent.json",
+        "https://static.litetools.top/source/json/useragent.json",
         headers={"user-agent": f"python-lite-tools/{VERSION} Based On Script Engine"},
         timeout=5
     )

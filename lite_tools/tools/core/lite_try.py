@@ -23,8 +23,10 @@ def combine_retry(exc: Union[List[Exception], Exception, type]) -> T:
     if isinstance(exc, tuple):
         not_retry_exception = exc
     elif isinstance(exc, (list, set)):
-        not_retry_exception = tuple(exc)
-    elif issubclass(exc, Exception):
+        not_retry_exception = tuple(
+            item for item in exc if isinstance(item, type) and issubclass(item, Exception)
+        )
+    elif isinstance(exc, type) and issubclass(exc, Exception):
         not_retry_exception = exc
     else:
         not_retry_exception = BaseRetryException
@@ -33,6 +35,8 @@ def combine_retry(exc: Union[List[Exception], Exception, type]) -> T:
 
 
 def get_params_args(params):
+    if not params:
+        return []
     if isinstance(params[0], int):  # (1, 2)  这种格式的
         for item in params:
             if not isinstance(item, int):
@@ -47,12 +51,14 @@ def get_params_args(params):
 
 
 def get_params_kwargs(params):
+    if not params:
+        return []
     if isinstance(params[0], str):  # ("data", "args")  这种格式的
         for item in params:
             if not isinstance(item, str):
                 return []
         return params
-    if isinstance(params[1], list):  # ([1, 23], ["e"])  # 这格式的
+    if len(params) > 1 and isinstance(params[1], list):  # ([1, 23], ["e"])  # 这格式的
         for item in params[1]:
             if not isinstance(item, str):
                 return []

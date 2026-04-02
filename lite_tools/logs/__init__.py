@@ -6,7 +6,45 @@ import re
 import sys
 import traceback
 
-from loguru import logger
+try:
+    from loguru import logger
+except ImportError:
+    import logging
+
+    class _LoggerAdapter:
+        def __init__(self):
+            self._logger = logging.getLogger("lite_tools")
+            if not self._logger.handlers:
+                handler = logging.StreamHandler(sys.stderr)
+                handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)-8s | %(message)s"))
+                self._logger.addHandler(handler)
+            self._logger.setLevel(logging.INFO)
+
+        def add(self, *args, **kwargs):
+            return 0
+
+        def remove(self, *args, **kwargs):
+            return None
+
+        def opt(self, *args, **kwargs):
+            return self
+
+        def success(self, message):
+            self._logger.info(message)
+
+        def debug(self, message):
+            self._logger.debug(message)
+
+        def warning(self, message):
+            self._logger.warning(message)
+
+        def error(self, message):
+            self._logger.error(message)
+
+        def critical(self, message):
+            self._logger.critical(message)
+
+    logger = _LoggerAdapter()
 
 
 def my_logger(file_root, log_function, log_line, message, log_level="error"):
@@ -73,4 +111,3 @@ def get_using_line_info(limit: int = 7):
     except Exception as err:
         _ = err
         return "", ""
-

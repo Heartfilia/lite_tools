@@ -397,42 +397,45 @@ def _get_fmt_time(time_limit: tuple):
     """
     因为最差都会有一个年
     """
+    if not time_limit:
+        raise ErrorTimeRange("时间范围不能为空，至少需要传入年份")
+
     year = time_limit[0]
-    assert (isinstance(year, int) and 1970 <= year
-            ) or (
+    if not ((isinstance(year, int) and 1970 <= year) or (
             isinstance(year, str) and year.isdigit() and len(year) >= 4 and "1970" <= year
-    ), ErrorTimeRange("`年`只可以为大于等于1970年的数字字面量,并且是4位数的值")
+    )):
+        raise ErrorTimeRange("`年`只可以为大于等于1970年的数字字面量,并且是4位数的值")
 
     month = time_limit[1] if len(time_limit) >= 2 else 1
-    assert (isinstance(month, int) and 1 <= month <= 12
-            ) or (
+    if not ((isinstance(month, int) and 1 <= month <= 12) or (
             isinstance(month, str) and month.isdigit() and 1 <= int(month) <= 12
-    ), ErrorTimeRange(f"月只可以为是 1-12 整型, 你写的`月`是: [{month}]")
+    )):
+        raise ErrorTimeRange(f"月只可以为是 1-12 整型, 你写的`月`是: [{month}]")
 
     day = time_limit[2] if len(time_limit) >= 3 else 1
     this_month_max_day = _check_month_day_max(int(year), int(month))
-    assert (isinstance(day, int) and 1 <= day <= this_month_max_day
-            ) or (
+    if not ((isinstance(day, int) and 1 <= day <= this_month_max_day) or (
             isinstance(day, str) and day.isdigit() and 1 <= int(day) <= this_month_max_day
-    ), ErrorTimeRange(f"{year}年{month}月这个月的日只可以为是 1-{this_month_max_day} 整型, 你写的`日`是: [{day}]")
+    )):
+        raise ErrorTimeRange(f"{year}年{month}月这个月的日只可以为是 1-{this_month_max_day} 整型, 你写的`日`是: [{day}]")
 
     hour = time_limit[3] if len(time_limit) >= 4 else 0
-    assert (isinstance(hour, int) and 0 <= hour <= 23
-            ) or (
+    if not ((isinstance(hour, int) and 0 <= hour <= 23) or (
             isinstance(hour, str) and hour.isdigit() and 0 <= int(hour) <= 23
-    ), ErrorTimeRange(f"时只可以为是 0-23 整型, 你写的`时`是: [{hour}]")
+    )):
+        raise ErrorTimeRange(f"时只可以为是 0-23 整型, 你写的`时`是: [{hour}]")
 
     minute = time_limit[4] if len(time_limit) >= 5 else 0
-    assert (isinstance(minute, int) and 0 <= minute <= 59
-            ) or (
+    if not ((isinstance(minute, int) and 0 <= minute <= 59) or (
             isinstance(minute, str) and minute.isdigit() and 0 <= int(minute) <= 59
-    ), ErrorTimeRange(f"分只可以为是 0-59 整型, 你写的`分`是: [{minute}]")
+    )):
+        raise ErrorTimeRange(f"分只可以为是 0-59 整型, 你写的`分`是: [{minute}]")
 
     second = time_limit[5] if len(time_limit) == 6 else 0
-    assert (isinstance(second, int) and 0 <= second <= 59
-            ) or (
+    if not ((isinstance(second, int) and 0 <= second <= 59) or (
             isinstance(second, str) and second.isdigit() and 0 <= int(second) <= 59
-    ), ErrorTimeRange(f"秒只可以为是 0-59 整型, 你写的`秒`是: [{second}]")
+    )):
+        raise ErrorTimeRange(f"秒只可以为是 0-59 整型, 你写的`秒`是: [{second}]")
 
     return f"{year}-{month:>02}-{day:>02} {hour:>02}:{minute:>02}:{second:>02}"
 

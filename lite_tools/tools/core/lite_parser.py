@@ -55,14 +55,14 @@ def try_get(
     :return        : 如果取到则为值，否则为 default 设置的值 默认None
     """
     renderer = _judge_json(renderer, json, options)
-    if not renderer and isinstance(options, dict) and options.get('mode') == "file":
+    if renderer is None and isinstance(options, dict) and options.get('mode') == "file":
         # 这里是把json文件输出到本地文件的时候的情况
         return default
-    if not renderer:
+    if renderer is None:
         if log:
             line, fl = get_using_line_info()
             my_logger(fl, "try_get", line, f"这里需要传入字典或者json串 --> 调用出错->[{getters}]")
-        return expected_type
+        return default
     elif json is True or getters is None:
         # 如果是需要json字符串或者只是单纯想转换字符串 不要传对应值就好了
         return renderer
@@ -70,10 +70,9 @@ def try_get(
     if isinstance(getters, str):
         getters = symbol_encode(getters)
         for each_getter in getters.split("|"):    # 兼容 | 管道符号可以多个条件一起操作
-            origin_getter = trans_to_dict_rule(each_getter)
-            decode_getter = symbol_decode(origin_getter)
             try:
-                now_result = __main_try_get(renderer, lambda _: eval(decode_getter), default, expected_type, log)
+                getter_tokens = trans_to_dict_rule(each_getter)
+                now_result = __main_try_get(renderer, getter_tokens, default, expected_type, log)
             except Exception as err:
                 # 因为有些时候lambda 那里可能会出现问题
                 if log:
@@ -101,25 +100,43 @@ def symbol_decode(decode_string: str) -> str:
     decode_string = decode_string.replace(chr(64447), "[")
     decode_string = decode_string.replace(chr(64448), "]")
     decode_string = decode_string.replace(chr(64449), "|")
-    return "_" + decode_string
+    return decode_string
 
 
 def trans_to_dict_rule(origin_string: str):
-    result = ""
+    result = []
     for string in origin_string.split('.'):
-        if "[" not in string:
-            result += f"['{string}']"
-        elif "[" in string and string.endswith("]"):
-            if not string.startswith("["):
-                result += re.sub(r"(^[^\[]+)", r"['\1']", string)
+        if not string:
+            continue
+        while string:
+            if string.startswith("["):
+                end = string.find("]")
+                if end == -1:
+                    raise ValueError(f"错误的 getter: {origin_string}")
+                index_value = string[1:end]
+                if re.fullmatch(r"-?\d+", index_value):
+                    result.append(int(index_value))
+                else:
+                    result.append(symbol_decode(index_value))
+                string = string[end + 1:]
+                continue
+
+            if "[" in string:
+                head, string = string.split("[", 1)
+                if head:
+                    result.append(symbol_decode(head))
+                string = "[" + string
             else:
-                result += string
+                result.append(symbol_decode(string))
+                string = ""
     return result
 
 
 def __main_try_get(renderer: Any, getter: Any, default=None, expected_type=None, log: bool = False):
     try:
-        result = getter(renderer)  # lambda function
+        result = renderer
+        for each_getter in getter:
+            result = result[each_getter]
         if expected_type is None or isinstance(result, expected_type):
             return result
     except (AttributeError, KeyError, TypeError, IndexError) as e:
@@ -153,10 +170,10 @@ def try_key(renderer, getter, mode: Literal['key', 'value'] = "key", expected_ty
         )   --> 只处理等值和不等值 当然其他的也能弄 后面再添加规则
     """
     renderer = _judge_json(renderer, options=options)
-    if not renderer and isinstance(options, dict) and options.get('mode') == "file":
+    if renderer is None and isinstance(options, dict) and options.get('mode') == "file":
         # 这里是把json文件输出到本地文件的时候的情况
         return []
-    if not renderer:
+    if renderer is None:
         if log:
             line, fl = get_using_line_info()
             my_logger(fl, "try_key", line, f"请传入标准的json串或者python字典数据")

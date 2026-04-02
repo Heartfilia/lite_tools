@@ -10,7 +10,8 @@ from lite_tools.tools.core.lite_string import color_string
 
 
 def get_dict():
-    base_root = get_goal_dir("dict", "dictionary.json", "http://static.litetools.top/source/json/dictionary.json")
+    base_root = get_goal_dir("dict", "dictionary.json",
+                             "https://static.litetools.top/source/json/dictionary.json")
     if not os.path.exists(base_root):
         logger.warning("字典源数据获取异常...")
         return

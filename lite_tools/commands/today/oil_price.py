@@ -22,14 +22,18 @@ from lxml import etree
 from prettytable import PrettyTable
 
 import requests
-# from lite_tools.utils.tls import requests
-from lite_tools.tools.core.lite_ua import get_ua
-from lite_tools.tools.core.lite_try import try_catch
+
 from lite_tools.tools.core.lite_string import color_string
 from lite_tools.commands.today.today_utils import check_cache
 
 
-@try_catch(log="本功能为在线功能,需要网络。如有网络不要频繁请求，[如果网页数据版式有改动,这样的话这个功能暂时就废了需要修复]")
+_OIL_URL = "https://www.tuanyou.net/youjia/"
+
+
+def _clean_text(value: str) -> str:
+    return " ".join(str(value).split())
+
+
 def print_oil():
     """
     今日全国油价
@@ -41,42 +45,42 @@ def print_oil():
 
 @check_cache
 def get_html_info(mode: str = "oil"):
-    # _ = mode
-    # resp = requests.get(
-    #     'http://www.qiyoujiage.com/',
-    #     headers={
-    #         "user-agent": get_ua(),
-    #         "Referer": "http://www.qiyoujiage.com",
-    #         "Host": "www.qiyoujiage.com",
-    #     }
-    # )
-    # resp.encoding = resp.apparent_encoding
-    # return resp.text
-
-    # https://www.tuanyou.net/youjia/   <<<-- 换成这个试试
-    return ""
+    _ = mode
+    resp = requests.get(
+        _OIL_URL,
+        headers={"user-agent": "Mozilla/5.0"},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    resp.encoding = resp.apparent_encoding or resp.encoding
+    return resp.text
 
 
 def parse_oil_data(html_obj):
-    new_msg = "".join(html_obj.xpath('//div[@id="left"]/div[1]//text()')[:2])
-    print(color_string(f"【今日油价】：{new_msg}"))
-    tb_base = PrettyTable(["地区", "92#", "95#", "98#", "0#", " 地区", " 92#", " 95#", " 98#", " 0#"])
-    city_nums = html_obj.xpath('//ul[@class="ylist"]/li[position() > 5]')
-    temp_save = []
-    for num in range(0, len(city_nums), 5):
-        name = "".join(city_nums[num].xpath('./a/text()'))
-        _92 = "".join(city_nums[num+1].xpath('./text()'))
-        _95 = "".join(city_nums[num+2].xpath('./text()'))
-        _98 = "".join(city_nums[num+3].xpath('./text()'))
-        _0 = "".join(city_nums[num+4].xpath('./text()'))
-        if len(temp_save) < 10:
-            temp_save.extend([name, _92, _95, _98, _0])
-        if len(temp_save) == 10:
-            tb_base.add_row(temp_save)
-            temp_save = []
-    if len(temp_save) == 5:
-        temp_save.extend(["", "", "", "", ""])
-        tb_base.add_row(temp_save)
+    h1 = _clean_text("".join(html_obj.xpath("//h1//text()"))).replace("北京市", "全国")
+    summary_rows = [_clean_text("".join(row.xpath(".//text()"))) for row in html_obj.xpath("//table[1]//tr")]
+    summary_rows = [row for row in summary_rows if row]
+    summary_text = " | ".join(summary_rows[:4])
+    print(color_string(f"【今日油价】：{h1}"))
+    if summary_text:
+        print(color_string(summary_text))
+
+    tb_base = PrettyTable(["地区", "92#", "95#", "98#", "0#", "地区 ", "92# ", "95# ", "98# ", "0# "])
+    city_rows = []
+
+    for item in html_obj.xpath("/html/body/div/div[5]/div[7]/div[2]/li"):
+        values = [_clean_text("".join(link.xpath(".//text()"))) for link in item.xpath("./a")]
+        values = [value for value in values if value]
+        if len(values) >= 5:
+            if values[0].startswith("地区") or values[1].startswith("92号"):
+                continue
+            city_rows.append(values[:5])
+
+    for index in range(0, len(city_rows), 2):
+        left = city_rows[index]
+        right = city_rows[index + 1] if index + 1 < len(city_rows) else ["", "", "", "", ""]
+        tb_base.add_row(left + right)
+
     print(tb_base)
 
 

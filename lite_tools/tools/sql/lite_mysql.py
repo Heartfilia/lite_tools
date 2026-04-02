@@ -80,7 +80,7 @@ class MySql:
             self._init_mysql()
             self.log = self.config.log
         else:
-            raise ValueError
+            raise ValueError("需要传入 pool 或 config，并且 config 必须是 MySqlConfig 或 dict")
 
         self.sql_base = SqlString(self.table_name)
         self.count_conf = CountConfig()
@@ -152,8 +152,11 @@ class MySql:
                 如果是多行 [[], [], []] 里面的每一小条
         fetch-many 的时候需要配置  buffer=xxx 默认1000
         """
-        assert sql, f"传入了空sql语句--> sql:[ {sql} ]"
-        assert self._secure_check(sql), '删除操作终止!!!'
+        if not sql:
+            raise ValueError(f"传入了空sql语句--> sql:[ {sql} ]")
+        if not self._secure_check(sql):
+            raise PermissionError("删除操作终止!!!")
+        sql = sql.strip()
         mode = sql.upper()[0]   # 取第一个字母
         _start_time = time.perf_counter()
         conn = self.connection()
@@ -226,64 +229,74 @@ class MySql:
         """
         if self.cur == "stream" or self.cur == "dict_stream":
             yield from self.select_iter(sql, log=query_log, **kwargs)
+            return
         start_time = time.time()
         conn = self.connection()
         table_name = self._get_select_table_name(sql, **kwargs)
-        with conn.cursor() as cursor:  # 这里是有结果返回的
-            cursor.execute(sql)
-        if fetch == 'one':
-            item = cursor.fetchone()
-            items = [item]
-        elif fetch == "many":
-            if not isinstance(kwargs.get('buffer', 1000), int):
-                sql_log("需要设置的 buffer 为数字....", "error")
+        try:
+            with conn.cursor() as cursor:  # 这里是有结果返回的
+                cursor.execute(sql)
+                if fetch == 'one':
+                    item = cursor.fetchone()
+                    items = [item] if item is not None else []
+                elif fetch == "many":
+                    if not isinstance(kwargs.get('buffer', 1000), int):
+                        sql_log("需要设置的 buffer 为数字....", "error")
+                        return
+                    items = cursor.fetchmany(kwargs.get("buffer", 1000))
+                    for item in items:
+                        yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
+                    while items:
+                        items = cursor.fetchmany(kwargs.get("buffer", 1000))
+                        for item in items:
+                            yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
+                    return
+                else:
+                    items = cursor.fetchall()
+            end_time = time.time()
+            all_num = len(items)
+            if query_log is True:
+                sql_log(
+                    f"[{table_name} <{all_num}:{end_time-start_time:.3f}s>] - SELECT[{fetch}] SQL-> {sql}",
+                    "success",
+                )
+            if all_num == 0:  # 如果这次结果是 0 那就是没有数据了
+                if kwargs.get("_function_use") is True:
+                    raise IterNotNeedRun
                 return
-            items = cursor.fetchmany(kwargs.get("buffer", 1000))
+
             for item in items:
-                yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
-            while items:
-                items = cursor.fetchmany(kwargs.get("buffer", 1000))
-                for item in items:
+                if count is False:
                     yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
-            return
-        else:
-            items = cursor.fetchall()
-        conn.close()
-        end_time = time.time()
-        all_num = len(items)
-        if query_log is True:
-            sql_log(
-                f"[{table_name} <{all_num}:{end_time-start_time:.3f}s>] - SELECT[{fetch}] SQL-> {sql}",
-                "success",
-            )
-        if all_num == 0:  # 如果这次结果是 0 那就是没有数据了
-            if kwargs.get("_function_use") is True:
+                else:
+                    yield all_num, item[0] if len(item) == 1 and isinstance(item, tuple) else item
+                    all_num -= 1
+
+            if all_num < kwargs.get("_limit_num", 0):   # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
                 raise IterNotNeedRun
-            return
-
-        for item in items:
-            if count is False:
-                yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
-            else:
-                yield all_num, item[0] if len(item) == 1 and isinstance(item, tuple) else item
-                all_num -= 1
-
-        if all_num < kwargs.get("_limit_num", 0):   # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
-            raise IterNotNeedRun
+        finally:
+            conn.close()
 
     def select_iter(self, sql: str, args: Union[list, tuple] = None, log: bool = False, **kwargs):
         """
         这里属于流式的读取位置 这里只能fetchone
         max_num  一般用于测试 就是获取的数据量到了这个值后 就停止继续遍历
         """
-        assert sql, f"传入了空sql语句--> sql:[ {sql} ]"
+        if not sql:
+            raise ValueError(f"传入了空sql语句--> sql:[ {sql} ]")
         conn = self.connection()
-        if self.cur not in ["stream", "dict_stream"]:
+        if self.cur == "dict_stream":
+            cur = pymysql.cursors.SSDictCursor
+        elif self.cur == "stream":
             cur = pymysql.cursors.SSCursor
+        elif self.cur == "dict":
+            cur = pymysql.cursors.DictCursor
         else:
             cur = pymysql.cursors.Cursor
         table_name = self.table_name or self._get_select_table_name(sql)
         _start_time = time.perf_counter()
+        limit_num = kwargs.get("max_num")
+        local_line = 0
         try:
             with conn.cursor(cur) as cursor:
                 if args:    # 批量操作的时候
@@ -297,13 +310,14 @@ class MySql:
                 result = cursor.fetchone()
                 while result is not None:
                     _duration_time = time.perf_counter() - _start_time
+                    local_line += 1
                     ok = self.count_conf.add_line(table_name, "S", 1)
-                    yield result if len(result) > 1 else result[0]
-                    if (log or self.log) and (ok % 500 == 0):
+                    yield result if not (isinstance(result, tuple) and len(result) == 1) else result[0]
+                    if (log or self.log) and (local_line % 500 == 0):
                         sql_log(
-                            f"S[{table_name} <{_duration_time:.2f}s>] 程序运行 lines={ok} "
-                            f"avg_rate={ok/_duration_time:.3f} line/s")
-                    if ok >= kwargs.get("max_num", -1):
+                            f"S[{table_name} <{_duration_time:.2f}s>] 程序运行 lines={local_line} "
+                            f"avg_rate={local_line/_duration_time:.3f} line/s")
+                    if isinstance(limit_num, int) and limit_num >= 0 and local_line >= limit_num:
                         break
                     result = cursor.fetchone()
         except Exception as err:
@@ -311,11 +325,10 @@ class MySql:
         finally:
             conn.close()
             if log or self.log:
-                all_line = self.count_conf.get_line(table_name, "S")
                 _duration_time = time.perf_counter() - _start_time
                 sql_log(
-                    f"S[{table_name} <{_duration_time:.2f}s>] 运行结束 lines={all_line} "
-                    f"avg_rate={all_line / _duration_time:.3f} line/s", "info")
+                    f"S[{table_name} <{_duration_time:.2f}s>] 运行结束 lines={local_line} "
+                    f"avg_rate={local_line / (_duration_time or 1):.3f} line/s", "info")
 
     def exists(self, where: Union[dict, str], table_name: str = None) -> bool:
         """
@@ -517,9 +530,13 @@ class AioMySql:
     ):
         if not self._pool:
             await self.__init()
+        if not sql:
+            raise ValueError(f"传入了空sql语句--> sql:[ {sql} ]")
+        sql = sql.strip()
         if _log:
             sql_log(f"{sql=}  {args=}", "debug")
 
+        conn = None
         try:
             async with self._pool.acquire() as conn:
                 async with conn.cursor() as cursor:   # 默认返回dict
@@ -536,7 +553,7 @@ class AioMySql:
                     elif fetch == "one":
                         return await cursor.fetchone()
                     elif fetch == "many":
-                        return cursor.fetchmany(kwargs.get('buffer', 1000))
+                        return await cursor.fetchmany(kwargs.get('buffer', 1000))
                     else:
                         return await cursor.fetchall()
         except Exception as err:
@@ -545,7 +562,6 @@ class AioMySql:
                     f"{pretty_indent(sql)}"
                     f"\n------------------< sql end >---------------------\n"
                     f">>> {err} ", "error")
-            if not fetch:
+            if not fetch and conn is not None:
                 await conn.rollback()
                 return 0
-

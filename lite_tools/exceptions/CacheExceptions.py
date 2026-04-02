@@ -20,7 +20,10 @@
 """
 
 
-class QueueEmptyNotion(Exception):
+from queue import Empty
+
+
+class QueueEmptyNotion(Empty):
     def __init__(self):
         pass
 

@@ -3,7 +3,6 @@ import re
 import socket
 import asyncio
 import platform
-import telnetlib3
 from typing import Tuple
 
 from lite_tools.logs import logger
@@ -123,6 +122,13 @@ async def check_proxy(proxy: str, timeout=3, log: bool = False) -> bool:
 
     ip, port = extract_info(proxy)
     if not ip or port == 0:
+        return False
+
+    try:
+        import telnetlib3
+    except ImportError:
+        if log:
+            print("缺少依赖 telnetlib3，无法校验代理")
         return False
 
     try:

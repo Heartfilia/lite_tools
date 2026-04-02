@@ -39,7 +39,7 @@ def _print_ball_option():
 
 @match_case
 def chose_now(_):
-    pass
+    _print_ball_option()
 
 
 @chose_now.register_all(["fuli", "fl", "福利"])
@@ -59,7 +59,8 @@ def get_gym_info(option):
 
 
 def ball_cmdline(args: list):
-    if args[1] in ["fuli", "tiyu"]:
-        chose_now(args[1])
-    else:
+    if len(args) <= 1 or args[1] in ["-h", "--help"]:
         _print_ball_option()
+        return
+
+    chose_now(args[1])

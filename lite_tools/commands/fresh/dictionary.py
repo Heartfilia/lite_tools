@@ -32,6 +32,6 @@ def fresh_dictionary():
 
 @try_catch(log=False)
 def get_info():
-    resp = requests.get("http://static.litetools.top/source/json/dictionary.json")
+    resp = requests.get("https://static.litetools.top/source/json/dictionary.json")
     data = resp.text
     return data
