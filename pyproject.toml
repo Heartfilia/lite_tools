@@ -1,6 +1,6 @@
 [project]
 name = "lite-tools"
-version = "0.4.14.4"    # 您可以根据实际的 记得utils.__init__里面也有
+dynamic = ["version"]
 description = "一些让你效率提升的小工具集合包[还在持续增加及优化]"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -81,3 +81,6 @@ include = [
     "lite_tools.tools.time",
     "lite_tools.utils"
 ]
+
+[tool.setuptools.dynamic]
+version = { attr = "lite_tools.version.VERSION" }
