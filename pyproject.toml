@@ -25,6 +25,7 @@ dependencies = [
     "requests",
     "redis[hiredis]>=4.5.0",
     "httpx>=0.28.1",
+    "colorama; sys_platform == 'win32'",
 ]
 
 [project.urls]
