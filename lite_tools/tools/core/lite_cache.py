@@ -27,6 +27,12 @@ import json
 import asyncio
 import inspect
 import threading
+import hashlib
+import math
+import uuid
+import weakref
+from datetime import date, datetime, time as datetime_time, timedelta
+from decimal import Decimal
 from queue import Queue, Empty
 from functools import wraps, partial
 from asyncio import iscoroutinefunction
@@ -37,7 +43,6 @@ import redis
 
 from lite_tools.logs import logger
 from lite_tools.tools.core.ip_info import get_lan
-from lite_tools.tools.core.lib_hashlib import get_md5
 from lite_tools.exceptions.CacheExceptions import QueueEmptyNotion
 
 
@@ -351,14 +356,18 @@ class LiteCacher:
         :param save_ip       是否需要记录当前内网ip
         """
         self._ip = get_lan() if save_ip else ""   # 存一下内网地址
-        if sync_redis:
+        if sync_redis is not None and async_redis is not None:
+            raise ValueError("sync_redis 和 async_redis 只能传入一个")
+        self._mid_hash = {}
+        self._memory_lock = threading.RLock()
+        self._receiver_tokens = {}
+        self._receiver_lock = threading.Lock()
+        if sync_redis is not None:
             self._mid = sync_redis    # 同步redis
             self._mode = 1
-            self._mid_hash = None
-        elif async_redis:   # 如果是同步方法 调用了这个 会默认走内存 不会走这里
+        elif async_redis is not None:   # 同步方法使用独立的内存缓存
             self._mid = async_redis   # 异步redis
             self._mode = 2
-            self._mid_hash = None
         else:
             self._mid_hash = dict()            # 内存
             self._mode = 0
@@ -385,19 +394,37 @@ class LiteCacher:
         内存 设置
         """
         cache_key = task_item['key']
-        if task_item['type'] == 1:   # 1-存
-            if task_item['value'] is None:
-                return
-            with self._lock:
-                self._mid_hash[cache_key] = (task_item["value"], time.perf_counter())
-        else:   # 0-取
-            if cache_key in self._mid_hash:
-                result, perf_counter = self._mid_hash[cache_key]
-                if time.perf_counter() - perf_counter < task_item['ttl']:
-                    return result
-                else:
-                    with self._lock:
-                        del self._mid_hash[cache_key]   # 移除过期的key
+        now = time.monotonic()
+        stored = None
+        if task_item['type'] == 1 and task_item['value'] is not None:
+            try:
+                stored = copy.deepcopy(task_item['value'])
+            except Exception:
+                return  # An uncopyable result must not break the wrapped call.
+        with self._memory_lock:
+            if task_item['type'] == 1:
+                if task_item['value'] is None:
+                    return
+                # Bound memory and prune entries even if they are never read.
+                maximum = self.kwargs.get("max_entries", 1024)
+                if len(self._mid_hash) >= maximum:
+                    for key, (_, expires) in list(self._mid_hash.items()):
+                        if expires <= now:
+                            self._mid_hash.pop(key, None)
+                    if cache_key not in self._mid_hash and len(self._mid_hash) >= maximum:
+                        self._mid_hash.pop(next(iter(self._mid_hash)))
+                self._mid_hash[cache_key] = (stored, now + task_item['ttl'])
+            else:
+                entry = self._mid_hash.get(cache_key)
+                if entry is not None:
+                    result, expires = entry
+                    if now < expires:
+                        try:
+                            return copy.deepcopy(result)
+                        except Exception:
+                            self._mid_hash.pop(cache_key, None)
+                            return None
+                    self._mid_hash.pop(cache_key, None)
 
     def _mode_1(self, task_item: dict) -> Any:
         """
@@ -424,12 +451,14 @@ class LiteCacher:
                     if self.kwargs.get("log", False):
                         logger.error(f"【{err.__traceback__.tb_lineno}】redis- {err}")
         else:
-            cache_item = self._mid.get(cache_key)
-            if cache_item:
-                if isinstance(cache_item, bytes):  # 避免redis读取的是bytes的没有处理
-                    cache_item = cache_item.decode(encoding=self.kwargs.get("encoding", "utf-8"))
-                task_item_row = json.loads(cache_item)
-                return task_item_row['value']
+            try:
+                cache_item = self._mid.get(cache_key)
+                if cache_item:
+                    if isinstance(cache_item, bytes):
+                        cache_item = cache_item.decode(encoding=self.kwargs.get("encoding", "utf-8"))
+                    return json.loads(cache_item)['value']
+            except (redis.exceptions.RedisError, ValueError, TypeError, KeyError, UnicodeError):
+                return None  # Cache miss on an unavailable/corrupt cache.
 
     async def _mode_2(self, task_item: dict) -> Any:
         """
@@ -438,7 +467,7 @@ class LiteCacher:
         cache_key = task_item['key']
         if task_item['type'] == 1:  # 1-存
             # 这里有一次碰到了出来的结果是异步函数，现在没有碰到，不知道为啥
-            await_value = await task_item['value'] if iscoroutinefunction(task_item['value']) else task_item['value']
+            await_value = await task_item['value'] if inspect.isawaitable(task_item['value']) else task_item['value']
             if await_value is None:
                 return
             async with self._lock:
@@ -458,39 +487,93 @@ class LiteCacher:
                     if self.kwargs.get("log", False):
                         logger.error(f"【{err.__traceback__.tb_lineno}】async_redis- {err}")
         else:
-            cache_item = await self._mid.get(cache_key)
-            if cache_item:
-                if isinstance(cache_item, bytes):  # 避免redis读取的是bytes的没有处理
-                    cache_item = cache_item.decode(encoding=self.kwargs.get("encoding", "utf-8"))
-                task_item_row = json.loads(cache_item)
-                return task_item_row['value']
+            try:
+                cache_item = await self._mid.get(cache_key)
+                if cache_item:
+                    if isinstance(cache_item, bytes):
+                        cache_item = cache_item.decode(encoding=self.kwargs.get("encoding", "utf-8"))
+                    return json.loads(cache_item)['value']
+            except (redis.exceptions.RedisError, ValueError, TypeError, KeyError, UnicodeError):
+                return None
+
+    @classmethod
+    def _key_value(cls, value):
+        """Typed, unambiguous canonical form; never serialize executable code."""
+        if value is None:
+            return ["none"]
+        if type(value) in (bool, int, str):
+            return [type(value).__name__, value]
+        if type(value) is float:
+            if not math.isfinite(value):
+                raise TypeError("非有限浮点数不参与缓存")
+            return ["float", value.hex()]
+        if type(value) is bytes:
+            return ["bytes", value.hex()]
+        if isinstance(value, (datetime, date, datetime_time)):
+            return [type(value).__name__, value.isoformat()]
+        if isinstance(value, timedelta):
+            return ["timedelta", value.days, value.seconds, value.microseconds]
+        if isinstance(value, (Decimal, uuid.UUID)):
+            return [type(value).__name__, str(value)]
+        if type(value) in (list, tuple):
+            return [type(value).__name__, [cls._key_value(item) for item in value]]
+        if type(value) in (set, frozenset):
+            return [type(value).__name__, sorted((cls._key_value(item) for item in value), key=cls._key_json)]
+        if type(value) is dict:
+            items = [[cls._key_value(key), cls._key_value(item)] for key, item in value.items()]
+            return ["dict", sorted(items, key=lambda pair: cls._key_json(pair[0]))]
+        raise TypeError("无法安全生成缓存键的类型: {}".format(type(value).__name__))
+
+    @staticmethod
+    def _key_json(value):
+        return json.dumps(value, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
+
+    def _receiver_token(self, receiver):
+        identity = id(receiver)
+        with self._receiver_lock:
+            entry = self._receiver_tokens.get(identity)
+            if entry is None or entry[0]() is not receiver:
+                def discard(reference):
+                    with self._receiver_lock:
+                        current = self._receiver_tokens.get(identity)
+                        if current is not None and current[0] is reference:
+                            self._receiver_tokens.pop(identity, None)
+                reference = weakref.ref(receiver, discard)
+                entry = (reference, uuid.uuid4().hex)
+                self._receiver_tokens[identity] = entry
+            return entry[1]
 
     def cal_redis_key_name(
             self, redis_head: str, signature: inspect.Signature = None, main_key: list = None, *args, **kwargs):
         """
         获取名称
         """
-        if signature:
-            parameters = list(signature.parameters.keys())
-            if parameters[0] in ['self', 'cls']:  # 需要处理类里面的这俩情况 -- 如果开发的没有按照标准规范开发 这里判断可能有问题
-                # first_arg = args[0]
-                # if hasattr(func, "__self__"):  # 不继续判断了 先写简单一点
-                # 直接取除了第一位后面的所有参数
-                cal_args = ";".join(str(arg) for arg in args[1:])
-            else:
-                cal_args = ";".join(str(arg) for arg in args)
+        arguments = None
+        receiver_token = None
+        if signature is not None:
+            bound = signature.bind(*args, **kwargs)
+            bound.apply_defaults()
+            arguments = dict(bound.arguments)
+            names = list(signature.parameters)
+            if names and names[0] in ("self", "cls") and names[0] in arguments:
+                receiver_token = self._receiver_token(arguments.pop(names[0]))
+        if main_key:
+            if not isinstance(main_key, list) or not all(isinstance(key, str) for key in main_key):
+                raise ValueError("main_key 必须是参数名列表")
+            available = dict(kwargs) if arguments is None else dict(arguments)
+            if signature is not None:
+                for name, parameter in signature.parameters.items():
+                    if parameter.kind is inspect.Parameter.VAR_KEYWORD:
+                        for key, value in arguments.get(name, {}).items():
+                            available.setdefault(key, value)
+            missing = set(main_key) - set(available)
+            if missing:
+                raise ValueError("main_key 指定的参数不存在: {}".format(sorted(missing)))
+            payload = {key: available[key] for key in main_key}
         else:
-            cal_args = ""  # 需要计算签名的东西
-
-        cal_kw = ";".join(f"{k}={v}" for k, v in kwargs.items())
-
-        if not main_key:
-            hash_value = get_md5(f"{cal_args}_{cal_kw}")
-        else:
-            base_string = ";".join(f"{self.kwargs.get(mk, '') or ''}" for mk in main_key)
-            hash_value = get_md5(base_string)
-
-        return f"{redis_head}:{hash_value}"
+            payload = arguments if arguments is not None else (args, kwargs)
+        encoded = self._key_json(["v2", receiver_token, self._key_value(payload)])
+        return "{}:v2:{}".format(redis_head, hashlib.sha256(encoded.encode("utf-8")).hexdigest())
 
     def cached(self, redis_head: str, ttl: int = 60, main_key: list = None):
         """
@@ -498,19 +581,34 @@ class LiteCacher:
         ttl       : 过期时间
         main_key  : 如果设置了这个 那么key的拼接规则就会变成 从kw里面取值 然后组合判断 如 ["a", "b"] 那么需要提取到 这个方法 a的值和b的值来计算key
         """
+        if isinstance(ttl, bool) or not isinstance(ttl, int) or ttl <= 0:
+            raise ValueError("ttl 必须是正整数秒")
+        if main_key is not None and (not isinstance(main_key, list) or not all(isinstance(key, str) for key in main_key)):
+            raise ValueError("main_key 必须是参数名列表")
+        maximum = self.kwargs.get("max_entries", 1024)
+        if isinstance(maximum, bool) or not isinstance(maximum, int) or maximum < 1:
+            raise ValueError("max_entries 必须是正整数")
         def decorator(func: Callable):
+            signature = inspect.signature(func)
+            # Avoid sharing results between different functions with one prefix.
+            namespace = "{}:{}:{}".format(redis_head, func.__module__, func.__qualname__)
+            if func.__closure__:
+                # Two closures may have the same qualified name but capture
+                # different users/configuration. Never share their cache.
+                namespace += ":" + uuid.uuid4().hex
+            def make_key(args, kwargs):
+                return self.cal_redis_key_name(namespace, signature, main_key, *args, **kwargs)
             @wraps(func)
             async def async_wrapper(*args, **kwargs) -> Any:
-                redis_key = self.cal_redis_key_name(
-                    redis_head,
-                    inspect.signature(func) if args else None,
-                    main_key,
-                    *args, **kwargs)
+                try:
+                    redis_key = make_key(args, kwargs)
+                except (TypeError, RecursionError):
+                    return await func(*args, **kwargs)  # Unsupported values: bypass, never collide.
                 task_item_0 = {"type": 0, "key": redis_key, "ttl": ttl, "function": func.__name__}
                 if self._mode == 2:
                     cache_result = await self._mode_2(task_item_0)
                 else:
-                    cache_result = self._mode_1(task_item_0) if self._mode == 1 else self._mode_0(task_item_0)
+                    cache_result = await asyncio.get_running_loop().run_in_executor(None, self._mode_1, task_item_0) if self._mode == 1 else self._mode_0(task_item_0)
                 if cache_result is None:
                     result = await func(*args, **kwargs)
                     if result is not None:
@@ -518,7 +616,10 @@ class LiteCacher:
                         if self._mode == 2:
                             await self._mode_2(task_item_1)
                         else:
-                            self._mode_1(task_item_1) if self._mode == 1 else self._mode_0(task_item_1)
+                            if self._mode == 1:
+                                await asyncio.get_running_loop().run_in_executor(None, self._mode_1, task_item_1)
+                            else:
+                                self._mode_0(task_item_1)
 
                     return result
                 else:
@@ -526,11 +627,10 @@ class LiteCacher:
 
             @wraps(func)
             def wrapper(*args, **kwargs) -> Any:
-                redis_key = self.cal_redis_key_name(
-                    redis_head,
-                    inspect.signature(func) if args else None,
-                    main_key,
-                    *args, **kwargs)
+                try:
+                    redis_key = make_key(args, kwargs)
+                except (TypeError, RecursionError):
+                    return func(*args, **kwargs)
                 task_item_0 = {"type": 0, "key": redis_key, "ttl": ttl, "function": func.__name__}
                 if self._mode == 1:
                     cache_result = self._mode_1(task_item_0)

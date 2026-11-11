@@ -69,12 +69,14 @@ from lite_tools.tools.core.lite_ua import get_ua, generate_ua, lite_ua
 try:
     from lite_tools.tools.sql.config import MySqlConfig
     from lite_tools.tools.sql.lite_mysql import MySql, AioMySql
-except ImportError:  # 这里是忽略这里面的包异常的
-    pass
+except ModuleNotFoundError as err:
+    if err.name not in ("pymysql", "aiomysql", "dbutils", "dbutils.pooled_db"):
+        raise
 try:
     from lite_tools.tools.sql.lite_redis import LiteRedis, LiteProxy, BloomFilter
-except ImportError:
-    pass
+except ModuleNotFoundError as err:
+    if err.name != "redis":
+        raise
 
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.core.lite_match import match_case
@@ -85,8 +87,9 @@ from lite_tools.tools.core.lite_string import (
 # from lite_tools.tools.time.httpx_timeout import x_timeout
 try:
     from lite_tools.tools.core.lite_cache import Singleton, Buffer, LiteCacher
-except ImportError:
-    pass
+except ModuleNotFoundError as err:
+    if err.name != "redis":
+        raise
 from lite_tools.tools.core.lite_file import count_lines, LiteLogFile
 
 from lite_tools.tools.js import (
@@ -100,5 +103,7 @@ from lite_tools.utils import VERSION
 
 version = VERSION
 
-__all__ += ["5dm"]  # 这个是给我自己用的
+# Wildcard imports must not reference missing optional dependencies or the old
+# nonexistent '5dm' name. Explicit imports of installed features are unchanged.
+__all__ = [symbol for symbol in __all__ if symbol in globals()]
 __ALL__ = __all__

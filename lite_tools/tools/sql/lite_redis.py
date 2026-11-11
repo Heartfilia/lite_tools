@@ -18,12 +18,12 @@
           ┃ ┫ ┫   ┃ ┫ ┫
           ┗━┻━┛   ┗━┻━┛
 """
-import re
 import json
 import random
 import threading
 import time as _time
 from collections import Counter
+from collections.abc import Mapping as MappingABC
 
 from datetime import datetime, timedelta
 from typing import Union, Sequence, List, Optional, TypeVar, Callable, Mapping, Set
@@ -62,8 +62,10 @@ except ImportError:
         install('typing_extensions')
         from typing_extensions import Literal
 
-import yaml
 import redis as _redis
+from redis.backoff import NoBackoff
+from redis.retry import Retry
+from redis.connection import parse_url, SSLConnection
 
 from lite_tools.logs import logger
 from lite_tools.tools.core.lib_hashlib import get_md5
@@ -123,7 +125,11 @@ class LiteProxy:
     def _trans_type(mode: str, proxy: str = None) -> Union[dict, str, None]:
         if proxy is None:
             return None
-        if not proxy.startswith('http'):
+        if isinstance(proxy, bytes):
+            proxy = proxy.decode("utf-8")
+        if not isinstance(proxy, str) or not proxy.strip():
+            raise ValueError("代理必须是非空字符串")
+        if "://" not in proxy:
             proxy = f"http://{proxy}"
 
         if mode == "httpx":
@@ -161,12 +167,14 @@ class LiteRedis:
             timeout: int = 10,
             **kwargs):
         """
-        keep_waiting: 如果出现了异常 是否一直重试等待redis服务器修复正常
-        timeout     : 如果重试的话 休眠多久重试 默认10s
+        keep_waiting: 是否对只读操作的临时连接错误进行有限重试；写操作不会自动重放
+        timeout     : 重试间隔，默认10s。kwargs 可设 retry_attempts=3、retry_deadline=30
 
         如果需要机器人报警，
         """
         self._counter = Counter()
+        if not isinstance(keep_waiting, bool):
+            raise ValueError("keep_waiting 必须是 bool")
         self.host = host
         self.port = port
         self.password = password
@@ -174,20 +182,30 @@ class LiteRedis:
         self.username = username
         self.db = db
         self.kwargs = kwargs
+        self.keep_waiting = keep_waiting
+        self.timeout = timeout
 
         if path:
-            if path.endswith(".yaml") or path.endswith(".yml"):
+            if path.startswith(("redis://", "rediss://")):
+                self.read_url(path)
+            elif path.endswith(".yaml") or path.endswith(".yml"):
                 self.read_yaml(path)
             elif path.endswith(".json"):
                 self.read_json(path)
-            elif path.startswith("redis://"):
-                # _redis.from_url(path, decode_responses=True) # 我这里不这么运行 因为我要自己封装
-                self.read_url(path)
             else:
-                raise ValueError("path只支持 json/yaml 文件或 redis:// URL")
+                raise ValueError("path只支持 json/yaml 文件或 redis://、rediss:// URL")
+        # Apply the same validation to direct parameters and file/URL configs.
+        self.set_param({"host": self.host, "port": self.port, "db": self.db,
+                        "password": self.password, "username": self.username,
+                        "decode": self.decode})
+        self._retry_attempts = self.kwargs.pop("retry_attempts", 3)
+        self._retry_deadline = self.kwargs.pop("retry_deadline", 30)
+        if isinstance(self._retry_attempts, bool) or not isinstance(self._retry_attempts, int) or self._retry_attempts < 1:
+            raise ValueError("retry_attempts 必须是正整数")
+        for name, value in (("timeout", timeout), ("retry_deadline", self._retry_deadline)):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value < float("inf"):
+                raise ValueError("{} 必须是有限非负数".format(name))
         self._redis = self._connect_redis(self.host, self.db, self.password, self.port)
-        self.keep_waiting = keep_waiting
-        self.timeout = timeout
 
     @classmethod
     def help(cls):
@@ -197,7 +215,7 @@ class LiteRedis:
         logger.info("""下面是展示文件的字段怎么写的 后面我写了具体值的就是默认参数 写了~的就是没有设置默认参数 可以只写最基础的字段
         如: myConf.json
         {"host": "xxx", "password": "yyy"}
-不传入path参数的话:默认就是走localhost:6379    也可以直接这里面传入参数,但这个就很麻烦  我没有兼容**url格式**的redis链接 没必要
+不传入path参数的话默认连接 localhost:6379，也支持 redis:// 和 rediss:// URL。
         
 JSON示例: 文件名.json
 {"host": "127.0.0.1", "port": 6379, "password": ~, "decode": True, "kwargs": {其它配置用字典传这里}}
@@ -220,59 +238,45 @@ kwargs:
         """
         这里创建链接是不会报错的 地址不对都不会报错 这里的报错只是参数异常报错
         """
-        try:
-            redis = _redis.Redis(
-                host=_host, db=_db, password=_password, port=_port, username=self.username,
-                decode_responses=self.decode, socket_timeout=5, socket_connect_timeout=5, **self.kwargs)
-            return redis
-        except Exception as err:
-            logger.error(err)
+        options = dict(socket_timeout=5, socket_connect_timeout=5)
+        options.update(self.kwargs)
+        # redis-py 6+ retries writes by default. Disable transport replay here;
+        # the wrapper retries only explicitly known read-only operations.
+        options.pop("retry_on_timeout", None)
+        options.update(retry=Retry(NoBackoff(), 0), retry_on_error=[])
+        return _redis.Redis(host=_host, db=_db, password=_password, port=_port,
+                            username=self.username, decode_responses=self.decode, **options)
 
     def _self_incr_error(self, field: str) -> None:
         with lock:
             self._counter[field] += 1
 
-    def _redis_option(self, option, name: str, *args, **kwargs):
-        error_time_start = _time.time()
-        while True:
+    _READ_ONLY = frozenset((
+        "get", "mget", "exists", "ttl", "pttl", "type", "strlen", "getbit", "getrange", "substr",
+        "lindex", "llen", "lrange", "scard", "sismember", "smismember", "smembers", "srandmember",
+        "hget", "hmget", "hgetall", "hexists", "hkeys", "hlen", "hvals", "hstrlen",
+        "zcard", "zcount", "zrange", "zrank", "zscore", "zmscore", "zrandmember",
+        "scan", "sscan", "hscan", "zscan", "keys", "ping", "echo", "dbsize",
+    ))
+
+    def _redis_option(self, option, *args, **kwargs):
+        started = _time.monotonic()
+        method = getattr(option, "__name__", "")
+        attempts = self._retry_attempts if self.keep_waiting and method in self._READ_ONLY else 1
+        for attempt in range(attempts):
             try:
-                result = option(name, *args, **kwargs)
-                if self._counter["retry"] > 0:  # 如果正常的话 需要恢复为0
-                    if self._counter["retry"] > 10:  # 如果重试次数非常多的那种需要报恢复正常的日志
-                        error_time_end = _time.time()
-                        logger.success(f"{self.host}:{self.port} 的redis恢复正常,"
-                                       f"恢复耗时: {error_time_end - error_time_start:.3f}秒")
+                result = option(*args, **kwargs)
+                with lock:
                     self._counter["retry"] = 0
-                if self._counter["redis"] > 0:  # 如果正常的话 需要恢复为0
                     self._counter["redis"] = 0
                 return result
-            except KeyboardInterrupt:
-                break
-            except _redis.exceptions.ConnectionError:
-                if self._counter["retry"] % 30 == 0:  # 大概这里会 300 秒报错提示一次
-                    logger.warning(f"redis链接失败\n\t"
-                                   f"错误:redis链接异常...\n\t"
-                                   f"主机:{self.host}\n\t"
-                                   f"操作:{option.__name__}\n\t"
-                                   f"访问库:{name}\n\t"
-                                   f"重试:等待10秒重试")
-                self._connect_redis(self.host, self.db, self.password, self.port)
+            except (_redis.exceptions.AuthenticationError, _redis.exceptions.AuthorizationError):
+                raise
+            except (_redis.exceptions.ConnectionError, _redis.exceptions.TimeoutError):
                 self._self_incr_error("retry")
-                logger.warning(f"【{option.__name__}】redis链接异常:正在重新链接 -> 重试次数:{self._counter['retry']}")
-            except Exception as err:
-                self._self_incr_error("redis")  # 只有链接异常才会进行重连操作
-                if self._counter['redis'] % 60 == 0:  # 大概每600秒就会提示报错一次 如果没解决的话
-                    logger.error(f"redis 操作失败\n\t"
-                                 f"错误:{err}\n\t"
-                                 f"主机:{self.host}\n\t"
-                                 f"操作:{option.__name__}\n\t"
-                                 f"访问库:{name}\n\t"
-                                 f"重试:等待{self.timeout + 20}秒重试")
-                    _time.sleep(self.timeout + 20)  # 这里的报错需要额外多休息会 因为这里的报错不是链接异常
-            if self.keep_waiting:
+                if attempt + 1 >= attempts or _time.monotonic() - started + self.timeout >= self._retry_deadline:
+                    raise
                 _time.sleep(self.timeout)
-            else:
-                break
 
     @property
     def redis(self) -> _redis.Redis:
@@ -281,19 +285,35 @@ kwargs:
     client = redis
 
     def set_param(self, config: dict, from_url: bool = False):
+        if not isinstance(config, MappingABC):
+            raise ValueError("Redis 配置必须是字典")
+        options = config.get("kwargs", {})
+        if not isinstance(options, MappingABC):
+            raise ValueError("Redis kwargs 必须是字典")
         self.host = config.get("host", "127.0.0.1")
         self.port = config.get("port", 6379)
         self.db = config.get("db", 0)
+        if not isinstance(self.host, str) or not self.host:
+            raise ValueError("Redis host 必须是非空字符串")
+        for name, value, upper in (("port", self.port, 65535), ("db", self.db, None)):
+            if isinstance(value, bool) or not isinstance(value, int) or value < (1 if name == "port" else 0) or (upper and value > upper):
+                raise ValueError("Redis {} 不合法".format(name))
         self.password = config.get("password")
         self.username = config.get("username")
         if not from_url:
-            self.decode = config.get("decode", True)
-            self.kwargs = config.get("kwargs", {})
+            self.decode = config.get("decode_responses", config.get("decode", True))
+            if not isinstance(self.decode, bool):
+                raise ValueError("Redis decode 必须是 bool")
+            self.kwargs = dict(self.kwargs, **options)
 
     def read_yaml(self, path: str):
         try:
+            import yaml
+        except ImportError as err:
+            raise ImportError("读取 YAML 需要安装 PyYAML；JSON/URL/直接传参不需要") from err
+        try:
             with open(path, 'r', encoding='utf-8') as fp:
-                config = yaml.load(fp.read(), Loader=yaml.Loader)
+                config = yaml.safe_load(fp)
         except (FileNotFoundError, FileExistsError):
             raise FileNotFount(path)
         else:
@@ -309,19 +329,21 @@ kwargs:
             self.set_param(config)
 
     def read_url(self, path: str):
-        username = re.search(r"//([^.]+):", path)
-        password = re.search(r"redis://.*?:(\S+)@", path)
-        host = re.search(r"@(\S+):", path) or re.search(r"//(\S+):\d+", path)
-        port = re.search(r":(\d{2,5})/?", path)
-        db = re.search(r":\d+/(\d+)", path)
-        conf = {
-            "host": host.group(1) if host else "127.0.0.1",
-            "port": int(port.group(1)) if port else 6379,
-            "db": int(db.group(1)) if db else 0,
-            "password": password.group(1) if password else None,
-            "username": username.group(1) if username else None
-        }
+        if not path.startswith(("redis://", "rediss://")):
+            raise ValueError("仅支持 redis://、rediss://")
+        parsed = parse_url(path)
+        connection_class = parsed.pop("connection_class", None)
+        if connection_class is SSLConnection:
+            parsed["ssl"] = True
+        conf = {key: parsed.pop(key) for key in ("host", "port", "db", "username", "password") if key in parsed}
+        decode = parsed.pop("decode_responses", self.decode)
+        if isinstance(decode, str):
+            if decode.lower() not in ("true", "false", "1", "0", "yes", "no"):
+                raise ValueError("decode_responses 必须是布尔值")
+            decode = decode.lower() in ("true", "1", "yes")
         self.set_param(conf, from_url=True)
+        self.decode = decode
+        self.kwargs.update(parsed)
 
     def delete(self, name: str) -> int:
         return self._redis_option(self.redis.delete, name)
@@ -530,17 +552,38 @@ kwargs:
     # ----------------上面是list 下面是set hash--------------------------
     def scan_iter(self, match: Union[PatternT, None] = None, count: Union[int, None] = None,
                   _type: Union[str, None] = None, **kwargs):
-        return self._redis_option(self.redis.scan_iter, match, count, _type, **kwargs)
+        cursor = 0
+        while True:
+            cursor, items = self._redis_option(self.redis.scan, cursor=cursor, match=match, count=count, _type=_type, **kwargs)
+            yield from items
+            if int(cursor) == 0:
+                break
 
     def sscan_iter(self, name: str, match: Union[PatternT, None] = None, count: Union[int, None] = None):
-        return self._redis_option(self.redis.sscan_iter, name, match, count)
+        cursor = 0
+        while True:
+            cursor, items = self._redis_option(self.redis.sscan, name, cursor=cursor, match=match, count=count)
+            yield from items
+            if int(cursor) == 0:
+                break
 
     def hscan_iter(self, name: str, match: Union[PatternT, None] = None, count: Union[int, None] = None):
-        return self._redis_option(self.redis.hscan_iter, name, match, count)
+        cursor = 0
+        while True:
+            cursor, items = self._redis_option(self.redis.hscan, name, cursor=cursor, match=match, count=count)
+            yield from items.items()
+            if int(cursor) == 0:
+                break
 
     def zscan_iter(self, name: str, match: Union[PatternT, None] = None, count: Union[int, None] = None,
                    score_cast_func: Union[type, Callable] = float):
-        return self._redis_option(self.redis.zscan_iter, name, match, count, score_cast_func)
+        cursor = 0
+        while True:
+            cursor, items = self._redis_option(self.redis.zscan, name, cursor=cursor, match=match, count=count,
+                                              score_cast_func=score_cast_func)
+            yield from items
+            if int(cursor) == 0:
+                break
 
     def sadd(self, name: str, *values: FieldT) -> None:
         if len(values) == 1 and isinstance(values[0], (dict, list)):
@@ -669,7 +712,9 @@ kwargs:
             value: EncodableT,
             withscore: bool = False,
     ):
-        return self._redis_option(self.redis.zrank, name, value, withscore)
+        if withscore:
+            return self._redis_option(self.redis.zrank, name, value, withscore=True)
+        return self._redis_option(self.redis.zrank, name, value)
 
     def zrem(self, name: str, *values: FieldT):
         return self._redis_option(self.redis.zrem, name, *values)
@@ -707,17 +752,24 @@ kwargs:
         """
         if isinstance(value, (dict, list)):
             value = json.dumps(value, ensure_ascii=False)
-        return self._redis_option(self.redis.hset, name, key, value, mapping, items)
+        options = dict(key=key, value=value, mapping=mapping)
+        if items is not None:
+            options["items"] = items
+        return self._redis_option(self.redis.hset, name, **options)
 
     def hsetnx(self, name: str, key: str, value: str) -> bool:
         return self._redis_option(self.redis.hsetnx, name, key, value)
 
     def __getattr__(self: T, name: str):
+        if name.startswith("_"):
+            raise AttributeError(name)
+        option = getattr(self.redis, name)
+        if not callable(option):
+            return option
         def default_method(*args, **kwargs) -> T:
             """
             没有封装的方法将会走这里
             """
-            option = getattr(self.redis, name)
             return self._redis_option(option, *args, **kwargs)
 
         return default_method
@@ -725,6 +777,10 @@ kwargs:
 
 class SimpleHash(object):
     def __init__(self, cap, seed):
+        if isinstance(cap, bool) or not isinstance(cap, int) or cap < 1 or cap > (1 << 32) or cap & (cap - 1):
+            raise ValueError("cap 必须是 1 到 2**32 范围内的 2 的幂")
+        if isinstance(seed, bool) or not isinstance(seed, int) or seed <= 0:
+            raise ValueError("seed 必须是正整数")
         self.cap = cap
         self.seed = seed
 
@@ -745,11 +801,20 @@ class BloomFilter:
         :param bit_size  : 容量控制 我这里默认256M redis最大为 512M
         :param block_num : 分区数量 设置为其它则会创建好几个 redis分区管理
         """
+        if isinstance(block_num, bool) or not isinstance(block_num, int) or not 1 <= block_num <= 256:
+            raise ValueError("block_num 必须是 1 到 256 的整数")
+        if not isinstance(key, str) or not key:
+            raise ValueError("key 必须是非空字符串")
+        if seeds is not None:
+            if (not isinstance(seeds, list) or not seeds or
+                    any(isinstance(seed, bool) or not isinstance(seed, int) or seed <= 0 for seed in seeds) or
+                    len(set(seeds)) != len(seeds)):
+                raise ValueError("seeds 必须是非空且不重复的正整数列表")
         self.server = redis
         self.key = key
         self.block_num = block_num
-        self.bit_size = bit_size if bit_size < 4294967296 else 4294967296   # 限制最大只能512M
-        self.seeds = [5, 7, 11, 13, 31, 37, 61] if not seeds else seeds
+        self.bit_size = bit_size
+        self.seeds = [5, 7, 11, 13, 31, 37, 61] if seeds is None else list(seeds)
         self.hash_func = [SimpleHash(self.bit_size, seed) for seed in self.seeds]  # 创建不同素材的hash函数
 
     def _get_name(self, string):
@@ -760,7 +825,10 @@ class BloomFilter:
 
     def remove(self):
         """移除布隆过滤器"""
-        self.server.delete(self.key)
+        # Delete exact partition names, never a glob that could match unrelated
+        # application keys. Individual deletes also work on Redis Cluster.
+        for partition in range(self.block_num):
+            self.server.delete("{}:{}".format(self.key, partition))
 
     def insert(self, string: str) -> None:
         """插入"""
@@ -775,9 +843,8 @@ class BloomFilter:
             # 空直接判断为存在 这样子就没有必要跑了
             return True
         string, name = self._get_name(string)
-        ret = True
         for func in self.hash_func:
             loc = func.hash(string)
-            ret ^= self.server.getbit(name, loc)
-        # 上面判断了是否包含
-        return True if not ret else False
+            if not self.server.getbit(name, loc):
+                return False
+        return True

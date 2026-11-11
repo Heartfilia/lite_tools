@@ -390,10 +390,7 @@ class FlattenJson(object):
     def _encode_key(key, flag) -> str:
         if flag == "list":
             return f"[{key}]."
-        if "." in key:
-            key = key.replace('.', r'\.')
-        elif "[" in key:
-            key = key.replace('[', r'\[')
+        key = str(key).replace('.', r'\.').replace('[', r'\[').replace(']', r'\]')
         return key + "."
 
     def show(self) -> None:
@@ -493,19 +490,54 @@ class WrapJson(object):
             "d": ...          # 忽略格式但是必须存在（不允许是list,tuple,set,dict...这些集合类型）
         }
         """
-        self.check_items = FlattenJson(template)          # 后面提取数据需要这个校验
-        for tes_key, each_value in self.check_items.get_all():
-            if type(each_value) is not type and each_value is not ...:
-                logger.error("模板只允许 基本单位的类型(int, str, float, bool) 以及 省略符号(...) 可以忽略参数类型")
-                logger.warning("其中(list,dict,set,tuple..)这些类型不允许用 ...匹配,只能指定是list或者tuple类型,否则返回None")
-                logger.error("不支持typing的进阶操作及具体值")
-                raise TemplateFormatError
-        self.results = []  # 给列表操作的时候用的 --> 用这个函数请避免用在多线程,毕竟这个效果只是为了单线程服务
-        self.template = template
+        if not isinstance(template, (dict, list)):
+            raise TemplateFormatError
+        self._validate_template(template)
+        self.template = copy.deepcopy(template)
+        self.check_items = FlattenJson(self.template)  # Retained for callers inspecting templates.
+        self.results = []
+
+    @classmethod
+    def _validate_template(cls, template):
+        if isinstance(template, dict):
+            for child in template.values():
+                cls._validate_template(child)
+        elif isinstance(template, list):
+            for child in template:
+                cls._validate_template(child)
+        elif not isinstance(template, type) and template is not ...:
+            raise TemplateFormatError
+
+    @classmethod
+    def _project(cls, template, value):
+        # Traverse objects, not encoded paths or executable assignments. Literal
+        # keys (quotes, dots, brackets, backslashes) remain literal keys.
+        if isinstance(template, dict):
+            if not isinstance(value, dict):
+                raise NotGoalItemException
+            result = {}
+            for key, child in template.items():
+                if key not in value:
+                    raise NotGoalItemException
+                result[key] = cls._project(child, value[key])
+            return result
+        if isinstance(template, list):
+            if not isinstance(value, list) or len(value) < len(template):
+                raise NotGoalItemException
+            return [cls._project(child, value[index]) for index, child in enumerate(template)]
+        if template is ...:
+            if isinstance(value, (list, tuple, set, dict, frozenset)):
+                raise NotGoalItemException
+        elif template in (list, tuple, set, dict, frozenset):
+            if not isinstance(value, template):
+                raise NotGoalItemException
+        elif type(value) is not template:
+            raise NotGoalItemException
+        return copy.deepcopy(value)
 
     def get_all(self, items: Union[str, list, dict]):
         dict_item = _judge_json(items)   # str --> 为了兼容json数据,json可以直接转换为python数据类型处理
-        if not dict_item:
+        if not isinstance(dict_item, (dict, list)):
             raise NotJsonException
 
         if isinstance(dict_item, dict):
@@ -516,10 +548,14 @@ class WrapJson(object):
                 return {}
         elif isinstance(dict_item, list):
             # 如果初始的数据是列表 那么就提出来的结果也是列表
-            self.results = []
-            for _ in self._wrap_from_list(dict_item):
-                ...
-            result = self.results
+            if isinstance(self.template, list):
+                try:
+                    return self._project(self.template, dict_item)
+                except NotGoalItemException:
+                    return []
+            # Each call owns its result list; simultaneous calls cannot mix rows.
+            result = list(self._matching_rows(dict_item))
+            self.results = result
         else:
             result = ""   # 走不到这里来, 我只是看不惯idea的报错提示
 
@@ -544,33 +580,22 @@ class WrapJson(object):
         return base_key
 
     def _wrap_from_dict(self, item: dict) -> dict:
-        base_model = copy.deepcopy(self.template)
-        flatten_json = FlattenJson(item)
-        for key, value in self.check_items.get_all():
-            parser_key = self._parse_rules(key)
-            if value in [list, tuple, set, dict, frozenset]:
-                result = try_get(item, key)
-                if not isinstance(result, value):
-                    raise NotGoalItemException
-            else:
-                result = flatten_json.get(key)
-                if value != type(result) and self.check_items.get(key) is not ...:
-                    raise NotGoalItemException
-            exec(f"base_model{parser_key} = {repr(result)}")
+        return self._project(self.template, item)
 
-        return base_model
+    def _matching_rows(self, items):
+        for item in items:
+            if isinstance(item, list):
+                yield from self._matching_rows(item)
+            elif isinstance(item, dict):
+                try:
+                    yield self._wrap_from_dict(item)
+                except NotGoalItemException:
+                    continue
 
     def _wrap_from_list(self, item: list):
-        for each in item:
-            if isinstance(each, list):
-                yield from self._wrap_from_list(each)
-            elif isinstance(each, dict):
-                try:
-                    result = self._wrap_from_dict(each)
-                except NotGoalItemException:
-                    pass
-                else:
-                    self.results.append(result)
+        for result in self._matching_rows(item):
+            self.results.append(result)
+            yield result
 
 
 if __name__ == "__main__":

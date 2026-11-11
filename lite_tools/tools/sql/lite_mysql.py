@@ -32,11 +32,40 @@ import aiomysql
 from pymysql import cursors
 from dbutils.pooled_db import PooledDB
 
-from lite_tools.logs.sql import x as sql_log
+from lite_tools.logs.sql import x as _sql_log
 from lite_tools.tools.core.lite_string import pretty_indent
 from lite_tools.tools.sql.lib_mysql_string import SqlString
 from lite_tools.tools.sql.config import MySqlConfig, CountConfig
 from lite_tools.exceptions.SqlExceptions import IterNotNeedRun, NeedPoolOrConfig
+
+
+def sql_log(*args, **kwargs):
+    # Observability must never turn an already committed write into a failure.
+    try:
+        _sql_log(*args, **kwargs)
+    except Exception:
+        pass
+
+
+def _validate_execution(sql, fetch, buffer):
+    if not isinstance(sql, str) or not sql.strip():
+        raise ValueError("sql 必须是非空字符串")
+    if fetch not in ("", "one", "all", "many"):
+        raise ValueError("fetch 必须是 one/all/many 或空字符串")
+    if fetch == "many" and (isinstance(buffer, bool) or not isinstance(buffer, int) or buffer <= 0):
+        raise ValueError("buffer 必须是正整数")
+
+
+def _is_batch(args):
+    return isinstance(args, (list, tuple)) and bool(args) and isinstance(args[0], (list, tuple, Mapping))
+
+
+def _scalar(row):
+    if isinstance(row, Mapping):
+        return next(iter(row.values()))
+    if isinstance(row, (list, tuple)):
+        return row[0]
+    return row
 
 
 class MySql:
@@ -124,6 +153,19 @@ class MySql:
                 database=database,
                 charset=charset,
                 cursorclass=cursor_type,   # 调整返回结果的样式
+                unix_socket=self.config.unix_socket,
+                sql_mode=self.config.sql_mode,
+                read_default_file=self.config.read_default_file,
+                use_unicode=True if self.config.use_unicode is None else self.config.use_unicode,
+                client_flag=self.config.client_flag,
+                init_command=self.config.init_command,
+                connect_timeout=self.config.connect_timeout or 10,
+                read_default_group=self.config.read_default_group,
+                autocommit=self.config.autocommit,
+                local_infile=self.config.local_infile,
+                ssl=self.config.ssl,
+                server_public_key=self.config.server_public_key,
+                **({"conv": self.config.conv} if self.config.conv is not None else {}),
             )
 
     def close_pool(self) -> bool:
@@ -152,40 +194,43 @@ class MySql:
                 如果是多行 [[], [], []] 里面的每一小条
         fetch-many 的时候需要配置  buffer=xxx 默认1000
         """
-        if not sql:
-            raise ValueError(f"传入了空sql语句--> sql:[ {sql} ]")
+        _validate_execution(sql, fetch, kwargs.get('buffer', 1000))
         if not self._secure_check(sql):
             raise PermissionError("删除操作终止!!!")
+        # An explicit empty parameter sequence is a no-op, never execute an
+        # unbound template or a potentially destructive raw statement instead.
+        if isinstance(args, (list, tuple)) and not args:
+            return 0 if not fetch else (() if fetch != "one" else None)
         sql = sql.strip()
         mode = sql.upper()[0]   # 取第一个字母
         _start_time = time.perf_counter()
         conn = self.connection()
         try:
             with conn.cursor() as cursor:    # 这里是返回影响的行数
-                if args:    # 批量操作的时候
-                    if not isinstance(args[0], (list, tuple)):   # 判断内容里面 里面是否是列表或者元组，如果是的话那么就是批量的
-                        cursor.execute(sql, args)    # 这里是单行操作套用模板的情况
-                    else:
-                        cursor.executemany(sql, args)   # 批量操作套用模板
+                if _is_batch(args):
+                    cursor.executemany(sql, args)
+                elif args is not None:
+                    cursor.execute(sql, args)
                 else:
                     cursor.execute(sql)
 
                 _end_time = time.perf_counter()
 
-                if not fetch and not sql.upper().startswith("SELECT"):
+                if cursor.description is None:
+                    effect_count = cursor.rowcount
                     conn.commit()
                     if log or self.log:
-                        effect_count = cursor.rowcount
-                        if "ON DUPLICATE KEY UPDATE" in sql:
-                            effect_count //= 2    # 这里是有问题的  所以这里只是看个大概
-                        self.count_conf.add_time(table_name, mode, _end_time-_start_time)
-                        _all_row = self.count_conf.add_line(table_name, mode, effect_count)
-                        _rate = self.count_conf.get_rate(table_name, mode)
-                        sql_log(
-                            f"{mode}[{table_name} <{_all_row}:{time.time()-self.start_time:.2f}s>] "
-                            f"this_ts={_end_time-_start_time:.3f}s avg_rate={_rate} -> {effect_count}",
-                            "success"
-                        )
+                        try:
+                            self.count_conf.add_time(table_name, mode, _end_time-_start_time)
+                            _all_row = self.count_conf.add_line(table_name, mode, effect_count)
+                            _rate = self.count_conf.get_rate(table_name, mode)
+                            sql_log(
+                                f"{mode}[{table_name} <{_all_row}:{time.time()-self.start_time:.2f}s>] "
+                                f"this_ts={_end_time-_start_time:.3f}s avg_rate={_rate} -> {effect_count}",
+                                "success"
+                            )
+                        except Exception:
+                            pass  # Metrics are not part of the transaction.
                     return effect_count   # 如果是插入 更新操作的话 需要获得 影响的行数
                 elif fetch == "one":
                     return cursor.fetchone()
@@ -199,9 +244,11 @@ class MySql:
                     f"{pretty_indent(sql)}"
                     f"\n------------------< sql end >---------------------\n"
                     f">>> {err} ", "error")
-            if not fetch:
+            try:
                 conn.rollback()
-                return 0
+            except Exception:
+                pass  # Preserve the database error if the connection is gone.
+            raise
         finally:
             conn.close()
 
@@ -227,6 +274,7 @@ class MySql:
                     ------> 设置 many 的时候有点类似批量读取 每次读取 buffer 的量 这里 count 无效 将不再打印日志
         :return:
         """
+        _validate_execution(sql, fetch, kwargs.get('buffer', 1000))
         if self.cur == "stream" or self.cur == "dict_stream":
             yield from self.select_iter(sql, log=query_log, **kwargs)
             return
@@ -235,14 +283,15 @@ class MySql:
         table_name = self._get_select_table_name(sql, **kwargs)
         try:
             with conn.cursor() as cursor:  # 这里是有结果返回的
-                cursor.execute(sql)
+                args = kwargs.get("args")
+                if args is None:
+                    cursor.execute(sql)
+                else:
+                    cursor.execute(sql, args)
                 if fetch == 'one':
                     item = cursor.fetchone()
                     items = [item] if item is not None else []
                 elif fetch == "many":
-                    if not isinstance(kwargs.get('buffer', 1000), int):
-                        sql_log("需要设置的 buffer 为数字....", "error")
-                        return
                     items = cursor.fetchmany(kwargs.get("buffer", 1000))
                     for item in items:
                         yield item[0] if len(item) == 1 and isinstance(item, tuple) else item
@@ -255,6 +304,7 @@ class MySql:
                     items = cursor.fetchall()
             end_time = time.time()
             all_num = len(items)
+            result_count = all_num
             if query_log is True:
                 sql_log(
                     f"[{table_name} <{all_num}:{end_time-start_time:.3f}s>] - SELECT[{fetch}] SQL-> {sql}",
@@ -272,7 +322,7 @@ class MySql:
                     yield all_num, item[0] if len(item) == 1 and isinstance(item, tuple) else item
                     all_num -= 1
 
-            if all_num < kwargs.get("_limit_num", 0):   # 如果本次数据小于限制的数据 就终止继续迭代 当时获得了的数据还是要继续抛的
+            if result_count < kwargs.get("_limit_num", 0):
                 raise IterNotNeedRun
         finally:
             conn.close()
@@ -282,28 +332,25 @@ class MySql:
         这里属于流式的读取位置 这里只能fetchone
         max_num  一般用于测试 就是获取的数据量到了这个值后 就停止继续遍历
         """
-        if not sql:
-            raise ValueError(f"传入了空sql语句--> sql:[ {sql} ]")
+        _validate_execution(sql, "one", 1)
+        limit_num = kwargs.get("max_num")
+        if limit_num is not None and (isinstance(limit_num, bool) or not isinstance(limit_num, int) or limit_num < 0):
+            raise ValueError("max_num 必须是非负整数")
+        if limit_num == 0:
+            return
         conn = self.connection()
-        if self.cur == "dict_stream":
+        if self.cur in ("dict", "dict_stream"):
             cur = pymysql.cursors.SSDictCursor
-        elif self.cur == "stream":
-            cur = pymysql.cursors.SSCursor
-        elif self.cur == "dict":
-            cur = pymysql.cursors.DictCursor
         else:
-            cur = pymysql.cursors.Cursor
+            cur = pymysql.cursors.SSCursor
         table_name = self.table_name or self._get_select_table_name(sql)
         _start_time = time.perf_counter()
         limit_num = kwargs.get("max_num")
         local_line = 0
         try:
             with conn.cursor(cur) as cursor:
-                if args:    # 批量操作的时候
-                    if not isinstance(args[0], (list, tuple)):   # 判断内容里面 里面是否是列表或者元组，如果是的话那么就是批量的
-                        cursor.execute(sql, args)    # 这里是单行操作套用模板的情况
-                    else:
-                        cursor.executemany(sql, args)   # 批量操作套用模板
+                if args is not None:
+                    cursor.execute(sql, args)
                 else:
                     cursor.execute(sql)
 
@@ -311,7 +358,7 @@ class MySql:
                 while result is not None:
                     _duration_time = time.perf_counter() - _start_time
                     local_line += 1
-                    ok = self.count_conf.add_line(table_name, "S", 1)
+                    self.count_conf.add_line(table_name, "S", 1)
                     yield result if not (isinstance(result, tuple) and len(result) == 1) else result[0]
                     if (log or self.log) and (local_line % 500 == 0):
                         sql_log(
@@ -322,6 +369,7 @@ class MySql:
                     result = cursor.fetchone()
         except Exception as err:
             sql_log(f"[{err.__traceback__.tb_lineno}]{sql} : {err} ", "error")
+            raise
         finally:
             conn.close()
             if log or self.log:
@@ -337,22 +385,28 @@ class MySql:
         :param table_name: 如果传入优先取这里的table名称 否则取全局的
         """
         table = self._check_table(table_name)
-        sql = self.sql_base.exists(where, table_name=table)
-        for num in self.select(sql, query_log=False):
-            if num == 0:
-                return False
-            else:
-                return True
-        return False
+        clause, params = self.sql_base._where_parameters(where, allow_empty=True)
+        if isinstance(where, Mapping) or where is None:
+            quoted_table = self.sql_base._table(table)
+            if params:
+                quoted_table = quoted_table.replace("%", "%%")
+            sql = "SELECT 1 FROM {}{} LIMIT 1;".format(quoted_table, " WHERE " + clause if clause else "")
+        else:
+            sql = self.sql_base.exists(where, table_name=table)
+        return self.execute(sql, params or None, fetch="one") is not None
 
     def count(self, where: Union[dict, str] = None, table_name: str = None) -> int:
         """
         只能提取全库量 可以加筛选条件 但是 不适合 groupBy 之类的统计
         """
         table = self._check_table(table_name)
-        sql = self.sql_base.count(where, table_name=table)
-        for num in self.select(sql, query_log=False):
-            return num
+        clause, params = self.sql_base._where_parameters(where, allow_empty=True)
+        quoted_table = self.sql_base._table(table)
+        if params:
+            quoted_table = quoted_table.replace("%", "%%")
+        sql = "SELECT COUNT(*) FROM {}{};".format(quoted_table, " WHERE " + clause if clause else "")
+        row = self.execute(sql, params or None, fetch="one")
+        return int(_scalar(row)) if row is not None else 0
 
     def insert(
             self,
@@ -361,7 +415,7 @@ class MySql:
             duplicate_except: list = None,
             ignore: bool = False,
             log: bool = False,
-    ) -> None:
+    ) -> int:
         """
         创建数据模板 和对应的数据结果
         :param item  : -> dict模式 直接处理为单条 {"a": 1, "b": False} -> a=1,b=0
@@ -373,7 +427,7 @@ class MySql:
         """
         table = self._check_table(table_name)
         _sql, values = self.sql_base.insert(item, table, duplicate_except, ignore)
-        self.execute(_sql, values, log=log, table_name=table)
+        return self.execute(_sql, values, log=log, table_name=table)
 
     def update(
             self,
@@ -381,7 +435,7 @@ class MySql:
             where: Union[str, List[str], Mapping[str, any], List[Mapping[str, any]]],
             table_name: str = "",
             log: bool = False
-    ) -> None:
+    ) -> int:
         """
         更新数据
         :param item: 更新的结果 字典表示
@@ -391,17 +445,21 @@ class MySql:
         """
         table = self._check_table(table_name)
         _sql, values = self.sql_base.update(item, where, table_name=table)
-        self.execute(_sql, values, log=log, table_name=table)
+        return self.execute(_sql, values, log=log, table_name=table)
 
-    def delete(self, where: Union[dict, str], table_name: str = None) -> None:
+    def delete(self, where: Union[dict, str], table_name: str = None) -> int:
         """
         删除数据操作
         :param where: 需要删除数据的时候使用的条件
         :param table_name: 表名 这里和全局二选一 优先级这里最高
         """
         table = self._check_table(table_name)
-        sql = self.sql_base.delete(where, table_name=table)
-        self.execute(sql, mode="delete", table_name=table)
+        clause, params = self.sql_base._where_parameters(where)
+        quoted_table = self.sql_base._table(table)
+        if params:
+            quoted_table = quoted_table.replace("%", "%%")
+        sql = "DELETE FROM {} WHERE {};".format(quoted_table, clause)
+        return self.execute(sql, params or None, table_name=table)
 
     def connection(self):
         """获取链接对象"""
@@ -424,15 +482,10 @@ class MySql:
         """
         安全检查-->程序里面不给你操作drop操作的
         """
-        if string.upper().startswith("DROP"):
-            sql_log(f"SQL: {string}  确定要删除操作吗? Y/N", "warning")
-            flag = input(">>> ")
-            if flag.upper() == "Y":
-                sql_log(
-                    f"哈哈哈 这里是唬你的 程序里面不给你--DROP--操作的 我肯定直接报错啦 ( •̀ ω •́ )y",
-                    "success")
-                return False
-        return True
+        # Convenience guard only, NOT an SQL security boundary. Database users
+        # must still have minimal privileges; arbitrary SQL is trusted input.
+        prefix = re.sub(r"\A(?:\s+|/\*.*?\*/|--[^\n]*(?:\n|$)|\#[^\n]*(?:\n|$))*", "", string, flags=re.S)
+        return re.match(r"DROP\b", prefix, re.I) is None
 
 
 class AioMySql:
@@ -446,6 +499,14 @@ class AioMySql:
             self._pool = None
 
         self._config = config
+        self._init_lock = None
+
+    async def _ensure_pool(self):
+        if self._init_lock is None:
+            self._init_lock = asyncio.Lock()
+        async with self._init_lock:
+            if self._pool is None:
+                await self.__init()
 
     async def __init(self):
         if not self._pool and (not self._config or not isinstance(self._config, (MySqlConfig, dict))):
@@ -516,7 +577,6 @@ class AioMySql:
         try:
             if self._pool:
                 self._pool.close()
-                await asyncio.sleep(1)
                 await self._pool.wait_closed()
                 self._pool = None
                 return True
@@ -528,26 +588,26 @@ class AioMySql:
             self, sql: str, args: Union[list, tuple] = None, fetch: Literal['one', 'all', 'many', ''] = '',
             _log: bool = False, **kwargs
     ):
-        if not self._pool:
-            await self.__init()
-        if not sql:
-            raise ValueError(f"传入了空sql语句--> sql:[ {sql} ]")
+        _validate_execution(sql, fetch, kwargs.get('buffer', 1000))
+        if not MySql._secure_check(sql):
+            raise PermissionError("不允许 DROP 操作")
+        if isinstance(args, (list, tuple)) and not args:
+            return 0 if not fetch else (() if fetch != "one" else None)
+        await self._ensure_pool()
         sql = sql.strip()
         if _log:
             sql_log(f"{sql=}  {args=}", "debug")
 
-        conn = None
-        try:
-            async with self._pool.acquire() as conn:
+        async with self._pool.acquire() as conn:
+            try:
                 async with conn.cursor() as cursor:   # 默认返回dict
-                    if args:    # 批量操作的时候
-                        if not isinstance(args[0], (list, tuple)):   # 判断内容里面 里面是否是列表或者元组，如果是的话那么就是批量的
-                            cur = await cursor.execute(sql, args)    # 这里是单行操作套用模板的情况
-                        else:
-                            cur = await cursor.executemany(sql, args)   # 批量操作套用模板
+                    if _is_batch(args):
+                        cur = await cursor.executemany(sql, args)
+                    elif args is not None:
+                        cur = await cursor.execute(sql, args)
                     else:
                         cur = await cursor.execute(sql)
-                    if not fetch and not sql.upper().startswith("SELECT"):
+                    if cursor.description is None:
                         await conn.commit()
                         return cur   # 如果是插入 更新操作的话 需要获得 影响的行数
                     elif fetch == "one":
@@ -556,12 +616,11 @@ class AioMySql:
                         return await cursor.fetchmany(kwargs.get('buffer', 1000))
                     else:
                         return await cursor.fetchall()
-        except Exception as err:
-            sql_log(f"[{err.__traceback__.tb_lineno}]"
-                    f"\n-----------------< sql start >--------------------\n"
-                    f"{pretty_indent(sql)}"
-                    f"\n------------------< sql end >---------------------\n"
-                    f">>> {err} ", "error")
-            if not fetch and conn is not None:
-                await conn.rollback()
-                return 0
+            except BaseException:
+                # Roll back before releasing the connection, also on task
+                # cancellation. Never let rollback errors hide the real error.
+                try:
+                    await conn.rollback()
+                except Exception:
+                    pass
+                raise

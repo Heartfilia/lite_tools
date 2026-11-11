@@ -4,6 +4,7 @@ import socket
 import asyncio
 import platform
 from typing import Tuple
+from urllib.parse import urlsplit
 
 from lite_tools.logs import logger
 
@@ -97,7 +98,7 @@ async def check_proxy(proxy: str, timeout=3, log: bool = False) -> bool:
     :param proxy: 代理地址（支持带认证信息）格式: user:pass@ip:port 或 ip:port
     :param timeout: 连接超时时间（秒）
     :param log: 是否输出日志
-    :return: 代理是否有效
+    :return: 代理端口是否可以建立 TCP 连接（不验证代理协议或认证）
 
     ------------------------
     # 异步批量检测代理
@@ -109,13 +110,14 @@ async def check_proxy(proxy: str, timeout=3, log: bool = False) -> bool:
 
     def extract_info(pro: str) -> Tuple[str, int]:
         """提取代理IP和端口"""
-        if "@" in pro:
-            pro = pro.split("@")[-1]
-        pro = re.sub(r"^https?://", "", pro)
-        ip_port = pro.split(":")
-        if len(ip_port) != 2 or not ip_port[1].isdigit():
+        try:
+            parsed = urlsplit(pro if "://" in pro else "//" + pro)
+            port = parsed.port
+        except ValueError:
             return "", 0
-        return ip_port[0], int(ip_port[1])
+        if not parsed.hostname or port is None or not 1 <= port <= 65535:
+            return "", 0
+        return parsed.hostname, port
 
     if not isinstance(proxy, str):
         return False
@@ -132,24 +134,26 @@ async def check_proxy(proxy: str, timeout=3, log: bool = False) -> bool:
         return False
 
     try:
-        # 异步建立连接（核心改造点）[1,2](@ref)
-        async with telnetlib3.open_connection(
+        reader, writer = await asyncio.wait_for(telnetlib3.open_connection(
                 host=ip,
                 port=port,
                 connect_maxwait=timeout
-        ) as client:
-            # 连接成功即认为代理有效
+        ), timeout=timeout)
+        try:
+            # This checks TCP reachability, not proxy authentication/protocol.
             if log:
-                print(f"[{proxy}] 连接成功，代理有效")
+                print(f"[{ip}:{port}] TCP 连接成功")
             return True
+        finally:
+            writer.close()
 
     except (ConnectionRefusedError, asyncio.TimeoutError, OSError) as e:
         if log:
-            print(f"[{proxy}] 连接失败: {str(e)}")
+            print(f"[{ip}:{port}] 连接失败: {type(e).__name__}")
         return False
     except Exception as e:
         if log:
-            print(f"[{proxy}] 未知错误: {str(e)}")
+            print(f"[{ip}:{port}] 未知错误: {type(e).__name__}")
         return False
 
 

@@ -48,9 +48,9 @@ class MySql(LiteMySql):
         from xxx import MySql
         mysql = MySql(table_name="yyy")
 
-        mysql.insert({})
-        mysql.update({}, {})
-        mysql.delete({})
+        mysql.insert({"id": 1, "name": "example"})
+        mysql.update({"name": "updated"}, {"id": 1})
+        mysql.delete({"id": 1})  # 空条件会报错，避免意外整表删除
         for row in mysql.select("SELECT * FROM xxxxxx;"):
             print(row)
         """

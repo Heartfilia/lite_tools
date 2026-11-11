@@ -27,9 +27,9 @@ except ImportError:
     from typing_extensions import Literal
 
 try:
-    from pymysql.converters import decoders
+    from pymysql.converters import conversions
 except ImportError:
-    decoders = None
+    conversions = None
 
 from lite_tools.tools.core.lite_parser import try_get
 from lite_tools.exceptions.SqlExceptions import EmptyConfigException, KeyFieldNeedError
@@ -84,7 +84,7 @@ class MySqlConfig:
         # 其它的虽然添加了 但是我目前还没用到 以后再说
         """
         if conv is None:
-            self.conv = decoders
+            self.conv = copy.copy(conversions) if conversions is not None else None
         else:
             self.conv = conv
 
@@ -134,7 +134,7 @@ class MySqlConfig:
             raise KeyFieldNeedError("user or username")
 
         password = try_get(config, "password|pass")
-        if not password:
+        if password is None:
             raise KeyFieldNeedError("password or pass")
 
         this = cls(
@@ -236,7 +236,7 @@ class MySqlConfig:
         if server_public_key is not None:
             this.server_public_key = server_public_key
 
-        this._other = config or {}
+        this._other = dict(config)
         return this
 
     def to_dict(self):
@@ -247,10 +247,9 @@ class MySqlConfig:
 
         other = obj['_other']
         del obj['_other']
-        if other:
-            obj.update(other)
-
-        return obj
+        # Canonical, possibly edited attributes take precedence over the original
+        # dictionary; aliases/unknown settings are retained for compatibility.
+        return dict(other, **obj)
 
 
 _base_field = {
@@ -267,10 +266,11 @@ class CountConfig:
 
     def init(self, table: str, mode: str):
         """初始化模板数据字段"""
-        if table not in self.log_jar:
-            self.log_jar[table] = {}
-        if mode not in self.log_jar[table]:
-            self.log_jar[table][mode] = copy.deepcopy(_base_field)
+        with self.lock:
+            if table not in self.log_jar:
+                self.log_jar[table] = {}
+            if mode not in self.log_jar[table]:
+                self.log_jar[table][mode] = copy.deepcopy(_base_field)
 
     def add_line(self, table: str, mode: str, num: int = 0) -> int:
         self.init(table, mode)
